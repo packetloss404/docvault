@@ -1,0 +1,214 @@
+@if (loading()) {
+  <div class="text-center py-3">
+    <div class="spinner-border spinner-border-sm text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+} @else {
+  <!-- Launch workflow -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="row g-2 align-items-end">
+        <div class="col">
+          <label class="form-label">Launch Workflow</label>
+          <select
+            class="form-select form-select-sm"
+            [ngModel]="launchTemplateId()"
+            (ngModelChange)="launchTemplateId.set($event)"
+          >
+            <option [ngValue]="null">Select template...</option>
+            @for (t of templates(); track t.id) {
+              <option [ngValue]="t.id">{{ t.label }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-auto">
+          <button
+            class="btn btn-primary btn-sm"
+            (click)="launchWorkflow()"
+            [disabled]="!launchTemplateId()"
+          >
+            Launch
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active instances -->
+  @if (instances().length === 0) {
+    <p class="text-muted">No active workflows for this document.</p>
+  } @else {
+    <!-- Instance selector (if multiple) -->
+    @if (instances().length > 1) {
+      <div class="mb-3">
+        @for (inst of instances(); track inst.id) {
+          <button
+            class="btn btn-sm me-1"
+            [class.btn-primary]="selectedInstance()?.id === inst.id"
+            [class.btn-outline-secondary]="selectedInstance()?.id !== inst.id"
+            (click)="selectInstance(inst)"
+          >
+            {{ inst.workflow_label }}
+            @if (inst.is_complete) {
+              <i class="bi bi-check-circle ms-1"></i>
+            }
+          </button>
+        }
+      </div>
+    }
+
+    @if (selectedInstance(); as inst) {
+      <!-- Status card -->
+      <div class="card mb-3">
+        <div class="card-header d-flex justify-content-between">
+          <span class="fw-semibold">{{ inst.workflow_label }}</span>
+          @if (inst.is_complete) {
+            <span class="badge bg-success">Complete</span>
+          } @else {
+            <span class="badge bg-warning text-dark">In Progress</span>
+          }
+        </div>
+        <div class="card-body">
+          <div class="mb-2">
+            <strong>Current State:</strong>
+            <span class="badge bg-primary ms-1">{{ inst.current_state_label || 'None' }}</span>
+          </div>
+          <div class="mb-2">
+            <strong>Completion:</strong>
+            <div class="progress mt-1" style="height: 8px;">
+              <div
+                class="progress-bar"
+                [style.width.%]="inst.completion"
+              ></div>
+            </div>
+            <small class="text-muted">{{ inst.completion }}%</small>
+          </div>
+          <div>
+            <small class="text-muted">
+              Launched: {{ inst.launched_at | date: 'medium' }} |
+              Last change: {{ inst.state_changed_at | date: 'medium' }}
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Available transitions -->
+      @if (!inst.is_complete && availableTransitions().length > 0) {
+        <div class="card mb-3">
+          <div class="card-header">Available Transitions</div>
+          <div class="card-body">
+            @for (t of availableTransitions(); track t.id) {
+              <button
+                class="btn btn-outline-primary btn-sm me-2 mb-1"
+                (click)="openTransitionDialog(t)"
+              >
+                {{ t.label }}
+                <small class="text-muted">(to {{ t.destination_state_label }})</small>
+              </button>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Log -->
+      @if (logEntries().length > 0) {
+        <div class="card">
+          <div class="card-header">Audit Log</div>
+          <div class="card-body p-0">
+            <table class="table table-sm mb-0">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Action</th>
+                  <th>User</th>
+                  <th>Comment</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (entry of logEntries(); track entry.id) {
+                  <tr>
+                    <td><small>{{ entry.datetime | date: 'short' }}</small></td>
+                    <td>{{ entry.transition_label || 'Launch' }}</td>
+                    <td>{{ entry.username || 'System' }}</td>
+                    <td><small>{{ entry.comment }}</small></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    }
+  }
+
+  <!-- Transition Dialog (Modal) -->
+  @if (showTransitionDialog() && selectedTransition(); as trans) {
+    <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">{{ trans.label }}</h5>
+            <button type="button" class="btn-close" (click)="cancelTransitionDialog()"></button>
+          </div>
+          <div class="modal-body">
+            <p class="text-muted">
+              {{ trans.origin_state_label }} &rarr; {{ trans.destination_state_label }}
+            </p>
+            @for (field of transitionFields(); track field.id) {
+              <div class="mb-3">
+                <label class="form-label">
+                  {{ field.label }}
+                  @if (field.required) { <span class="text-danger">*</span> }
+                </label>
+                @if (field.field_type === 'text') {
+                  <textarea
+                    class="form-control form-control-sm"
+                    [ngModel]="transitionFieldValues()[field.name] || ''"
+                    (ngModelChange)="setFieldValue(field.name, $event)"
+                  ></textarea>
+                } @else if (field.field_type === 'boolean') {
+                  <select
+                    class="form-select form-select-sm"
+                    [ngModel]="transitionFieldValues()[field.name] || ''"
+                    (ngModelChange)="setFieldValue(field.name, $event)"
+                  >
+                    <option value="">Select...</option>
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                  </select>
+                } @else {
+                  <input
+                    [type]="field.field_type === 'integer' ? 'number' : field.field_type === 'date' ? 'date' : 'text'"
+                    class="form-control form-control-sm"
+                    [ngModel]="transitionFieldValues()[field.name] || ''"
+                    (ngModelChange)="setFieldValue(field.name, $event)"
+                  />
+                }
+                @if (field.help_text) {
+                  <small class="form-text text-muted">{{ field.help_text }}</small>
+                }
+              </div>
+            }
+            <div class="mb-3">
+              <label class="form-label">Comment</label>
+              <textarea
+                class="form-control form-control-sm"
+                [ngModel]="transitionComment()"
+                (ngModelChange)="transitionComment.set($event)"
+                rows="2"
+                placeholder="Optional comment..."
+              ></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-secondary btn-sm" (click)="cancelTransitionDialog()">Cancel</button>
+            <button class="btn btn-primary btn-sm" (click)="executeTransition()">
+              Execute Transition
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+}
