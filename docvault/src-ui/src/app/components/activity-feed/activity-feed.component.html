@@ -1,0 +1,69 @@
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Activity Feed</h2>
+    <button class="btn btn-outline-primary btn-sm" (click)="loadActivity()">
+      <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="text-center py-4">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+  } @else {
+    <div class="table-responsive">
+      <table class="table table-sm table-hover">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 140px;">Event Type</th>
+            <th>Title</th>
+            <th>Details</th>
+            <th style="width: 120px;">Document</th>
+            <th style="width: 100px;">User</th>
+            <th style="width: 110px;">Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (entry of activities(); track entry.id) {
+            <tr>
+              <td>
+                <span class="badge" [class]="getEventBadgeClass(entry.event_type)">
+                  <i class="bi me-1" [class]="getEventIcon(entry.event_type)"></i>
+                  {{ entry.event_type }}
+                </span>
+              </td>
+              <td>
+                <strong class="small">{{ entry.title }}</strong>
+              </td>
+              <td class="text-muted small">{{ truncateBody(entry.body) }}</td>
+              <td>
+                @if (entry.document_id) {
+                  <a
+                    [routerLink]="['/documents', entry.document_id]"
+                    class="btn btn-outline-primary btn-sm"
+                  >
+                    <i class="bi bi-file-earmark me-1"></i>{{ entry.document_title || '#' + entry.document_id }}
+                  </a>
+                }
+              </td>
+              <td class="small">
+                @if (entry.user) {
+                  <i class="bi bi-person me-1"></i>{{ entry.user }}
+                }
+              </td>
+              <td class="text-muted small">{{ formatTime(entry.created_at) }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="text-muted text-center py-4">
+                No activity recorded yet.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

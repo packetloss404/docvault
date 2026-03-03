@@ -76,6 +76,19 @@ INSTALLED_APPS = [
     "storage.apps.StorageConfig",
     "processing.apps.ProcessingConfig",
     "workflows.apps.WorkflowsConfig",
+    "sources.apps.SourcesConfig",
+    "notifications.apps.NotificationsConfig",
+    "ml.apps.MlConfig",
+    "ai.apps.AiConfig",
+    "collaboration.apps.CollaborationConfig",
+    "zone_ocr.apps.ZoneOcrConfig",
+    "entities.apps.EntitiesConfig",
+    "relationships.apps.RelationshipsConfig",
+    "portal.apps.PortalConfig",
+    "esignatures.apps.EsignaturesConfig",
+    "annotations.apps.AnnotationsConfig",
+    "legal_hold.apps.LegalHoldConfig",
+    "physical_records.apps.PhysicalRecordsConfig",
 ]
 
 MIDDLEWARE = [
@@ -90,6 +103,9 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.middleware.CurrentUserMiddleware",
+    "security.middleware.SecurityHeadersMiddleware",
+    "security.middleware.IPAccessControlMiddleware",
+    "core.health.MetricsMiddleware",
 ]
 
 ROOT_URLCONF = "docvault.urls"
@@ -235,6 +251,10 @@ CHANNEL_LAYERS = {
 STORAGE_BACKEND = env("STORAGE_BACKEND")
 STORAGE_DIR = Path(env("MEDIA_ROOT")) / "documents"
 
+# Content-Addressable Storage
+STORAGE_CONTENT_ADDRESSED = env.bool("STORAGE_CONTENT_ADDRESSED", default=False)
+STORAGE_CONTENT_ADDRESSED_BACKEND = env.str("STORAGE_CONTENT_ADDRESSED_BACKEND", default="local")
+
 # S3 settings (for S3 storage backend)
 S3_ENDPOINT_URL = env("S3_ENDPOINT_URL")
 S3_ACCESS_KEY = env("S3_ACCESS_KEY")
@@ -263,25 +283,109 @@ PRE_CONSUME_SCRIPT = env.str("PRE_CONSUME_SCRIPT", default="")
 POST_CONSUME_SCRIPT = env.str("POST_CONSUME_SCRIPT", default="")
 CONSUME_SCRIPT_TIMEOUT = env.int("CONSUME_SCRIPT_TIMEOUT", default=30)
 
+# Barcode detection
+BARCODE_ENABLED = env.bool("BARCODE_ENABLED", default=True)
+BARCODE_SEPARATOR = env.str("BARCODE_SEPARATOR", default="PATCH T")
+BARCODE_ASN_PREFIX = env.str("BARCODE_ASN_PREFIX", default="ASN")
+BARCODE_DPI = env.int("BARCODE_DPI", default=300)
+BARCODE_MAX_PAGES = env.int("BARCODE_MAX_PAGES", default=5)
+BARCODE_UPSCALE = env.float("BARCODE_UPSCALE", default=2.0)
+BARCODE_TAG_MAPPING = {}  # Dict of regex pattern -> tag name
+BARCODE_RETAIN_SEPARATOR_PAGES = env.bool("BARCODE_RETAIN_SEPARATOR_PAGES", default=False)
+
 # Elasticsearch
 ELASTICSEARCH_URL = env.str("ELASTICSEARCH_URL", default="http://localhost:9200")
 ELASTICSEARCH_INDEX = env.str("ELASTICSEARCH_INDEX", default="docvault")
 ELASTICSEARCH_ENABLED = env.bool("ELASTICSEARCH_ENABLED", default=False)
 
-# Logging
+# LLM / AI
+LLM_ENABLED = env.bool("LLM_ENABLED", default=False)
+LLM_PROVIDER = env.str("LLM_PROVIDER", default="disabled")  # 'openai', 'ollama', 'disabled'
+LLM_MODEL = env.str("LLM_MODEL", default="gpt-4o-mini")
+LLM_API_KEY = env.str("LLM_API_KEY", default="")
+LLM_API_ENDPOINT = env.str("LLM_API_ENDPOINT", default="")
+EMBEDDING_MODEL = env.str("EMBEDDING_MODEL", default="text-embedding-3-small")
+EMBEDDING_DIM = env.int("EMBEDDING_DIM", default=1536)
+
+# Storage Encryption
+STORAGE_ENCRYPTION_ENABLED = env.bool("STORAGE_ENCRYPTION_ENABLED", default=False)
+STORAGE_ENCRYPTION_KEY = env.str("STORAGE_ENCRYPTION_KEY", default="")
+STORAGE_ENCRYPTION_KDF_ITERATIONS = env.int("STORAGE_ENCRYPTION_KDF_ITERATIONS", default=100000)
+
+# GPG / Document Signing
+GPG_HOME = env.str("GPG_HOME", default="")
+GPG_KEY_ID = env.str("GPG_KEY_ID", default="")
+
+# OpenID Connect
+OIDC_ENABLED = env.bool("OIDC_ENABLED", default=False)
+OIDC_RP_CLIENT_ID = env.str("OIDC_RP_CLIENT_ID", default="")
+OIDC_RP_CLIENT_SECRET = env.str("OIDC_RP_CLIENT_SECRET", default="")
+OIDC_OP_AUTHORIZATION_ENDPOINT = env.str("OIDC_OP_AUTHORIZATION_ENDPOINT", default="")
+OIDC_OP_TOKEN_ENDPOINT = env.str("OIDC_OP_TOKEN_ENDPOINT", default="")
+OIDC_OP_USER_ENDPOINT = env.str("OIDC_OP_USER_ENDPOINT", default="")
+OIDC_OP_JWKS_ENDPOINT = env.str("OIDC_OP_JWKS_ENDPOINT", default="")
+OIDC_CREATE_USER = env.bool("OIDC_CREATE_USER", default=True)
+
+# Two-Factor OTP
+OTP_ISSUER_NAME = env.str("OTP_ISSUER_NAME", default="DocVault")
+
+# Zone OCR
+ZONE_OCR_MATCH_THRESHOLD = env.float("ZONE_OCR_MATCH_THRESHOLD", default=0.7)
+ZONE_OCR_CONFIDENCE_THRESHOLD = env.float("ZONE_OCR_CONFIDENCE_THRESHOLD", default=0.8)
+
+# Named Entity Recognition
+NER_ENABLED = env.bool("NER_ENABLED", default=False)
+NER_SPACY_MODEL = env.str("NER_SPACY_MODEL", default="en_core_web_sm")
+
+# Contributor Portal
+PORTAL_UPLOAD_RATE_LIMIT = env.int("PORTAL_UPLOAD_RATE_LIMIT", default=10)  # per hour per IP
+PORTAL_REQUEST_REMINDER_DAYS = env.int("PORTAL_REQUEST_REMINDER_DAYS", default=3)
+PORTAL_FROM_EMAIL = env.str("PORTAL_FROM_EMAIL", default="noreply@docvault.local")
+
+# Security Hardening
+SESSION_COOKIE_AGE = env.int("SESSION_COOKIE_AGE", default=3600)
+SESSION_COOKIE_SECURE = env.bool("SESSION_COOKIE_SECURE", default=False)
+CSRF_COOKIE_SECURE = env.bool("CSRF_COOKIE_SECURE", default=False)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True
+X_FRAME_OPTIONS = "DENY"
+IP_WHITELIST = env.list("IP_WHITELIST", default=[])
+IP_BLACKLIST = env.list("IP_BLACKLIST", default=[])
+
+# Sentry (optional)
+SENTRY_DSN = env.str("SENTRY_DSN", default="")
+if SENTRY_DSN:
+    try:
+        import sentry_sdk
+        from sentry_sdk.integrations.django import DjangoIntegration
+        from sentry_sdk.integrations.celery import CeleryIntegration
+
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            integrations=[DjangoIntegration(), CeleryIntegration()],
+            traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.1),
+            send_default_pii=False,
+        )
+    except ImportError:
+        pass
+
+# Logging — structured JSON in production, readable in dev
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
         "json": {
             "()": "django.utils.log.ServerFormatter",
-            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
+            "format": '{"time":"%(asctime)s","level":"%(levelname)s","logger":"%(name)s","message":"%(message)s"}',
+        },
+        "verbose": {
+            "format": "%(asctime)s %(levelname)-8s %(name)s %(message)s",
         },
     },
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
-            "formatter": "json",
+            "formatter": "json" if not DEBUG else "verbose",
         },
     },
     "root": {

@@ -35,3 +35,23 @@ def auto_launch_workflows(sender, instance, created, **kwargs):
                 template.label,
                 instance.pk,
             )
+
+
+@receiver(post_save, sender=Document)
+def execute_document_rules(sender, instance, created, **kwargs):
+    """Execute trigger-action rules when a document is added or updated."""
+    from workflows.constants import TRIGGER_DOCUMENT_ADDED, TRIGGER_DOCUMENT_UPDATED
+    from workflows.rules import execute_rule_actions, get_matching_rules
+
+    trigger_type = TRIGGER_DOCUMENT_ADDED if created else TRIGGER_DOCUMENT_UPDATED
+
+    try:
+        rules = get_matching_rules(trigger_type, document=instance)
+        for rule in rules:
+            execute_rule_actions(rule, instance)
+    except Exception:
+        logger.exception(
+            "Error executing rules for document %s (%s)",
+            instance.pk,
+            "added" if created else "updated",
+        )

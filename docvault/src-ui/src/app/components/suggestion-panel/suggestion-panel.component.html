@@ -1,0 +1,184 @@
+<div class="card border-primary mb-3">
+  <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-lightbulb me-2"></i>ML Suggestions</span>
+    @if (hasSuggestions) {
+      <button
+        class="btn btn-sm btn-light"
+        (click)="acceptAll()"
+        [disabled]="applyingAll()"
+      >
+        @if (applyingAll()) {
+          <span class="spinner-border spinner-border-sm me-1"></span>
+          Applying...
+        } @else {
+          <i class="bi bi-check-all me-1"></i>Accept All
+        }
+      </button>
+    }
+  </div>
+
+  <div class="card-body">
+    @if (loading()) {
+      <div class="text-center py-3">
+        <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+        Loading suggestions...
+      </div>
+    } @else if (error()) {
+      <div class="text-muted text-center py-3">
+        <i class="bi bi-info-circle me-1"></i>{{ error() }}
+      </div>
+    } @else if (!hasSuggestions) {
+      <div class="text-muted text-center py-3">
+        <i class="bi bi-inbox me-1"></i>No suggestions available
+      </div>
+    } @else {
+      <!-- Tags -->
+      @if (tags().length > 0) {
+        <div class="mb-3">
+          <h6 class="text-muted mb-2">
+            <i class="bi bi-tag me-1"></i>Tags
+          </h6>
+          <div class="d-flex flex-wrap gap-2">
+            @for (item of tags(); track item.id) {
+              <div
+                class="badge d-inline-flex align-items-center gap-1 border px-2 py-2"
+                [class]="confidenceBorderClass(item.confidence)"
+              >
+                <span
+                  class="badge rounded-pill"
+                  [class]="confidenceClass(item.confidence)"
+                >{{ confidencePercent(item.confidence) }}</span>
+                <span class="text-dark">{{ item.name || '#' + item.id }}</span>
+                <button
+                  class="btn btn-sm p-0 ms-1 text-success border-0"
+                  title="Accept"
+                  (click)="acceptSuggestion('tags', item)"
+                >
+                  <i class="bi bi-check-lg"></i>
+                </button>
+                <button
+                  class="btn btn-sm p-0 ms-1 text-muted border-0"
+                  title="Dismiss"
+                  (click)="dismissSuggestion('tags', item.id)"
+                >
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Correspondent -->
+      @if (correspondent().length > 0) {
+        <div class="mb-3">
+          <h6 class="text-muted mb-2">
+            <i class="bi bi-person me-1"></i>Correspondent
+          </h6>
+          <div class="d-flex flex-wrap gap-2">
+            @for (item of correspondent(); track item.id) {
+              <div
+                class="badge d-inline-flex align-items-center gap-1 border px-2 py-2"
+                [class]="confidenceBorderClass(item.confidence)"
+              >
+                <span
+                  class="badge rounded-pill"
+                  [class]="confidenceClass(item.confidence)"
+                >{{ confidencePercent(item.confidence) }}</span>
+                <span class="text-dark">{{ item.name || '#' + item.id }}</span>
+                <button
+                  class="btn btn-sm p-0 ms-1 text-success border-0"
+                  title="Accept"
+                  (click)="acceptSuggestion('correspondent', item)"
+                >
+                  <i class="bi bi-check-lg"></i>
+                </button>
+                <button
+                  class="btn btn-sm p-0 ms-1 text-muted border-0"
+                  title="Dismiss"
+                  (click)="dismissSuggestion('correspondent', item.id)"
+                >
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Document Type -->
+      @if (documentType().length > 0) {
+        <div class="mb-3">
+          <h6 class="text-muted mb-2">
+            <i class="bi bi-file-earmark me-1"></i>Document Type
+          </h6>
+          <div class="d-flex flex-wrap gap-2">
+            @for (item of documentType(); track item.id) {
+              <div
+                class="badge d-inline-flex align-items-center gap-1 border px-2 py-2"
+                [class]="confidenceBorderClass(item.confidence)"
+              >
+                <span
+                  class="badge rounded-pill"
+                  [class]="confidenceClass(item.confidence)"
+                >{{ confidencePercent(item.confidence) }}</span>
+                <span class="text-dark">{{ item.name || '#' + item.id }}</span>
+                <button
+                  class="btn btn-sm p-0 ms-1 text-success border-0"
+                  title="Accept"
+                  (click)="acceptSuggestion('document_type', item)"
+                >
+                  <i class="bi bi-check-lg"></i>
+                </button>
+                <button
+                  class="btn btn-sm p-0 ms-1 text-muted border-0"
+                  title="Dismiss"
+                  (click)="dismissSuggestion('document_type', item.id)"
+                >
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Storage Path -->
+      @if (storagePath().length > 0) {
+        <div class="mb-3">
+          <h6 class="text-muted mb-2">
+            <i class="bi bi-folder2 me-1"></i>Storage Path
+          </h6>
+          <div class="d-flex flex-wrap gap-2">
+            @for (item of storagePath(); track item.id) {
+              <div
+                class="badge d-inline-flex align-items-center gap-1 border px-2 py-2"
+                [class]="confidenceBorderClass(item.confidence)"
+              >
+                <span
+                  class="badge rounded-pill"
+                  [class]="confidenceClass(item.confidence)"
+                >{{ confidencePercent(item.confidence) }}</span>
+                <span class="text-dark">{{ item.name || '#' + item.id }}</span>
+                <button
+                  class="btn btn-sm p-0 ms-1 text-success border-0"
+                  title="Accept"
+                  (click)="acceptSuggestion('storage_path', item)"
+                >
+                  <i class="bi bi-check-lg"></i>
+                </button>
+                <button
+                  class="btn btn-sm p-0 ms-1 text-muted border-0"
+                  title="Dismiss"
+                  (click)="dismissSuggestion('storage_path', item.id)"
+                >
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    }
+  </div>
+</div>

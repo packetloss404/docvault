@@ -71,3 +71,42 @@ def auto_launch_workflows(document_id):
             )
 
     return {"launched_instance_ids": launched}
+
+
+@shared_task
+def execute_scheduled_rules():
+    """Execute rules with SCHEDULED triggers (run every 15 minutes)."""
+    from documents.models import Document
+    from workflows.constants import TRIGGER_SCHEDULED
+    from workflows.rules import execute_rule_actions, get_matching_rules
+
+    rules = get_matching_rules(TRIGGER_SCHEDULED, document=None)
+    executed = 0
+    for rule in rules:
+        # Build queryset filtered by trigger conditions
+        documents = Document.objects.all()
+        for trigger in rule.triggers.filter(type=TRIGGER_SCHEDULED, enabled=True):
+            if trigger.filter_has_document_type_id:
+                documents = documents.filter(
+                    document_type_id=trigger.filter_has_document_type_id
+                )
+            if trigger.filter_has_correspondent_id:
+                documents = documents.filter(
+                    correspondent_id=trigger.filter_has_correspondent_id
+                )
+            if trigger.filter_has_tags.exists():
+                for tag in trigger.filter_has_tags.all():
+                    documents = documents.filter(tags=tag)
+
+        for doc in documents.distinct():
+            try:
+                execute_rule_actions(rule, doc)
+                executed += 1
+            except Exception:
+                logger.exception(
+                    "Error executing scheduled rule '%s' for doc %s",
+                    rule.name,
+                    doc.pk,
+                )
+
+    return {"executed": executed}

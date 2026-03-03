@@ -11,6 +11,11 @@ router.register(
     views.WorkflowTemplateViewSet,
     basename="workflow-template",
 )
+router.register(
+    r"workflow-rules",
+    views.WorkflowRuleViewSet,
+    basename="workflow-rule",
+)
 
 # Nested state views
 state_list = views.WorkflowStateViewSet.as_view({
@@ -66,6 +71,30 @@ escalation_list = views.WorkflowStateEscalationViewSet.as_view({
     "post": "create",
 })
 escalation_detail = views.WorkflowStateEscalationViewSet.as_view({
+    "get": "retrieve",
+    "put": "update",
+    "patch": "partial_update",
+    "delete": "destroy",
+})
+
+# Nested rule trigger views
+rule_trigger_list = views.WorkflowRuleTriggerViewSet.as_view({
+    "get": "list",
+    "post": "create",
+})
+rule_trigger_detail = views.WorkflowRuleTriggerViewSet.as_view({
+    "get": "retrieve",
+    "put": "update",
+    "patch": "partial_update",
+    "delete": "destroy",
+})
+
+# Nested rule action views
+rule_action_list = views.WorkflowRuleActionViewSet.as_view({
+    "get": "list",
+    "post": "create",
+})
+rule_action_detail = views.WorkflowRuleActionViewSet.as_view({
     "get": "retrieve",
     "put": "update",
     "patch": "partial_update",
@@ -144,6 +173,28 @@ urlpatterns = [
         "workflow-templates/<int:template_pk>/states/<int:state_pk>/escalations/<int:pk>/",
         escalation_detail,
         name="workflow-state-escalation-detail",
+    ),
+    # Rule triggers
+    path(
+        "workflow-rules/<int:rule_pk>/triggers/",
+        rule_trigger_list,
+        name="workflow-rule-trigger-list",
+    ),
+    path(
+        "workflow-rules/<int:rule_pk>/triggers/<int:pk>/",
+        rule_trigger_detail,
+        name="workflow-rule-trigger-detail",
+    ),
+    # Rule actions
+    path(
+        "workflow-rules/<int:rule_pk>/actions/",
+        rule_action_list,
+        name="workflow-rule-action-list",
+    ),
+    path(
+        "workflow-rules/<int:rule_pk>/actions/<int:pk>/",
+        rule_action_detail,
+        name="workflow-rule-action-detail",
     ),
     # Document workflows
     path(

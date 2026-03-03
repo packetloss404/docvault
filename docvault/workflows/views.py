@@ -13,25 +13,31 @@ from security.permissions import IsAdminOrReadOnly
 from . import engine
 from .actions import BUILTIN_ACTIONS
 from .models import (
+    WorkflowAction,
     WorkflowInstance,
     WorkflowInstanceLogEntry,
+    WorkflowRule,
     WorkflowState,
     WorkflowStateAction,
     WorkflowStateEscalation,
     WorkflowTemplate,
     WorkflowTransition,
     WorkflowTransitionField,
+    WorkflowTrigger,
 )
 from .serializers import (
     TransitionExecuteSerializer,
+    WorkflowActionSerializer,
     WorkflowInstanceLogEntrySerializer,
     WorkflowInstanceSerializer,
+    WorkflowRuleSerializer,
     WorkflowStateActionSerializer,
     WorkflowStateEscalationSerializer,
     WorkflowStateSerializer,
     WorkflowTemplateSerializer,
     WorkflowTransitionFieldSerializer,
     WorkflowTransitionSerializer,
+    WorkflowTriggerSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -261,6 +267,57 @@ class DocumentWorkflowViewSet(viewsets.ViewSet):
         transitions = engine.get_available_transitions(instance, request.user)
         serializer = WorkflowTransitionSerializer(transitions, many=True)
         return Response(serializer.data)
+
+
+# ---------------------------------------------------------------------------
+# Trigger-Action Rules
+# ---------------------------------------------------------------------------
+
+class WorkflowRuleViewSet(viewsets.ModelViewSet):
+    """CRUD for workflow rules."""
+
+    queryset = WorkflowRule.objects.all()
+    serializer_class = WorkflowRuleSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrReadOnly]
+    search_fields = ["name"]
+    ordering_fields = ["name", "order", "created_at"]
+    ordering = ["order", "name"]
+
+
+class WorkflowRuleTriggerViewSet(viewsets.ModelViewSet):
+    """CRUD for triggers within a workflow rule."""
+
+    serializer_class = WorkflowTriggerSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrReadOnly]
+    pagination_class = None
+
+    def get_queryset(self):
+        return WorkflowTrigger.objects.filter(
+            rules=self.kwargs["rule_pk"],
+        )
+
+    def perform_create(self, serializer):
+        trigger = serializer.save()
+        rule = WorkflowRule.objects.get(pk=self.kwargs["rule_pk"])
+        rule.triggers.add(trigger)
+
+
+class WorkflowRuleActionViewSet(viewsets.ModelViewSet):
+    """CRUD for actions within a workflow rule."""
+
+    serializer_class = WorkflowActionSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrReadOnly]
+    pagination_class = None
+
+    def get_queryset(self):
+        return WorkflowAction.objects.filter(
+            rules=self.kwargs["rule_pk"],
+        )
+
+    def perform_create(self, serializer):
+        action = serializer.save()
+        rule = WorkflowRule.objects.get(pk=self.kwargs["rule_pk"])
+        rule.actions.add(action)
 
 
 class ActionBackendListView(APIView):

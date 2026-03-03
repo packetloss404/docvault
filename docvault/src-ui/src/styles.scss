@@ -1,0 +1,116 @@
+// Bootstrap
+@use "bootstrap/scss/bootstrap";
+@use "bootstrap-icons/font/bootstrap-icons.css";
+
+// DocVault theme variables
+:root {
+  --dv-bg: #f8f9fa;
+  --dv-text: #212529;
+  --dv-sidebar-bg: #212529;
+  --dv-sidebar-text: rgba(255, 255, 255, 0.75);
+  --dv-card-bg: #ffffff;
+  --dv-border: #dee2e6;
+  --dv-hover: rgba(0, 0, 0, 0.05);
+}
+
+[data-bs-theme="dark"] {
+  --dv-bg: #1a1d21;
+  --dv-text: #dee2e6;
+  --dv-sidebar-bg: #111315;
+  --dv-sidebar-text: rgba(255, 255, 255, 0.75);
+  --dv-card-bg: #212529;
+  --dv-border: #495057;
+  --dv-hover: rgba(255, 255, 255, 0.05);
+}
+
+// DocVault global styles
+body {
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  background-color: var(--dv-bg);
+  color: var(--dv-text);
+}
+
+.sidebar {
+  min-height: calc(100vh - 56px);
+  background-color: var(--dv-sidebar-bg);
+}
+
+.sidebar .nav-link {
+  color: var(--dv-sidebar-text);
+  padding: 0.75rem 1rem;
+
+  &:hover,
+  &.active {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  i {
+    width: 1.5rem;
+    text-align: center;
+    margin-right: 0.5rem;
+  }
+}
+
+.content-area {
+  min-height: calc(100vh - 56px);
+  background-color: var(--dv-bg);
+  color: var(--dv-text);
+}
+
+.card {
+  background-color: var(--dv-card-bg);
+  border-color: var(--dv-border);
+  color: var(--dv-text);
+}
+
+.card-header {
+  background-color: var(--dv-card-bg);
+  border-bottom-color: var(--dv-border);
+}
+
+.card-footer {
+  background-color: var(--dv-card-bg);
+  border-top-color: var(--dv-border);
+}
+
+.table {
+  color: var(--dv-text);
+}
+
+.table-hover > tbody > tr:hover {
+  background-color: var(--dv-hover);
+}
+
+.form-control,
+.form-select {
+  background-color: var(--dv-card-bg);
+  color: var(--dv-text);
+  border-color: var(--dv-border);
+
+  &:focus {
+    background-color: var(--dv-card-bg);
+    color: var(--dv-text);
+  }
+}
+
+.dropdown-menu {
+  background-color: var(--dv-card-bg);
+  border-color: var(--dv-border);
+}
+
+.dropdown-item {
+  color: var(--dv-text);
+
+  &:hover,
+  &:focus {
+    background-color: var(--dv-hover);
+    color: var(--dv-text);
+  }
+}
+
+.modal-content {
+  background-color: var(--dv-card-bg);
+  border-color: var(--dv-border);
+  color: var(--dv-text);
+}

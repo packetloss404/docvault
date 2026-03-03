@@ -1,0 +1,89 @@
+x-app-env: &app-env
+  DJANGO_SECRET_KEY: dev-secret-key-change-in-production
+  DJANGO_DEBUG: "true"
+  DATABASE_URL: postgres://docvault:docvault@db:5432/docvault
+  REDIS_URL: redis://redis:6379
+  STORAGE_BACKEND: local
+  S3_ENDPOINT_URL: http://minio:9000
+  S3_ACCESS_KEY: docvault
+  S3_SECRET_KEY: docvault123
+  S3_BUCKET_NAME: docvault
+
+x-app-volumes: &app-volumes
+  - .:/app
+  - media_data:/app/media
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: docvault
+      POSTGRES_USER: docvault
+      POSTGRES_PASSWORD: docvault
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docvault"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: docvault
+      MINIO_ROOT_PASSWORD: docvault123
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    environment:
+      <<: *app-env
+    ports:
+      - "8000:8000"
+    volumes: *app-volumes
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    command: celery -A docvault worker -l info -Q default,processing
+    environment:
+      <<: *app-env
+    volumes: *app-volumes
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  miniodata:
+  media_data:

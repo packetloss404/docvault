@@ -1,0 +1,164 @@
+# =============================================================================
+# DocVault Helm Chart — Default Values
+# =============================================================================
+
+# -- Number of web server replicas
+replicaCount: 2
+
+image:
+  repository: docvault
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# ---------------------------------------------------------------------------
+# Web (gunicorn) deployment
+# ---------------------------------------------------------------------------
+web:
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+# ---------------------------------------------------------------------------
+# Celery worker deployment
+# ---------------------------------------------------------------------------
+worker:
+  replicaCount: 2
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  queues: "default,processing"
+
+# ---------------------------------------------------------------------------
+# Celery beat deployment (always single replica)
+# ---------------------------------------------------------------------------
+beat:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# ---------------------------------------------------------------------------
+# PostgreSQL sub-chart
+# ---------------------------------------------------------------------------
+postgresql:
+  enabled: true  # Set false to use an external database
+  auth:
+    username: docvault
+    password: docvault
+    database: docvault
+
+# -- External database (used when postgresql.enabled=false)
+externalDatabase:
+  host: ""
+  port: 5432
+  username: docvault
+  password: ""
+  database: docvault
+
+# ---------------------------------------------------------------------------
+# Redis sub-chart
+# ---------------------------------------------------------------------------
+redis:
+  enabled: true  # Set false to use an external Redis
+  architecture: standalone
+  auth:
+    enabled: false
+
+# -- External Redis (used when redis.enabled=false)
+externalRedis:
+  host: ""
+  port: 6379
+
+# ---------------------------------------------------------------------------
+# Elasticsearch (optional)
+# ---------------------------------------------------------------------------
+elasticsearch:
+  enabled: false
+  url: "http://elasticsearch:9200"
+
+# ---------------------------------------------------------------------------
+# Ingress
+# ---------------------------------------------------------------------------
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: docvault.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# ---------------------------------------------------------------------------
+# Persistence — media / documents storage
+# ---------------------------------------------------------------------------
+persistence:
+  enabled: true
+  size: 10Gi
+  storageClass: ""
+  accessModes:
+    - ReadWriteMany
+
+# ---------------------------------------------------------------------------
+# Service
+# ---------------------------------------------------------------------------
+service:
+  type: ClusterIP
+  port: 8000
+
+# ---------------------------------------------------------------------------
+# Service account
+# ---------------------------------------------------------------------------
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# ---------------------------------------------------------------------------
+# Pod-level settings
+# ---------------------------------------------------------------------------
+podAnnotations: {}
+podSecurityContext:
+  fsGroup: 1000
+  runAsUser: 1000
+  runAsNonRoot: true
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop:
+      - ALL
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# ---------------------------------------------------------------------------
+# Environment variables passed to all pods
+# ---------------------------------------------------------------------------
+env:
+  DJANGO_SECRET_KEY: change-me-in-production
+  DJANGO_SETTINGS_MODULE: docvault.settings.production
+  STORAGE_BACKEND: local
+  DJANGO_ALLOWED_HOSTS: "*"
+  DJANGO_SECURE_SSL_REDIRECT: "false"
+
+# -- Additional sensitive values stored in the Secret
+secretEnv:
+  DJANGO_SECRET_KEY: change-me-in-production

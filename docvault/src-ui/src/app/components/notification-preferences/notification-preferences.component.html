@@ -1,0 +1,138 @@
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Notification Settings</h2>
+  </div>
+
+  <!-- Quota Usage Card -->
+  @if (quotaUsage()) {
+    <div class="card mb-4">
+      <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-speedometer me-2"></i>Quota Usage</h5>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label fw-semibold">Documents</label>
+            <div class="d-flex justify-content-between mb-1">
+              <span>{{ quotaUsage()!.document_count }} used</span>
+              @if (quotaUsage()!.max_documents !== null) {
+                <span>{{ quotaUsage()!.max_documents }} max</span>
+              } @else {
+                <span class="text-muted">Unlimited</span>
+              }
+            </div>
+            @if (quotaUsage()!.max_documents !== null) {
+              <div class="progress" style="height: 8px;">
+                <div
+                  class="progress-bar"
+                  [class]="getProgressBarClass(getUsagePercent(quotaUsage()!.document_count, quotaUsage()!.max_documents))"
+                  [style.width.%]="getUsagePercent(quotaUsage()!.document_count, quotaUsage()!.max_documents)"
+                ></div>
+              </div>
+              @if (quotaUsage()!.documents_remaining !== null) {
+                <small class="text-muted">{{ quotaUsage()!.documents_remaining }} remaining</small>
+              }
+            }
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label fw-semibold">Storage</label>
+            <div class="d-flex justify-content-between mb-1">
+              <span>{{ formatBytes(quotaUsage()!.storage_bytes) }} used</span>
+              @if (quotaUsage()!.max_storage_bytes !== null) {
+                <span>{{ formatBytes(quotaUsage()!.max_storage_bytes!) }} max</span>
+              } @else {
+                <span class="text-muted">Unlimited</span>
+              }
+            </div>
+            @if (quotaUsage()!.max_storage_bytes !== null) {
+              <div class="progress" style="height: 8px;">
+                <div
+                  class="progress-bar"
+                  [class]="getProgressBarClass(getUsagePercent(quotaUsage()!.storage_bytes, quotaUsage()!.max_storage_bytes))"
+                  [style.width.%]="getUsagePercent(quotaUsage()!.storage_bytes, quotaUsage()!.max_storage_bytes)"
+                ></div>
+              </div>
+              @if (quotaUsage()!.storage_remaining !== null) {
+                <small class="text-muted">{{ formatBytes(quotaUsage()!.storage_remaining!) }} remaining</small>
+              }
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Notification Preferences Table -->
+  <div class="card">
+    <div class="card-header">
+      <h5 class="mb-0"><i class="bi bi-bell me-2"></i>Delivery Preferences</h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm table-hover mb-0">
+          <thead>
+            <tr>
+              <th style="width: 260px;">Event Type</th>
+              @for (channel of channels; track channel) {
+                <th class="text-center" style="width: 100px;">{{ formatChannelLabel(channel) }}</th>
+              }
+              <th>Webhook URL</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track row.event_type) {
+              <tr>
+                <td>
+                  <span class="fw-semibold">{{ formatEventType(row.event_type) }}</span>
+                  <br />
+                  <small class="text-muted">{{ row.event_type }}</small>
+                </td>
+                @for (channel of channels; track channel) {
+                  <td class="text-center align-middle">
+                    <div class="form-check form-switch d-flex justify-content-center">
+                      <input
+                        class="form-check-input"
+                        type="checkbox"
+                        role="switch"
+                        [checked]="isEnabled(row, channel)"
+                        (change)="togglePreference(row, channel)"
+                      />
+                    </div>
+                  </td>
+                }
+                <td class="align-middle">
+                  @if (isEnabled(row, 'webhook')) {
+                    <div class="input-group input-group-sm">
+                      <input
+                        type="url"
+                        class="form-control form-control-sm"
+                        placeholder="https://example.com/webhook"
+                        [ngModel]="getWebhookUrl(row.event_type)"
+                        (ngModelChange)="setWebhookUrl(row.event_type, $event)"
+                      />
+                      <button
+                        class="btn btn-outline-primary btn-sm"
+                        (click)="saveWebhookUrl(row)"
+                        [disabled]="saving()"
+                      >
+                        <i class="bi bi-check-lg"></i>
+                      </button>
+                    </div>
+                  } @else {
+                    <span class="text-muted small">Enable webhook to set URL</span>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="text-muted text-center py-4">
+                  Loading preferences...
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,121 @@
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Audit Log</h4>
+    <div class="btn-group">
+      <button class="btn btn-outline-secondary btn-sm" (click)="exportLog('csv')" [disabled]="exportLoading()">
+        <i class="bi bi-filetype-csv me-1"></i> Export CSV
+      </button>
+      <button class="btn btn-outline-secondary btn-sm" (click)="exportLog('json')" [disabled]="exportLoading()">
+        <i class="bi bi-filetype-json me-1"></i> Export JSON
+      </button>
+    </div>
+  </div>
+
+  @if (errorMessage()) {
+    <div class="alert alert-danger alert-dismissible">
+      {{ errorMessage() }}
+      <button type="button" class="btn-close" (click)="errorMessage.set('')"></button>
+    </div>
+  }
+
+  <!-- Filters -->
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label form-label-sm">Action</label>
+          <select class="form-select form-select-sm" [(ngModel)]="filterAction">
+            <option value="">All actions</option>
+            @for (action of actionTypes; track action) {
+              <option [value]="action">{{ action }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label form-label-sm">From Date</label>
+          <input type="date" class="form-control form-control-sm" [(ngModel)]="filterFromDate" />
+        </div>
+        <div class="col-md-3">
+          <label class="form-label form-label-sm">To Date</label>
+          <input type="date" class="form-control form-control-sm" [(ngModel)]="filterToDate" />
+        </div>
+        <div class="col-md-3">
+          <button class="btn btn-primary btn-sm me-1" (click)="applyFilters()">
+            <i class="bi bi-funnel me-1"></i> Filter
+          </button>
+          <button class="btn btn-outline-secondary btn-sm" (click)="clearFilters()">
+            Clear
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  @if (loading()) {
+    <div class="text-center py-4">
+      <div class="spinner-border"></div>
+    </div>
+  } @else {
+    <div class="table-responsive">
+      <table class="table table-sm table-striped table-hover">
+        <thead class="table-dark">
+          <tr>
+            <th>Timestamp</th>
+            <th>User</th>
+            <th>Action</th>
+            <th>Model</th>
+            <th>Detail</th>
+            <th>IP Address</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (entries().length === 0) {
+            <tr>
+              <td colspan="6" class="text-center text-muted py-3">No audit log entries found.</td>
+            </tr>
+          }
+          @for (entry of entries(); track entry.id) {
+            <tr>
+              <td class="text-nowrap">{{ formatTimestamp(entry.timestamp) }}</td>
+              <td>{{ entry.username || '(system)' }}</td>
+              <td>
+                <span class="badge" [class]="getActionBadgeClass(entry.action)">
+                  {{ entry.action }}
+                </span>
+              </td>
+              <td>{{ entry.model_type }}</td>
+              <td class="text-truncate" style="max-width: 300px;" [title]="entry.detail">
+                {{ entry.detail }}
+              </td>
+              <td>{{ entry.ip_address || '-' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    @if (totalPages > 1) {
+      <nav>
+        <ul class="pagination pagination-sm justify-content-center">
+          <li class="page-item" [class.disabled]="currentPage() === 1">
+            <button class="page-link" (click)="goToPage(currentPage() - 1)">Previous</button>
+          </li>
+          @for (p of pageNumbers; track p) {
+            <li class="page-item" [class.active]="p === currentPage()">
+              <button class="page-link" (click)="goToPage(p)">{{ p }}</button>
+            </li>
+          }
+          <li class="page-item" [class.disabled]="currentPage() === totalPages">
+            <button class="page-link" (click)="goToPage(currentPage() + 1)">Next</button>
+          </li>
+        </ul>
+      </nav>
+    }
+
+    <p class="text-muted text-center small">
+      Showing {{ entries().length }} of {{ totalCount() }} entries
+    </p>
+  }
+</div>
