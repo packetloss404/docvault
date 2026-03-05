@@ -1,0 +1,383 @@
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Documents</h2>
+    <span class="badge bg-secondary">{{ totalCount() }} total</span>
+  </div>
+
+  <!-- Bulk operation result message -->
+  @if (bulkMessage()) {
+    <div
+      class="alert mb-3"
+      [class.alert-success]="!bulkError()"
+      [class.alert-danger]="bulkError()"
+    >
+      {{ bulkMessage() }}
+      <button
+        type="button"
+        class="btn-close float-end"
+        (click)="bulkMessage.set('')"
+      ></button>
+    </div>
+  }
+
+  <!-- Search and Filter Bar -->
+  <div class="row mb-3 g-2">
+    <div class="col-md-6">
+      <div class="input-group">
+        <input
+          type="text"
+          class="form-control"
+          placeholder="Search documents..."
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
+          (keyup.enter)="onSearch()"
+        />
+        <button class="btn btn-outline-primary" (click)="onSearch()">
+          <i class="bi bi-search"></i> Search
+        </button>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <select
+        class="form-select"
+        (change)="onTypeFilter($any($event.target).value)"
+      >
+        <option value="">All Document Types</option>
+        @for (type of documentTypes(); track type.id) {
+          <option [value]="type.id">{{ type.name }}</option>
+        }
+      </select>
+    </div>
+    <div class="col-md-3 text-end">
+      <span class="text-muted small">
+        Page {{ currentPage() }} of {{ totalPages() }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Bulk Actions Toolbar -->
+  @if (hasSelection()) {
+    <div
+      class="card mb-3 border-primary"
+    >
+      <div class="card-body py-2">
+        <div class="d-flex align-items-center flex-wrap gap-2">
+          <span class="fw-semibold me-2">
+            <i class="bi bi-check2-square me-1"></i>{{ selectionCount() }}
+            selected
+          </span>
+
+          <!-- Action buttons -->
+          @if (!bulkAction()) {
+            <button
+              class="btn btn-sm btn-outline-primary"
+              (click)="openBulkAction('add_tags')"
+            >
+              <i class="bi bi-tags me-1"></i>Add Tags
+            </button>
+            <button
+              class="btn btn-sm btn-outline-primary"
+              (click)="openBulkAction('set_correspondent')"
+            >
+              <i class="bi bi-people me-1"></i>Set Correspondent
+            </button>
+            <button
+              class="btn btn-sm btn-outline-primary"
+              (click)="openBulkAction('set_type')"
+            >
+              <i class="bi bi-collection me-1"></i>Set Type
+            </button>
+            <button
+              class="btn btn-sm btn-outline-danger"
+              (click)="openBulkAction('delete')"
+            >
+              <i class="bi bi-trash me-1"></i>Delete
+            </button>
+            <div class="ms-auto">
+              <button
+                class="btn btn-sm btn-outline-secondary"
+                (click)="clearSelection()"
+              >
+                Clear Selection
+              </button>
+            </div>
+          }
+
+          <!-- Add Tags form -->
+          @if (bulkAction() === 'add_tags') {
+            <div class="d-flex align-items-center flex-wrap gap-2 flex-grow-1">
+              <div class="d-flex flex-wrap gap-1">
+                @for (tag of tags(); track tag.id) {
+                  <button
+                    class="btn btn-sm"
+                    [class.btn-primary]="isBulkTagSelected(tag.id)"
+                    [class.btn-outline-secondary]="
+                      !isBulkTagSelected(tag.id)
+                    "
+                    (click)="toggleBulkTag(tag.id)"
+                  >
+                    {{ tag.name }}
+                  </button>
+                }
+              </div>
+              <button
+                class="btn btn-sm btn-success"
+                [disabled]="bulkLoading() || selectedTagIds().size === 0"
+                (click)="executeBulkAddTags()"
+              >
+                @if (bulkLoading()) {
+                  <span
+                    class="spinner-border spinner-border-sm me-1"
+                  ></span>
+                }
+                Apply
+              </button>
+              <button
+                class="btn btn-sm btn-outline-secondary"
+                (click)="cancelBulkAction()"
+              >
+                Cancel
+              </button>
+            </div>
+          }
+
+          <!-- Set Correspondent form -->
+          @if (bulkAction() === 'set_correspondent') {
+            <div class="d-flex align-items-center gap-2 flex-grow-1">
+              <select
+                class="form-select form-select-sm"
+                style="max-width: 250px;"
+                [ngModel]="selectedCorrespondentId()"
+                (ngModelChange)="selectedCorrespondentId.set($event)"
+              >
+                <option [ngValue]="null">Choose correspondent...</option>
+                @for (corr of correspondents(); track corr.id) {
+                  <option [ngValue]="corr.id">{{ corr.name }}</option>
+                }
+              </select>
+              <button
+                class="btn btn-sm btn-success"
+                [disabled]="
+                  bulkLoading() || selectedCorrespondentId() === null
+                "
+                (click)="executeBulkSetCorrespondent()"
+              >
+                @if (bulkLoading()) {
+                  <span
+                    class="spinner-border spinner-border-sm me-1"
+                  ></span>
+                }
+                Apply
+              </button>
+              <button
+                class="btn btn-sm btn-outline-secondary"
+                (click)="cancelBulkAction()"
+              >
+                Cancel
+              </button>
+            </div>
+          }
+
+          <!-- Set Type form -->
+          @if (bulkAction() === 'set_type') {
+            <div class="d-flex align-items-center gap-2 flex-grow-1">
+              <select
+                class="form-select form-select-sm"
+                style="max-width: 250px;"
+                [ngModel]="selectedDocTypeId()"
+                (ngModelChange)="selectedDocTypeId.set($event)"
+              >
+                <option [ngValue]="null">Choose document type...</option>
+                @for (type of documentTypes(); track type.id) {
+                  <option [ngValue]="type.id">{{ type.name }}</option>
+                }
+              </select>
+              <button
+                class="btn btn-sm btn-success"
+                [disabled]="bulkLoading() || selectedDocTypeId() === null"
+                (click)="executeBulkSetType()"
+              >
+                @if (bulkLoading()) {
+                  <span
+                    class="spinner-border spinner-border-sm me-1"
+                  ></span>
+                }
+                Apply
+              </button>
+              <button
+                class="btn btn-sm btn-outline-secondary"
+                (click)="cancelBulkAction()"
+              >
+                Cancel
+              </button>
+            </div>
+          }
+
+          <!-- Delete confirmation -->
+          @if (bulkAction() === 'delete') {
+            <div class="d-flex align-items-center gap-2 flex-grow-1">
+              <span class="text-danger fw-semibold">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                Delete {{ selectionCount() }} document(s)? This cannot be
+                undone.
+              </span>
+              <button
+                class="btn btn-sm btn-danger"
+                [disabled]="bulkLoading()"
+                (click)="executeBulkDelete()"
+              >
+                @if (bulkLoading()) {
+                  <span
+                    class="spinner-border spinner-border-sm me-1"
+                  ></span>
+                }
+                Confirm Delete
+              </button>
+              <button
+                class="btn btn-sm btn-outline-secondary"
+                (click)="cancelBulkAction()"
+              >
+                Cancel
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Documents Table -->
+  @if (loading()) {
+    <div class="text-center py-5">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+  } @else if (documents().length === 0) {
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-folder2-open" style="font-size: 3rem;"></i>
+      <p class="mt-2">No documents found.</p>
+    </div>
+  } @else {
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th style="width: 40px;">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                [checked]="allSelected()"
+                (change)="toggleSelectAll()"
+                title="Select all documents on this page"
+              />
+            </th>
+            <th style="width: 40px;"></th>
+            <th
+              role="button"
+              (click)="sortBy('title')"
+              class="user-select-none"
+            >
+              Title <i class="bi" [ngClass]="getSortIcon('title')"></i>
+            </th>
+            <th>Type</th>
+            <th
+              role="button"
+              (click)="sortBy('created')"
+              class="user-select-none"
+            >
+              Date <i class="bi" [ngClass]="getSortIcon('created')"></i>
+            </th>
+            <th
+              role="button"
+              (click)="sortBy('added')"
+              class="user-select-none"
+            >
+              Added <i class="bi" [ngClass]="getSortIcon('added')"></i>
+            </th>
+            <th>Pages</th>
+            <th>ASN</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (doc of documents(); track doc.id) {
+            <tr
+              role="button"
+              (click)="openDocument(doc)"
+              [class.table-active]="isSelected(doc.id)"
+            >
+              <td>
+                <input
+                  type="checkbox"
+                  class="form-check-input"
+                  [checked]="isSelected(doc.id)"
+                  (click)="toggleSelect(doc.id, $event)"
+                />
+              </td>
+              <td>
+                <img
+                  [src]="getPreviewUrl(doc)"
+                  alt="Preview"
+                  class="rounded"
+                  style="width: 32px; height: 44px; object-fit: cover;"
+                  onerror="this.style.display='none'"
+                />
+              </td>
+              <td>
+                <strong>{{ doc.title }}</strong>
+                <br />
+                <small class="text-muted">{{ doc.original_filename }}</small>
+              </td>
+              <td>
+                @if (doc.document_type_name) {
+                  <span class="badge bg-info text-dark">{{
+                    doc.document_type_name
+                  }}</span>
+                }
+              </td>
+              <td>{{ doc.created | date : 'mediumDate' }}</td>
+              <td>{{ doc.added | date : 'short' }}</td>
+              <td>{{ doc.page_count }}</td>
+              <td>
+                @if (doc.archive_serial_number) {
+                  <span class="badge bg-secondary">{{
+                    doc.archive_serial_number
+                  }}</span>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    @if (totalPages() > 1) {
+      <nav>
+        <ul class="pagination justify-content-center">
+          <li class="page-item" [class.disabled]="currentPage() === 1">
+            <a class="page-link" (click)="goToPage(currentPage() - 1)"
+              >Previous</a
+            >
+          </li>
+          @for (p of [].constructor(totalPages()); track $index) {
+            <li
+              class="page-item"
+              [class.active]="currentPage() === $index + 1"
+            >
+              <a class="page-link" (click)="goToPage($index + 1)">{{
+                $index + 1
+              }}</a>
+            </li>
+          }
+          <li
+            class="page-item"
+            [class.disabled]="currentPage() === totalPages()"
+          >
+            <a class="page-link" (click)="goToPage(currentPage() + 1)">Next</a>
+          </li>
+        </ul>
+      </nav>
+    }
+  }
+</div>

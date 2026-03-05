@@ -1,0 +1,47 @@
+================================================================================
+  DocVault has been deployed!
+================================================================================
+
+{{- if .Values.ingress.enabled }}
+Access DocVault at:
+{{- range $host := .Values.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+{{- else if contains "NodePort" .Values.service.type }}
+Get the application URL by running:
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "docvault.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo "DocVault is available at http://$NODE_IP:$NODE_PORT"
+{{- else if contains "ClusterIP" .Values.service.type }}
+Access DocVault by port-forwarding the service:
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "docvault.fullname" . }} 8000:{{ .Values.service.port }}
+  echo "DocVault is available at http://127.0.0.1:8000"
+{{- end }}
+
+Components deployed:
+  - Web server:    {{ .Values.replicaCount }} replica(s)
+  - Celery worker: {{ .Values.worker.replicaCount }} replica(s)
+  - Celery beat:   1 replica
+  {{- if .Values.postgresql.enabled }}
+  - PostgreSQL:    built-in (sub-chart)
+  {{- else }}
+  - PostgreSQL:    external ({{ .Values.externalDatabase.host }})
+  {{- end }}
+  {{- if .Values.redis.enabled }}
+  - Redis:         built-in (sub-chart)
+  {{- else }}
+  - Redis:         external ({{ .Values.externalRedis.host }})
+  {{- end }}
+
+IMPORTANT — Post-install steps:
+  1. Create a superuser:
+     kubectl exec -it deploy/{{ include "docvault.fullname" . }}-web -- python manage.py createsuperuser
+
+  2. Run database migrations (if first install):
+     kubectl exec -it deploy/{{ include "docvault.fullname" . }}-web -- python manage.py migrate
+
+  3. Change the DJANGO_SECRET_KEY in your values.yaml before going to production!
+
+For more information visit: https://github.com/docvault/docvault

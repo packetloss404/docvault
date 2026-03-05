@@ -1,0 +1,230 @@
+<!-- Top Navbar -->
+<nav class="navbar navbar-dark bg-dark px-3">
+  <div class="d-flex align-items-center">
+    <button class="btn btn-dark me-2 d-md-none" (click)="toggleSidebar()">
+      <i class="bi bi-list"></i>
+    </button>
+    <a class="navbar-brand fw-bold" routerLink="/">DocVault</a>
+  </div>
+
+  <div class="d-flex align-items-center">
+    <div class="input-group me-3 d-none d-md-flex" style="width: 300px;">
+      <input
+        type="text"
+        class="form-control form-control-sm"
+        placeholder="Search documents..."
+        [ngModel]="searchQuery()"
+        (ngModelChange)="searchQuery.set($event)"
+        (keyup.enter)="onSearch()"
+      />
+      <button class="btn btn-outline-secondary btn-sm" type="button" (click)="onSearch()">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+
+    <!-- Theme Toggle -->
+    <div class="dropdown me-2">
+      <button
+        class="btn btn-dark"
+        type="button"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+        title="Toggle theme"
+      >
+        <i class="bi" [ngClass]="getThemeIcon()"></i>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li>
+          <button
+            class="dropdown-item"
+            [class.active]="currentTheme() === 'light'"
+            (click)="setTheme('light')"
+          >
+            <i class="bi bi-sun-fill me-2"></i>Light
+          </button>
+        </li>
+        <li>
+          <button
+            class="dropdown-item"
+            [class.active]="currentTheme() === 'dark'"
+            (click)="setTheme('dark')"
+          >
+            <i class="bi bi-moon-fill me-2"></i>Dark
+          </button>
+        </li>
+        <li>
+          <button
+            class="dropdown-item"
+            [class.active]="currentTheme() === 'system'"
+            (click)="setTheme('system')"
+          >
+            <i class="bi bi-circle-half me-2"></i>System
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <a class="btn btn-dark position-relative me-2" routerLink="/notifications">
+      <i class="bi bi-bell"></i>
+      @if (unreadCount() > 0) {
+        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+          {{ unreadCount() }}
+        </span>
+      }
+    </a>
+
+    <div class="dropdown">
+      <button
+        class="btn btn-dark dropdown-toggle"
+        type="button"
+        data-bs-toggle="dropdown"
+      >
+        <i class="bi bi-person-circle me-1"></i>
+        {{ auth.currentUser()?.username || 'User' }}
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        <li><a class="dropdown-item" routerLink="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
+        <li><hr class="dropdown-divider" /></li>
+        <li><a class="dropdown-item" href="#" (click)="onLogout(); $event.preventDefault()"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Main Content Area -->
+<div class="d-flex">
+  <!-- Sidebar -->
+  <div class="sidebar d-none d-md-block" [class.d-block]="!sidebarCollapsed" style="width: 240px;">
+    <nav class="nav flex-column pt-2">
+      <a class="nav-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
+        <i class="bi bi-speedometer2"></i> Dashboard
+      </a>
+      <a class="nav-link" routerLink="/documents" routerLinkActive="active">
+        <i class="bi bi-file-earmark-text"></i> Documents
+      </a>
+      <a class="nav-link" routerLink="/search" routerLinkActive="active">
+        <i class="bi bi-search"></i> Search
+      </a>
+      <a class="nav-link" routerLink="/tags" routerLinkActive="active">
+        <i class="bi bi-tags"></i> Tags
+      </a>
+      <a class="nav-link" routerLink="/correspondents" routerLinkActive="active">
+        <i class="bi bi-people"></i> Correspondents
+      </a>
+      <a class="nav-link" routerLink="/cabinets" routerLinkActive="active">
+        <i class="bi bi-folder"></i> Cabinets
+      </a>
+
+      @if (sidebarViews().length > 0) {
+        <hr class="border-secondary mx-3" />
+        <span class="nav-link text-muted small py-1"><i class="bi bi-bookmark"></i> Saved Views</span>
+        @for (view of sidebarViews(); track view.id) {
+          <a class="nav-link py-1 ps-4" [routerLink]="['/saved-views', view.id, 'results']">
+            {{ view.name }}
+          </a>
+        }
+      }
+
+      <hr class="border-secondary mx-3" />
+
+      <a class="nav-link" routerLink="/saved-views" routerLinkActive="active">
+        <i class="bi bi-bookmarks"></i> Saved Views
+      </a>
+      <a class="nav-link" routerLink="/custom-fields" routerLinkActive="active">
+        <i class="bi bi-input-cursor-text"></i> Custom Fields
+      </a>
+      <a class="nav-link" routerLink="/metadata-types" routerLinkActive="active">
+        <i class="bi bi-card-list"></i> Metadata Types
+      </a>
+      <a class="nav-link" routerLink="/workflows" routerLinkActive="active">
+        <i class="bi bi-diagram-3"></i> Workflows
+      </a>
+      <a class="nav-link" routerLink="/sources" routerLinkActive="active">
+        <i class="bi bi-inbox"></i> Sources
+      </a>
+      <a class="nav-link" routerLink="/notification-preferences" routerLinkActive="active">
+        <i class="bi bi-bell-slash"></i> Notification Settings
+      </a>
+      <a class="nav-link" routerLink="/classifier" routerLinkActive="active">
+        <i class="bi bi-cpu"></i> ML Classifier
+      </a>
+      <a class="nav-link" routerLink="/barcode-config" routerLinkActive="active">
+        <i class="bi bi-upc-scan"></i> Barcode & ASN
+      </a>
+      <a class="nav-link" routerLink="/ai-config" routerLinkActive="active">
+        <i class="bi bi-robot"></i> AI Configuration
+      </a>
+      <a class="nav-link" routerLink="/signature-requests" routerLinkActive="active">
+        <i class="bi bi-pen"></i> E-Signatures
+      </a>
+      <a class="nav-link" routerLink="/share-links" routerLinkActive="active">
+        <i class="bi bi-link-45deg"></i> Share Links
+      </a>
+      <a class="nav-link" routerLink="/activity" routerLinkActive="active">
+        <i class="bi bi-activity"></i> Activity Feed
+      </a>
+      <a class="nav-link" routerLink="/audit-log" routerLinkActive="active">
+        <i class="bi bi-journal-check"></i> Audit Log
+      </a>
+      <a class="nav-link" routerLink="/scanner" routerLinkActive="active">
+        <i class="bi bi-printer"></i> Scanners
+      </a>
+
+      <hr class="border-secondary mx-3" />
+      <span class="nav-link text-muted small py-1"><i class="bi bi-door-open"></i> Contributor Portal</span>
+      <a class="nav-link" routerLink="/portals" routerLinkActive="active">
+        <i class="bi bi-door-open"></i> Portals
+      </a>
+      <a class="nav-link" routerLink="/document-requests" routerLinkActive="active">
+        <i class="bi bi-send"></i> Doc Requests
+      </a>
+      <a class="nav-link" routerLink="/submission-review" routerLinkActive="active">
+        <i class="bi bi-check2-square"></i> Review Queue
+      </a>
+
+      <hr class="border-secondary mx-3" />
+      <span class="nav-link text-muted small py-1"><i class="bi bi-eye"></i> OCR & Entities</span>
+      <a class="nav-link" routerLink="/zone-ocr" routerLinkActive="active">
+        <i class="bi bi-crop"></i> Zone OCR
+      </a>
+      <a class="nav-link" routerLink="/zone-ocr-review" routerLinkActive="active">
+        <i class="bi bi-clipboard-check"></i> OCR Review
+      </a>
+      <a class="nav-link" routerLink="/entity-browser" routerLinkActive="active">
+        <i class="bi bi-diagram-3"></i> Entity Browser
+      </a>
+
+      <hr class="border-secondary mx-3" />
+      <span class="nav-link text-muted small py-1"><i class="bi bi-bar-chart"></i> Search Admin</span>
+      <a class="nav-link" routerLink="/search-analytics" routerLinkActive="active">
+        <i class="bi bi-graph-up"></i> Search Analytics
+      </a>
+      <a class="nav-link" routerLink="/synonyms" routerLinkActive="active">
+        <i class="bi bi-arrow-left-right"></i> Synonyms
+      </a>
+      <a class="nav-link" routerLink="/curations" routerLinkActive="active">
+        <i class="bi bi-pin-angle"></i> Curations
+      </a>
+
+      <hr class="border-secondary mx-3" />
+      <span class="nav-link text-muted small py-1"><i class="bi bi-shield-lock"></i> Legal Hold</span>
+      <a class="nav-link" routerLink="/legal-holds" routerLinkActive="active">
+        <i class="bi bi-shield-lock"></i> Legal Holds
+      </a>
+
+      <hr class="border-secondary mx-3" />
+      <span class="nav-link text-muted small py-1"><i class="bi bi-building"></i> Physical Records</span>
+      <a class="nav-link" routerLink="/physical-locations" routerLinkActive="active">
+        <i class="bi bi-building"></i> Locations
+      </a>
+      <a class="nav-link" routerLink="/charge-outs" routerLinkActive="active">
+        <i class="bi bi-box-arrow-up-right"></i> Charge-Outs
+      </a>
+    </nav>
+  </div>
+
+  <!-- Content -->
+  <div class="content-area flex-grow-1 p-4">
+    <router-outlet />
+  </div>
+</div>

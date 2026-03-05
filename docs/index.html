@@ -1,0 +1,2555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocVault - The Ultimate Open-Source Document Management System</title>
+  <meta name="description" content="Enterprise-grade document management with ML classification, AI-powered search, workflow automation, e-signatures, and more. Built with Django 5 and Angular 21.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ========================================================================
+       CSS CUSTOM PROPERTIES
+       ======================================================================== */
+    :root {
+      /* Colors */
+      --bg-primary: #0a0e1a;
+      --bg-secondary: #0f1629;
+      --bg-tertiary: #141b2f;
+      --bg-card: rgba(20, 27, 47, 0.6);
+      --bg-card-hover: rgba(30, 40, 65, 0.7);
+      --border-color: rgba(99, 130, 255, 0.12);
+      --border-glow: rgba(99, 130, 255, 0.25);
+
+      /* Text */
+      --text-primary: #e8eaf6;
+      --text-secondary: #9aa5c4;
+      --text-muted: #5e6b8a;
+      --text-accent: #7b93ff;
+
+      /* Gradients */
+      --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --gradient-accent: linear-gradient(135deg, #06b6d4 0%, #7b93ff 50%, #a855f7 100%);
+      --gradient-hero: linear-gradient(160deg, #0a0e1a 0%, #111832 40%, #1a1145 70%, #0f1629 100%);
+      --gradient-card-border: linear-gradient(135deg, rgba(99, 130, 255, 0.3), rgba(168, 85, 247, 0.15), rgba(6, 182, 212, 0.2));
+
+      /* Accent colors */
+      --cyan: #06b6d4;
+      --blue: #7b93ff;
+      --purple: #a855f7;
+      --pink: #ec4899;
+      --green: #10b981;
+      --amber: #f59e0b;
+      --red: #ef4444;
+
+      /* Typography */
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-heading: 'Space Grotesk', 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+      /* Spacing */
+      --section-padding: 120px;
+      --container-width: 1200px;
+
+      /* Effects */
+      --glass-bg: rgba(15, 22, 41, 0.65);
+      --glass-blur: blur(20px);
+      --glass-border: 1px solid rgba(99, 130, 255, 0.1);
+      --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      --shadow-glow: 0 0 40px rgba(99, 130, 255, 0.15);
+
+      /* Transitions */
+      --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* ========================================================================
+       RESET & BASE
+       ======================================================================== */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    ::selection {
+      background: rgba(123, 147, 255, 0.3);
+      color: #fff;
+    }
+
+    a {
+      color: var(--text-accent);
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+    a:hover {
+      color: var(--cyan);
+    }
+
+    img { max-width: 100%; display: block; }
+
+    .container {
+      max-width: var(--container-width);
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ========================================================================
+       ANIMATED BACKGROUND
+       ======================================================================== */
+    .bg-grid {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(99, 130, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99, 130, 255, 0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    .bg-radial {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(ellipse 800px 600px at 20% 10%, rgba(99, 130, 255, 0.08), transparent),
+        radial-gradient(ellipse 600px 400px at 80% 50%, rgba(168, 85, 247, 0.06), transparent),
+        radial-gradient(ellipse 700px 500px at 50% 90%, rgba(6, 182, 212, 0.05), transparent);
+    }
+
+    /* Floating orbs */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      z-index: 0;
+      pointer-events: none;
+      animation: orbFloat 20s ease-in-out infinite;
+    }
+    .orb-1 {
+      width: 500px; height: 500px;
+      background: rgba(99, 130, 255, 0.08);
+      top: -100px; left: -100px;
+      animation-delay: 0s;
+    }
+    .orb-2 {
+      width: 400px; height: 400px;
+      background: rgba(168, 85, 247, 0.06);
+      top: 40%; right: -100px;
+      animation-delay: -7s;
+      animation-duration: 25s;
+    }
+    .orb-3 {
+      width: 350px; height: 350px;
+      background: rgba(6, 182, 212, 0.06);
+      bottom: 10%; left: 20%;
+      animation-delay: -14s;
+      animation-duration: 22s;
+    }
+
+    @keyframes orbFloat {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      25% { transform: translate(30px, -40px) scale(1.05); }
+      50% { transform: translate(-20px, 20px) scale(0.95); }
+      75% { transform: translate(40px, 30px) scale(1.02); }
+    }
+
+    /* ========================================================================
+       NAVIGATION
+       ======================================================================== */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      padding: 16px 0;
+      transition: all 0.4s var(--ease-out-expo);
+    }
+    nav.scrolled {
+      background: rgba(10, 14, 26, 0.85);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 0;
+    }
+    nav .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 1.3rem;
+      color: var(--text-primary);
+    }
+    .nav-logo svg {
+      width: 32px;
+      height: 32px;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+    .nav-links a {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.3s ease;
+      position: relative;
+    }
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: var(--gradient-accent);
+      transition: width 0.3s var(--ease-out-expo);
+    }
+    .nav-links a:hover {
+      color: var(--text-primary);
+    }
+    .nav-links a:hover::after {
+      width: 100%;
+    }
+    .nav-cta {
+      padding: 8px 20px;
+      background: var(--gradient-primary);
+      border-radius: 8px;
+      color: #fff !important;
+      font-weight: 600;
+      font-size: 0.85rem;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .nav-cta:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+      color: #fff !important;
+    }
+    .nav-cta::after { display: none; }
+
+    .nav-toggle {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+    }
+    .nav-toggle span {
+      display: block;
+      width: 24px;
+      height: 2px;
+      background: var(--text-secondary);
+      margin: 5px 0;
+      transition: 0.3s;
+    }
+
+    /* ========================================================================
+       HERO SECTION
+       ======================================================================== */
+    .hero {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 140px 0 100px;
+      overflow: hidden;
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      max-width: 720px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: rgba(99, 130, 255, 0.1);
+      border: 1px solid rgba(99, 130, 255, 0.2);
+      border-radius: 100px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--blue);
+      margin-bottom: 24px;
+    }
+    .hero-badge .dot {
+      width: 6px;
+      height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.3); }
+    }
+
+    .hero h1 {
+      font-family: var(--font-heading);
+      font-size: clamp(2.5rem, 5.5vw, 4.2rem);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 8px;
+      letter-spacing: -0.03em;
+    }
+    .hero h1 .gradient-text {
+      background: var(--gradient-accent);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-tagline {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      margin-bottom: 36px;
+      max-width: 560px;
+      line-height: 1.7;
+    }
+
+    .hero-typing {
+      display: inline;
+    }
+    .hero-cursor {
+      display: inline-block;
+      width: 2px;
+      height: 1.1em;
+      background: var(--blue);
+      vertical-align: text-bottom;
+      animation: blink 1s step-end infinite;
+      margin-left: 2px;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .hero-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 48px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: all 0.3s var(--ease-out-expo);
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: var(--gradient-primary);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(102, 126, 234, 0.5);
+      color: #fff;
+    }
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      backdrop-filter: var(--glass-blur);
+    }
+    .btn-secondary:hover {
+      border-color: var(--border-glow);
+      background: var(--bg-card-hover);
+      transform: translateY(-2px);
+      color: var(--text-primary);
+    }
+    .btn svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 40px;
+    }
+    .hero-stat {
+      text-align: left;
+    }
+    .hero-stat-value {
+      font-family: var(--font-heading);
+      font-size: 1.8rem;
+      font-weight: 700;
+      background: var(--gradient-accent);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-stat-label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Hero Visual */
+    .hero-visual {
+      position: absolute;
+      right: -60px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 580px;
+      height: 580px;
+      z-index: 1;
+      opacity: 0.9;
+    }
+    .hero-vault-graphic {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    .vault-ring {
+      position: absolute;
+      border: 1px solid;
+      border-radius: 50%;
+      animation: vaultSpin 30s linear infinite;
+    }
+    .vault-ring-1 {
+      inset: 0;
+      border-color: rgba(99, 130, 255, 0.15);
+    }
+    .vault-ring-2 {
+      inset: 40px;
+      border-color: rgba(168, 85, 247, 0.12);
+      animation-direction: reverse;
+      animation-duration: 25s;
+    }
+    .vault-ring-3 {
+      inset: 80px;
+      border-color: rgba(6, 182, 212, 0.1);
+      animation-duration: 20s;
+    }
+    @keyframes vaultSpin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .vault-node {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      background: var(--glass-bg);
+      border: 1px solid rgba(99, 130, 255, 0.2);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
+      animation: nodeFloat 6s ease-in-out infinite;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    .vault-node svg {
+      width: 22px;
+      height: 22px;
+      opacity: 0.8;
+    }
+    .vault-node:nth-child(1) { top: 5%; left: 48%; color: var(--cyan); }
+    .vault-node:nth-child(2) { top: 20%; right: 8%; color: var(--blue); animation-delay: -1s; }
+    .vault-node:nth-child(3) { top: 50%; right: 0; color: var(--purple); animation-delay: -2s; }
+    .vault-node:nth-child(4) { bottom: 20%; right: 10%; color: var(--pink); animation-delay: -3s; }
+    .vault-node:nth-child(5) { bottom: 5%; left: 45%; color: var(--green); animation-delay: -4s; }
+    .vault-node:nth-child(6) { bottom: 22%; left: 5%; color: var(--amber); animation-delay: -5s; }
+    .vault-node:nth-child(7) { top: 48%; left: 2%; color: var(--red); animation-delay: -0.5s; }
+    .vault-node:nth-child(8) { top: 18%; left: 10%; color: var(--cyan); animation-delay: -2.5s; }
+
+    @keyframes nodeFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .vault-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 120px;
+      height: 120px;
+      background: rgba(99, 130, 255, 0.08);
+      border: 2px solid rgba(99, 130, 255, 0.2);
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 60px rgba(99, 130, 255, 0.15);
+    }
+    .vault-center svg {
+      width: 48px;
+      height: 48px;
+      color: var(--blue);
+    }
+
+    /* ========================================================================
+       SECTION SHARED STYLES
+       ======================================================================== */
+    section {
+      position: relative;
+      z-index: 1;
+      padding: var(--section-padding) 0;
+    }
+
+    .section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--blue);
+      margin-bottom: 16px;
+    }
+    .section-label::before {
+      content: '';
+      width: 20px;
+      height: 2px;
+      background: var(--gradient-accent);
+    }
+
+    .section-title {
+      font-family: var(--font-heading);
+      font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+      font-weight: 700;
+      line-height: 1.15;
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+    }
+
+    .section-subtitle {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      max-width: 600px;
+      margin-bottom: 56px;
+      line-height: 1.7;
+    }
+
+    .text-center { text-align: center; }
+    .mx-auto { margin-left: auto; margin-right: auto; }
+
+    /* Reveal animations */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s var(--ease-out-expo), transform 0.8s var(--ease-out-expo);
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+    .reveal-delay-5 { transition-delay: 0.5s; }
+    .reveal-delay-6 { transition-delay: 0.6s; }
+
+    /* ========================================================================
+       FEATURES — EXPANDING ROWS
+       ======================================================================== */
+    .features-list {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .feature-row {
+      position: relative;
+      border-bottom: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    .feature-row:first-child {
+      border-top: 1px solid var(--border-color);
+    }
+    .feature-row:hover {
+      background: rgba(99, 130, 255, 0.03);
+    }
+    .feature-row.active {
+      background: rgba(99, 130, 255, 0.04);
+    }
+
+    .feature-header {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 24px 0;
+      position: relative;
+    }
+
+    .feature-number {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      min-width: 28px;
+      letter-spacing: 0.05em;
+    }
+
+    .feature-accent {
+      width: 3px;
+      height: 24px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      transition: height 0.4s var(--ease-out-expo), box-shadow 0.4s ease;
+    }
+    .feature-row.active .feature-accent {
+      height: 40px;
+      box-shadow: 0 0 12px currentColor;
+    }
+    .fa-cyan { background: var(--cyan); color: var(--cyan); }
+    .fa-blue { background: var(--blue); color: var(--blue); }
+    .fa-purple { background: var(--purple); color: var(--purple); }
+    .fa-pink { background: var(--pink); color: var(--pink); }
+    .fa-green { background: var(--green); color: var(--green); }
+    .fa-amber { background: var(--amber); color: var(--amber); }
+    .fa-red { background: var(--red); color: var(--red); }
+
+    .feature-title-area {
+      flex: 1;
+    }
+    .feature-title-area h3 {
+      font-family: var(--font-heading);
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      transition: color 0.3s ease;
+    }
+    .feature-row:hover .feature-title-area h3 {
+      color: #fff;
+    }
+    .feature-title-area .feature-brief {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+      font-weight: 400;
+    }
+
+    .feature-tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      flex-shrink: 0;
+    }
+    .tag-ai { background: rgba(168, 85, 247, 0.15); color: var(--purple); }
+    .tag-enterprise { background: rgba(6, 182, 212, 0.15); color: var(--cyan); }
+    .tag-security { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+    .tag-automation { background: rgba(245, 158, 11, 0.15); color: var(--amber); }
+    .tag-collab { background: rgba(16, 185, 129, 0.15); color: var(--green); }
+    .tag-storage { background: rgba(123, 147, 255, 0.15); color: var(--blue); }
+
+    .feature-toggle {
+      width: 24px;
+      height: 24px;
+      flex-shrink: 0;
+      color: var(--text-muted);
+      transition: transform 0.4s var(--ease-out-expo), color 0.3s ease;
+    }
+    .feature-row.active .feature-toggle {
+      transform: rotate(45deg);
+      color: var(--blue);
+    }
+
+    .feature-expand {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.5s var(--ease-out-expo), padding 0.5s var(--ease-out-expo);
+      padding: 0 0 0 51px;
+    }
+    .feature-row.active .feature-expand {
+      max-height: 200px;
+      padding: 0 0 28px 51px;
+    }
+
+    .feature-expand p {
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      max-width: 680px;
+    }
+
+    .feature-expand .feature-keywords {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 12px;
+    }
+    .feature-keyword {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      padding: 3px 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 4px;
+      color: var(--text-muted);
+    }
+
+    /* ========================================================================
+       ARCHITECTURE SECTION
+       ======================================================================== */
+    .arch-diagram {
+      position: relative;
+      padding: 48px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      backdrop-filter: var(--glass-blur);
+      overflow: hidden;
+    }
+
+    .arch-layers {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .arch-layer {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .arch-layer-label {
+      min-width: 100px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    .arch-nodes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .arch-node {
+      padding: 10px 18px;
+      background: rgba(99, 130, 255, 0.06);
+      border: 1px solid rgba(99, 130, 255, 0.12);
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .arch-node:hover {
+      background: rgba(99, 130, 255, 0.12);
+      border-color: rgba(99, 130, 255, 0.25);
+      transform: translateY(-2px);
+    }
+    .arch-node .arch-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .arch-connector {
+      width: 2px;
+      height: 16px;
+      background: linear-gradient(to bottom, rgba(99, 130, 255, 0.3), rgba(99, 130, 255, 0.05));
+      margin: 0 auto;
+    }
+
+    /* ========================================================================
+       PIPELINE SECTION
+       ======================================================================== */
+    .pipeline-wrapper {
+      position: relative;
+      padding: 40px 0;
+    }
+
+    .pipeline-track {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      overflow-x: auto;
+      padding: 24px 0;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .pipeline-track::-webkit-scrollbar { display: none; }
+
+    .pipeline-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 130px;
+      position: relative;
+      text-align: center;
+      padding: 0 8px;
+    }
+
+    .pipeline-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+      font-size: 1.1rem;
+      position: relative;
+      z-index: 2;
+      transition: all 0.4s var(--ease-out-expo);
+    }
+    .pipeline-step:hover .pipeline-icon {
+      transform: scale(1.1);
+      box-shadow: 0 0 24px rgba(99, 130, 255, 0.3);
+    }
+
+    .pipeline-step-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+    .pipeline-step-desc {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      line-height: 1.3;
+    }
+
+    .pipeline-arrow {
+      display: flex;
+      align-items: center;
+      color: var(--text-muted);
+      font-size: 1rem;
+      padding-top: 16px;
+      min-width: 24px;
+    }
+
+    /* Pipeline active animation */
+    .pipeline-step.pipeline-active .pipeline-icon {
+      animation: pipelinePulse 2s ease-in-out infinite;
+    }
+    @keyframes pipelinePulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(99, 130, 255, 0.2); }
+      50% { box-shadow: 0 0 20px 4px rgba(99, 130, 255, 0.3); }
+    }
+
+    /* ========================================================================
+       API SECTION
+       ======================================================================== */
+    .api-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      align-items: start;
+    }
+
+    .api-info h3 {
+      font-family: var(--font-heading);
+      font-size: 1.4rem;
+      margin-bottom: 16px;
+    }
+    .api-info p {
+      color: var(--text-secondary);
+      margin-bottom: 24px;
+      font-size: 0.95rem;
+    }
+    .api-endpoints {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .api-endpoint {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      transition: background 0.2s ease;
+    }
+    .api-endpoint:hover {
+      background: rgba(99, 130, 255, 0.06);
+    }
+    .api-method {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 0.68rem;
+      min-width: 48px;
+      text-align: center;
+    }
+    .method-get { background: rgba(16, 185, 129, 0.15); color: var(--green); }
+    .method-post { background: rgba(99, 130, 255, 0.15); color: var(--blue); }
+    .method-patch { background: rgba(245, 158, 11, 0.15); color: var(--amber); }
+    .method-delete { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+    .method-ws { background: rgba(168, 85, 247, 0.15); color: var(--purple); }
+    .api-path { color: var(--text-secondary); }
+
+    .code-block {
+      background: rgba(10, 14, 26, 0.8);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px;
+      background: rgba(99, 130, 255, 0.04);
+      border-bottom: 1px solid var(--border-color);
+    }
+    .code-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .code-dot-red { background: #ff5f57; }
+    .code-dot-yellow { background: #febc2e; }
+    .code-dot-green { background: #28c840; }
+    .code-title {
+      margin-left: 8px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+    .code-body {
+      padding: 20px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      line-height: 1.8;
+      overflow-x: auto;
+    }
+    .code-body .comment { color: #5e6b8a; }
+    .code-body .keyword { color: var(--purple); }
+    .code-body .string { color: var(--green); }
+    .code-body .number { color: var(--amber); }
+    .code-body .method { color: var(--cyan); }
+    .code-body .url { color: var(--blue); }
+
+    /* ========================================================================
+       SECURITY SECTION
+       ======================================================================== */
+    .security-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .security-card {
+      padding: 28px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      backdrop-filter: var(--glass-blur);
+      transition: all 0.3s var(--ease-out-expo);
+    }
+    .security-card:hover {
+      border-color: rgba(239, 68, 68, 0.2);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 32px rgba(239, 68, 68, 0.08);
+    }
+    .security-card-icon {
+      font-size: 1.5rem;
+      margin-bottom: 16px;
+    }
+    .security-card h4 {
+      font-family: var(--font-heading);
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .security-card p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* ========================================================================
+       DEPLOYMENT SECTION
+       ======================================================================== */
+    .deploy-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .deploy-tab {
+      padding: 10px 24px;
+      background: transparent;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: var(--font-body);
+    }
+    .deploy-tab.active {
+      background: rgba(99, 130, 255, 0.1);
+      border-color: rgba(99, 130, 255, 0.3);
+      color: var(--blue);
+    }
+    .deploy-tab:hover {
+      border-color: rgba(99, 130, 255, 0.2);
+    }
+    .deploy-content { display: none; }
+    .deploy-content.active { display: block; }
+
+    /* ========================================================================
+       STATS SECTION
+       ======================================================================== */
+    .stats-section {
+      padding: 80px 0;
+      position: relative;
+    }
+    .stats-section::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, transparent, rgba(99, 130, 255, 0.03), transparent);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+      position: relative;
+    }
+
+    .stat-card {
+      text-align: center;
+      padding: 36px 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      backdrop-filter: var(--glass-blur);
+      transition: all 0.3s var(--ease-out-expo);
+    }
+    .stat-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--border-glow);
+    }
+
+    .stat-number {
+      font-family: var(--font-heading);
+      font-size: 2.8rem;
+      font-weight: 700;
+      background: var(--gradient-accent);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* ========================================================================
+       TECH STACK
+       ======================================================================== */
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+    }
+
+    .tech-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 20px 22px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      transition: all 0.3s var(--ease-out-expo);
+    }
+    .tech-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--border-glow);
+      box-shadow: var(--shadow-glow);
+    }
+    .tech-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+    .tech-card-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .tech-card-role {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ========================================================================
+       CTA SECTION
+       ======================================================================== */
+    .cta-section {
+      padding: 120px 0;
+    }
+    .cta-card {
+      position: relative;
+      padding: 72px 64px;
+      border-radius: 24px;
+      text-align: center;
+      overflow: hidden;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+    }
+    .cta-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--gradient-primary);
+      opacity: 0.07;
+    }
+    .cta-card h2 {
+      font-family: var(--font-heading);
+      font-size: clamp(1.8rem, 3vw, 2.5rem);
+      font-weight: 700;
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .cta-card p {
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+      max-width: 540px;
+      margin: 0 auto 36px;
+      position: relative;
+    }
+    .cta-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      position: relative;
+    }
+
+    /* ========================================================================
+       FOOTER
+       ======================================================================== */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border-color);
+      padding: 48px 0;
+    }
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .footer-brand svg {
+      width: 24px;
+      height: 24px;
+      color: var(--blue);
+    }
+    .footer-brand span {
+      font-family: var(--font-heading);
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .footer-text {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+    }
+    .footer-links a {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      transition: color 0.3s ease;
+    }
+    .footer-links a:hover {
+      color: var(--text-primary);
+    }
+
+    /* ========================================================================
+       RESPONSIVE
+       ======================================================================== */
+    @media (max-width: 1024px) {
+      .hero-visual { display: none; }
+      .hero-content { max-width: 100%; }
+      .api-grid { grid-template-columns: 1fr; }
+      .security-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+      :root {
+        --section-padding: 72px;
+      }
+      .nav-links { display: none; }
+      .nav-links.open {
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        background: rgba(10, 14, 26, 0.97);
+        backdrop-filter: blur(20px);
+        padding: 24px;
+        gap: 20px;
+        border-bottom: 1px solid var(--border-color);
+      }
+      .nav-toggle { display: block; }
+      .feature-header { gap: 12px; }
+      .feature-brief { display: none; }
+      .feature-tag { display: none; }
+      .feature-expand { padding-left: 31px !important; }
+      .security-grid { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .hero-stats { flex-wrap: wrap; gap: 24px; }
+      .hero h1 { font-size: 2.2rem; }
+      .arch-layer { flex-direction: column; align-items: flex-start; }
+      .arch-layer-label { min-width: unset; text-align: left; }
+      .cta-card { padding: 48px 28px; }
+      .footer-inner { flex-direction: column; gap: 16px; text-align: center; }
+      .pipeline-track { justify-content: flex-start; }
+      .deploy-tabs { flex-wrap: wrap; }
+    }
+
+    @media (max-width: 480px) {
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .tech-grid { grid-template-columns: 1fr 1fr; }
+      .hero-buttons { flex-direction: column; }
+      .hero-buttons .btn { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background Effects -->
+  <div class="bg-grid"></div>
+  <div class="bg-radial"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+
+  <!-- ====================================================================
+       NAVIGATION
+       ==================================================================== -->
+  <nav id="navbar">
+    <div class="container">
+      <a href="#" class="nav-logo">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="4" width="28" height="24" rx="4" stroke="currentColor" stroke-width="2" fill="none"/>
+          <path d="M8 12h16M8 17h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="24" cy="22" r="6" fill="url(#nav-grad)" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M22 22l1.5 1.5L26 21" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs><linearGradient id="nav-grad" x1="18" y1="16" x2="30" y2="28"><stop stop-color="#667eea"/><stop offset="1" stop-color="#764ba2"/></linearGradient></defs>
+        </svg>
+        DocVault
+      </a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#architecture">Architecture</a></li>
+        <li><a href="#pipeline">Pipeline</a></li>
+        <li><a href="#api">API</a></li>
+        <li><a href="#security">Security</a></li>
+        <li><a href="#deploy">Deploy</a></li>
+        <li><a href="https://github.com/docvault/docvault" class="nav-cta">GitHub</a></li>
+      </ul>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ====================================================================
+       HERO
+       ==================================================================== -->
+  <section class="hero" id="hero">
+    <div class="container" style="display:flex;align-items:center;position:relative;">
+      <div class="hero-content">
+        <div class="hero-badge reveal">
+          <span class="dot"></span>
+          Open Source &middot; AGPLv3 License
+        </div>
+
+        <h1 class="reveal reveal-delay-1">
+          Document management<br>
+          <span class="gradient-text">reimagined.</span>
+        </h1>
+
+        <p class="hero-tagline reveal reveal-delay-2">
+          <span class="hero-typing" id="heroTyping"></span><span class="hero-cursor"></span>
+        </p>
+
+        <div class="hero-buttons reveal reveal-delay-3">
+          <a href="https://github.com/docvault/docvault" class="btn btn-primary">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+            Star on GitHub
+          </a>
+          <a href="#features" class="btn btn-secondary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            Explore Features
+          </a>
+        </div>
+
+        <div class="hero-stats reveal reveal-delay-4">
+          <div class="hero-stat">
+            <div class="hero-stat-value" data-count="21">0</div>
+            <div class="hero-stat-label">Django Apps</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-value" data-count="14">0</div>
+            <div class="hero-stat-label">Pipeline Plugins</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-value" data-count="80" data-suffix="+">0</div>
+            <div class="hero-stat-label">API Endpoints</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-value" data-count="40" data-suffix="+">0</div>
+            <div class="hero-stat-label">UI Routes</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hero Visual -->
+      <div class="hero-visual">
+        <div class="hero-vault-graphic">
+          <div class="vault-ring vault-ring-1"></div>
+          <div class="vault-ring vault-ring-2"></div>
+          <div class="vault-ring vault-ring-3"></div>
+
+          <!-- Floating nodes representing features -->
+          <div class="vault-node">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div class="vault-node">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          </div>
+          <div class="vault-node">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          </div>
+          <div class="vault-node">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          </div>
+          <div class="vault-node">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          </div>
+          <div class="vault-node">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+          </div>
+          <div class="vault-node">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          </div>
+          <div class="vault-node">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          </div>
+
+          <!-- Center vault icon -->
+          <div class="vault-center">
+            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="6" y="10" width="36" height="30" rx="4"/>
+              <path d="M14 10V8a10 10 0 0120 0v2"/>
+              <circle cx="24" cy="26" r="4"/>
+              <path d="M24 30v4"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================================
+       FEATURES
+       ==================================================================== -->
+  <section id="features">
+    <div class="container">
+      <div class="text-center">
+        <span class="section-label reveal">Features</span>
+        <h2 class="section-title reveal reveal-delay-1">Document management,<br>taken to its logical conclusion.</h2>
+        <p class="section-subtitle mx-auto reveal reveal-delay-2">
+          21 domain-bounded apps. 14 processing plugins. Every feature built from real-world requirements across Lodestone, Mayan EDMS, and Paperless-ngx — then taken further.
+        </p>
+      </div>
+
+      <div class="features-list reveal reveal-delay-3">
+
+        <div class="feature-row" data-feature>
+          <div class="feature-header">
+            <span class="feature-number">01</span>
+            <div class="feature-accent fa-cyan"></div>
+            <div class="feature-title-area">
+              <h3>14-Stage Processing Pipeline</h3>
+              <span class="feature-brief">Plugin architecture — drop a document in, get structured data out</span>
+            </div>
+            <span class="feature-tag tag-automation">Automation</span>
+            <svg class="feature-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="feature-expand">
+            <p>Every document flows through an ordered chain of plugins: preflight validation, barcode detection, workflow triggers, pre-consume hooks, content parsing, language detection, date extraction, persistent storage, ML classification, zone OCR, AI analysis, NER, thumbnail generation, and post-consume hooks. Each plugin is independently toggleable.</p>
+            <div class="feature-keywords"><span class="feature-keyword">ProcessingPlugin ABC</span><span class="feature-keyword">can_run() guard</span><span class="feature-keyword">14 ordered stages</span><span class="feature-keyword">pipeline stop</span></div>
+          </div>
+        </div>
+
+        <div class="feature-row" data-feature>
+          <div class="feature-header">
+            <span class="feature-number">02</span>
+            <div class="feature-accent fa-blue"></div>
+            <div class="feature-title-area">
+              <h3>OCR & Text Extraction</h3>
+              <span class="feature-brief">OCRmyPDF + Tesseract with six format-specific parsers</span>
+            </div>
+            <svg class="feature-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="feature-expand">
+            <p>Multi-language OCR with configurable DPI (300 default), deskew, rotation, and three cleaning modes. PDF/A archive output. Dedicated parsers for PDF, images, Office documents, email (.eml/.msg), plain text, and ZIP archives. Three OCR modes: skip existing text, redo all, or force.</p>
+            <div class="feature-keywords"><span class="feature-keyword">ocrmypdf</span><span class="feature-keyword">skip / redo / force</span><span class="feature-keyword">PDF/A output</span><span class="feature-keyword">6 parsers</span></div>
+          </div>
+        </div>
+
+        <div class="feature-row" data-feature>
+          <div class="feature-header">
+            <span class="feature-number">03</span>
+            <div class="feature-accent fa-purple"></div>
+            <div class="feature-title-area">
+              <h3>Workflow State Machine</h3>
+              <span class="feature-brief">Conditional transitions, escalation timers, AST-safe expression evaluator</span>
+            </div>
+            <span class="feature-tag tag-enterprise">Enterprise</span>
+            <svg class="feature-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="feature-expand">
+            <p>Full state-machine engine with states, transitions, custom form fields, and 7 built-in action backends (set properties, add tags, move to cabinet, set metadata, launch sub-workflows, send email, fire webhooks). Conditions use a safe AST-based evaluator that whitelists only safe Python node types. Escalation timers auto-advance stalled documents.</p>
+            <div class="feature-keywords"><span class="feature-keyword">ast.parse</span><span class="feature-keyword">7 action backends</span><span class="feature-keyword">escalation timers</span><span class="feature-keyword">trigger-action rules</span></div>
+          </div>
+        </div>
+
+        <div class="feature-row" data-feature>
+          <div class="feature-header">
+            <span class="feature-number">04</span>
+            <div class="feature-accent fa-green"></div>
+            <div class="feature-title-area">
+              <h3>ML Classification</h3>
+              <span class="feature-brief">Four MLP classifiers with TF-IDF and hash-based retraining</span>
+            </div>
+            <span class="feature-tag tag-ai">AI / ML</span>
+            <svg class="feature-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="feature-expand">
+            <p>scikit-learn MLP neural networks auto-suggest tags, correspondents, document types, and storage paths. TF-IDF feature extraction with smart corpus hashing detects when retraining is needed. Confidence thresholds prevent low-quality suggestions. Fully automatic — learns from your manual classifications.</p>
+            <div class="feature-keywords"><span class="feature-keyword">scikit-learn</span><span class="feature-keyword">MLPClassifier</span><span class="feature-keyword">TF-IDF</span><span class="feature-keyword">auto-retrain</span></div>
+          </div>
+        </div>
+
+        <div class="feature-row" data-feature>
+          <div class="feature-header">
+            <span class="feature-number">05</span>
+            <div class="feature-accent fa-purple"></div>
+            <div class="feature-title-area">
+              <h3>AI Summarization & RAG Chat</h3>
+              <span class="feature-brief">OpenAI + Ollama — ask your documents anything</span>
+            </div>
+            <span class="feature-tag tag-ai">AI / ML</span>
+            <svg class="feature-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="feature-expand">
+            <p>LLM-powered document summarization, title suggestion, entity extraction, and conversational Q&A. FAISS vector store with sentence embeddings enables Retrieval-Augmented Generation across your entire corpus. Supports OpenAI cloud and Ollama local models — your data stays private if you want it to.</p>
+            <div class="feature-keywords"><span class="feature-keyword">FAISS</span><span class="feature-keyword">hybrid RRF search</span><span class="feature-keyword">OpenAI / Ollama</span><span class="feature-keyword">RAG</span></div>
+          </div>
+        </div>
+
+        <div class="feature-row" data-feature>
+          <div class="feature-header">
+            <span class="feature-number">06</span>
+            <div class="feature-accent fa-cyan"></div>
+            <div class="feature-title-area">
+              <h3>Full-Text & Semantic Search</h3>
+              <span class="feature-brief">Elasticsearch + FAISS vector search with facets and curations</span>
+            </div>
+            <svg class="feature-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="feature-expand">
+            <p>Elasticsearch handles keyword search with faceted filtering, result highlighting, and permission-aware access control. FAISS vector search finds semantically similar documents using sentence embeddings. Reciprocal Rank Fusion merges both result sets. Built-in synonym management, search curations, click analytics, and 29 saved-view filter rule types.</p>
+            <div class="feature-keywords"><span class="feature-keyword">Elasticsearch 8</span><span class="feature-keyword">FAISS</span><span class="feature-keyword">29 filter rules</span><span class="feature-keyword">synonyms</span></div>
+          </div>
+        </div>
+
+        <div class="feature-row" data-feature>
+          <div class="feature-header">
+            <span class="feature-number">07</span>
+            <div class="feature-accent fa-amber"></div>
+            <div class="feature-title-area">
+              <h3>Zone OCR Templates</h3>
+              <span class="feature-brief">Draw bounding boxes, extract structured fields from forms</span>
+            </div>
+            <span class="feature-tag tag-enterprise">Enterprise</span>
+            <svg class="feature-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="feature-expand">
+            <p>Design templates by drawing bounding boxes on sample documents. Each zone extracts a specific field (invoice number, vendor name, total, date) using targeted OCR with configurable Tesseract PSM modes. Auto-matches templates to incoming documents with confidence scoring. Human review queue for low-confidence extractions.</p>
+            <div class="feature-keywords"><span class="feature-keyword">bounding boxes</span><span class="feature-keyword">template matching</span><span class="feature-keyword">confidence scoring</span><span class="feature-keyword">review queue</span></div>
+          </div>
+        </div>
+
+        <div class="feature-row" data-feature>
+          <div class="feature-header">
+            <span class="feature-number">08</span>
+            <div class="feature-accent fa-green"></div>
+            <div class="feature-title-area">
+              <h3>Named Entity Recognition</h3>
+              <span class="feature-brief">spaCy NER — persons, orgs, locations, dates, monetary amounts</span>
+            </div>
+            <span class="feature-tag tag-ai">AI / ML</span>
+            <svg class="feature-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="feature-expand">
+            <p>spaCy-powered extraction automatically identifies entities in every document. Six default types (person, organization, location, date, monetary, custom) with configurable models. Entities become searchable Elasticsearch facets with nested indexing. Entity browser with aggregation views and document co-occurrence.</p>
+            <div class="feature-keywords"><span class="feature-keyword">spaCy</span><span class="feature-keyword">en_core_web_sm</span><span class="feature-keyword">nested ES facets</span><span class="feature-keyword">entity browser</span></div>
+          </div>
+        </div>
+
+        <div class="feature-row" data-feature>
+          <div class="feature-header">
+            <span class="feature-number">09</span>
+            <div class="feature-accent fa-pink"></div>
+            <div class="feature-title-area">
+              <h3>E-Signature Workflows</h3>
+              <span class="feature-brief">Sequential/parallel signing, external signers, certificate of completion</span>
+            </div>
+            <span class="feature-tag tag-enterprise">Enterprise</span>
+            <svg class="feature-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="feature-expand">
+            <p>Place signature fields on PDF pages with drag-and-drop. Add external signers who receive tokenized email links — no account needed. Sequential or parallel signing order. Page-view tracking ensures signers read before signing. Certificate of completion PDF with full audit trail, SHA-256 hash, and signer IP addresses.</p>
+            <div class="feature-keywords"><span class="feature-keyword">tokenized signing</span><span class="feature-keyword">page view tracking</span><span class="feature-keyword">reportlab PDF</span><span class="feature-keyword">audit trail</span></div>
+          </div>
+        </div>
+
+        <div class="feature-row" data-feature>
+          <div class="feature-header">
+            <span class="feature-number">10</span>
+            <div class="feature-accent fa-amber"></div>
+            <div class="feature-title-area">
+              <h3>Visual Annotations</h3>
+              <span class="feature-brief">8 annotation types — highlights, stamps, freehand, sticky notes</span>
+            </div>
+            <span class="feature-tag tag-collab">Collaboration</span>
+            <svg class="feature-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="feature-expand">
+            <p>Non-destructive page-level annotations with percentage-based coordinates for resolution independence. Eight types: highlight, underline, strikethrough, sticky note, freehand, rectangle, text box, and rubber stamp (7 built-in stamps). Threaded replies, private annotations, and export to annotated PDF via PyMuPDF overlay.</p>
+            <div class="feature-keywords"><span class="feature-keyword">SVG overlay</span><span class="feature-keyword">W3C compatible</span><span class="feature-keyword">threaded replies</span><span class="feature-keyword">private mode</span></div>
+          </div>
+        </div>
+
+        <div class="feature-row" data-feature>
+          <div class="feature-header">
+            <span class="feature-number">11</span>
+            <div class="feature-accent fa-red"></div>
+            <div class="feature-title-area">
+              <h3>Legal Hold & Compliance</h3>
+              <span class="feature-brief">Freeze documents for litigation — criteria-based holds with custodian tracking</span>
+            </div>
+            <span class="feature-tag tag-security">Security</span>
+            <svg class="feature-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="feature-expand">
+            <p>Place legal holds using 7 criteria types (custodian, date range, tag, document type, search query, cabinet, specific documents) with AND logic. Held documents are frozen from deletion and content modification. Custodian notification with acknowledgement tracking. Hold release only clears the freeze when no other active holds apply.</p>
+            <div class="feature-keywords"><span class="feature-keyword">7 criteria types</span><span class="feature-keyword">custodian acknowledgement</span><span class="feature-keyword">matter numbers</span><span class="feature-keyword">hold release</span></div>
+          </div>
+        </div>
+
+        <div class="feature-row" data-feature>
+          <div class="feature-header">
+            <span class="feature-number">12</span>
+            <div class="feature-accent fa-blue"></div>
+            <div class="feature-title-area">
+              <h3>Physical Records Management</h3>
+              <span class="feature-brief">MPTT location tree, barcode charge-outs, destruction certificates</span>
+            </div>
+            <svg class="feature-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="feature-expand">
+            <p>Track physical originals alongside their digital counterparts. Hierarchical storage locations (Building → Room → Cabinet → Shelf → Box) with capacity tracking. Barcode-driven charge-out/charge-in register with overdue notifications. Destruction certificate generation with method, witness, and PDF output.</p>
+            <div class="feature-keywords"><span class="feature-keyword">django-mptt</span><span class="feature-keyword">charge-out register</span><span class="feature-keyword">overdue alerts</span><span class="feature-keyword">destruction certs</span></div>
+          </div>
+        </div>
+
+        <div class="feature-row" data-feature>
+          <div class="feature-header">
+            <span class="feature-number">13</span>
+            <div class="feature-accent fa-cyan"></div>
+            <div class="feature-title-area">
+              <h3>Content-Addressable Storage</h3>
+              <span class="feature-brief">SHA-256 deduplication — identical files stored exactly once</span>
+            </div>
+            <span class="feature-tag tag-storage">Storage</span>
+            <svg class="feature-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="feature-expand">
+            <p>Every file stored by its SHA-256 hash in a sharded path structure (ab/cd/full_hash). Duplicate uploads automatically reference the existing blob with incremented reference counting. Deletion only removes the physical file when the last reference is gone. Built-in integrity verification re-hashes stored files to detect corruption.</p>
+            <div class="feature-keywords"><span class="feature-keyword">SHA-256</span><span class="feature-keyword">ref counting</span><span class="feature-keyword">integrity verification</span><span class="feature-keyword">dedup stats</span></div>
+          </div>
+        </div>
+
+        <div class="feature-row" data-feature>
+          <div class="feature-header">
+            <span class="feature-number">14</span>
+            <div class="feature-accent fa-green"></div>
+            <div class="feature-title-area">
+              <h3>Barcode Intelligence</h3>
+              <span class="feature-brief">Auto-split scans, extract ASNs, regex-based tag mapping</span>
+            </div>
+            <span class="feature-tag tag-automation">Automation</span>
+            <svg class="feature-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="feature-expand">
+            <p>zxing-cpp barcode detection on the first N pages (configurable) with resolution upscaling. Separator pages (PATCH T) auto-split multi-document scans. Archive Serial Numbers extracted with configurable prefixes. Regex pattern matching maps barcode values to tags automatically.</p>
+            <div class="feature-keywords"><span class="feature-keyword">zxing-cpp</span><span class="feature-keyword">PATCH T separator</span><span class="feature-keyword">ASN extraction</span><span class="feature-keyword">tag mapping</span></div>
+          </div>
+        </div>
+
+        <div class="feature-row" data-feature>
+          <div class="feature-header">
+            <span class="feature-number">15</span>
+            <div class="feature-accent fa-purple"></div>
+            <div class="feature-title-area">
+              <h3>Contributor Portal</h3>
+              <span class="feature-brief">Branded upload portals for external parties — no account needed</span>
+            </div>
+            <span class="feature-tag tag-collab">Collaboration</span>
+            <svg class="feature-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="feature-expand">
+            <p>Create branded portals with custom logos, colors, and file restrictions. External parties upload documents through slug-based URLs without authentication. Document request workflows with tokenized links, deadlines, automatic reminders, and a staff review queue before ingestion into the archive.</p>
+            <div class="feature-keywords"><span class="feature-keyword">tokenized uploads</span><span class="feature-keyword">branded portals</span><span class="feature-keyword">deadline reminders</span><span class="feature-keyword">review queue</span></div>
+          </div>
+        </div>
+
+        <div class="feature-row" data-feature>
+          <div class="feature-header">
+            <span class="feature-number">16</span>
+            <div class="feature-accent fa-pink"></div>
+            <div class="feature-title-area">
+              <h3>Real-Time Collaboration</h3>
+              <span class="feature-brief">WebSocket updates, comments, checkout locking, share links</span>
+            </div>
+            <span class="feature-tag tag-collab">Collaboration</span>
+            <svg class="feature-toggle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </div>
+          <div class="feature-expand">
+            <p>Django Channels powers WebSocket live updates. Markdown comments with @mentions. Check-in/check-out locking with auto-expiration prevents concurrent edits. Share links with optional passwords and expiry dates. Per-user activity feeds and configurable notification preferences across email, in-app, and WebSocket channels.</p>
+            <div class="feature-keywords"><span class="feature-keyword">Django Channels</span><span class="feature-keyword">@mentions</span><span class="feature-keyword">checkout locking</span><span class="feature-keyword">share links</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================================
+       ARCHITECTURE
+       ==================================================================== -->
+  <section id="architecture">
+    <div class="container">
+      <div class="text-center">
+        <span class="section-label reveal">Architecture</span>
+        <h2 class="section-title reveal reveal-delay-1">Modular Monolith,<br>Enterprise Scale</h2>
+        <p class="section-subtitle mx-auto reveal reveal-delay-2">
+          Clean domain boundaries across 21 Django apps, backed by PostgreSQL, Elasticsearch, Redis, FAISS, and S3-compatible object storage.
+        </p>
+      </div>
+
+      <div class="arch-diagram reveal reveal-delay-3">
+        <div class="arch-layers">
+          <!-- Presentation Layer -->
+          <div class="arch-layer">
+            <div class="arch-layer-label">Presentation</div>
+            <div class="arch-nodes">
+              <div class="arch-node"><div class="arch-dot" style="background:var(--red)"></div>Angular 21 SPA</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--amber)"></div>REST API (DRF)</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--purple)"></div>WebSocket (Channels)</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--cyan)"></div>OpenAPI 3.0</div>
+            </div>
+          </div>
+
+          <div class="arch-connector"></div>
+
+          <!-- Application Layer -->
+          <div class="arch-layer">
+            <div class="arch-layer-label">Application</div>
+            <div class="arch-nodes">
+              <div class="arch-node"><div class="arch-dot" style="background:var(--blue)"></div>Documents</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--green)"></div>Organization</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--purple)"></div>Workflows</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--cyan)"></div>Search</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--red)"></div>Security</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--amber)"></div>Processing</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--pink)"></div>ML / AI</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--green)"></div>Collaboration</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--blue)"></div>E-Signatures</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--purple)"></div>Legal Hold</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--cyan)"></div>Portal</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--amber)"></div>+9 more</div>
+            </div>
+          </div>
+
+          <div class="arch-connector"></div>
+
+          <!-- Worker Layer -->
+          <div class="arch-layer">
+            <div class="arch-layer-label">Workers</div>
+            <div class="arch-nodes">
+              <div class="arch-node"><div class="arch-dot" style="background:var(--green)"></div>Celery (7 Queues)</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--amber)"></div>Celery Beat</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--cyan)"></div>OCR Workers</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--purple)"></div>ML Training</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--blue)"></div>Email Fetch</div>
+            </div>
+          </div>
+
+          <div class="arch-connector"></div>
+
+          <!-- Data Layer -->
+          <div class="arch-layer">
+            <div class="arch-layer-label">Data</div>
+            <div class="arch-nodes">
+              <div class="arch-node"><div class="arch-dot" style="background:var(--blue)"></div>PostgreSQL 16</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--amber)"></div>Elasticsearch 8</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--red)"></div>Redis 7</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--green)"></div>FAISS Vector DB</div>
+              <div class="arch-node"><div class="arch-dot" style="background:var(--purple)"></div>S3 / MinIO</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================================
+       PIPELINE
+       ==================================================================== -->
+  <section id="pipeline">
+    <div class="container">
+      <div class="text-center">
+        <span class="section-label reveal">Processing Pipeline</span>
+        <h2 class="section-title reveal reveal-delay-1">From Upload to Insight<br>in 14 Steps</h2>
+        <p class="section-subtitle mx-auto reveal reveal-delay-2">
+          Every document flows through a plugin-based pipeline. Each stage is independently configurable, and you can inject custom plugins at any point.
+        </p>
+      </div>
+
+      <div class="pipeline-wrapper reveal reveal-delay-3">
+        <div class="pipeline-track" id="pipelineTrack">
+          <div class="pipeline-step pipeline-active" data-step="0">
+            <div class="pipeline-icon fi-cyan">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          </div>
+            <div class="pipeline-step-label">Preflight</div>
+            <div class="pipeline-step-desc">MIME check<br>dedup verify</div>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+
+          <div class="pipeline-step" data-step="1">
+            <div class="pipeline-icon fi-green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="2" height="16"/><rect x="7" y="4" width="1" height="16"/><rect x="10" y="4" width="2" height="16"/><rect x="14" y="4" width="1" height="16"/><rect x="17" y="4" width="2" height="16"/></svg>
+          </div>
+            <div class="pipeline-step-label">Barcode</div>
+            <div class="pipeline-step-desc">Detect &amp; split<br>extract ASN</div>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+
+          <div class="pipeline-step" data-step="2">
+            <div class="pipeline-icon fi-purple">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+            <div class="pipeline-step-label">Workflow</div>
+            <div class="pipeline-step-desc">Match rules<br>apply overrides</div>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+
+          <div class="pipeline-step" data-step="3">
+            <div class="pipeline-icon fi-amber">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+          </div>
+            <div class="pipeline-step-label">Hooks</div>
+            <div class="pipeline-step-desc">Pre-consume<br>user scripts</div>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+
+          <div class="pipeline-step" data-step="4">
+            <div class="pipeline-icon fi-blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+            <div class="pipeline-step-label">Parser</div>
+            <div class="pipeline-step-desc">PDF, Office<br>Email, Image</div>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+
+          <div class="pipeline-step" data-step="5">
+            <div class="pipeline-icon fi-cyan">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4a2 2 0 012-2h4M20 7V4a2 2 0 00-2-2h-4M4 17v3a2 2 0 002 2h4M20 17v3a2 2 0 01-2 2h-4"/><rect x="7" y="8" width="10" height="8" rx="1"/></svg>
+          </div>
+            <div class="pipeline-step-label">OCR</div>
+            <div class="pipeline-step-desc">Tesseract<br>OCRmyPDF</div>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+
+          <div class="pipeline-step" data-step="6">
+            <div class="pipeline-icon fi-green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5"/></svg>
+          </div>
+            <div class="pipeline-step-label">Store</div>
+            <div class="pipeline-step-desc">S3, local<br>encrypted</div>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+
+          <div class="pipeline-step" data-step="7">
+            <div class="pipeline-icon fi-purple">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          </div>
+            <div class="pipeline-step-label">Classify</div>
+            <div class="pipeline-step-desc">ML auto-tag<br>type, sender</div>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+
+          <div class="pipeline-step" data-step="8">
+            <div class="pipeline-icon fi-amber">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          </div>
+            <div class="pipeline-step-label">Zone OCR</div>
+            <div class="pipeline-step-desc">Template<br>fields</div>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+
+          <div class="pipeline-step" data-step="9">
+            <div class="pipeline-icon fi-pink">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+          </div>
+            <div class="pipeline-step-label">AI</div>
+            <div class="pipeline-step-desc">Summarize<br>embed, extract</div>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+
+          <div class="pipeline-step" data-step="10">
+            <div class="pipeline-icon fi-green">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+          </div>
+            <div class="pipeline-step-label">NER</div>
+            <div class="pipeline-step-desc">Persons, orgs<br>locations</div>
+          </div>
+          <div class="pipeline-arrow">&rarr;</div>
+
+          <div class="pipeline-step" data-step="11">
+            <div class="pipeline-icon fi-blue">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </div>
+            <div class="pipeline-step-label">Thumbnail</div>
+            <div class="pipeline-step-desc">WebP preview<br>generation</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================================
+       API SECTION
+       ==================================================================== -->
+  <section id="api">
+    <div class="container">
+      <div class="text-center">
+        <span class="section-label reveal">API</span>
+        <h2 class="section-title reveal reveal-delay-1">Built API-First.<br>Documented Automatically.</h2>
+        <p class="section-subtitle mx-auto reveal reveal-delay-2">
+          Every feature is accessible through a comprehensive REST API with OpenAPI 3.0 documentation generated by drf-spectacular. WebSocket endpoints deliver real-time updates.
+        </p>
+      </div>
+
+      <div class="api-grid reveal reveal-delay-3">
+        <div class="api-info">
+          <h3>80+ Endpoints Across Every Domain</h3>
+          <p>Cursor-based pagination, django-filter backends, rate limiting, and permission-aware responses. Token, session, and OAuth2 authentication supported out of the box.</p>
+          <div class="api-endpoints">
+            <div class="api-endpoint"><span class="api-method method-get">GET</span><span class="api-path">/api/v1/documents/</span></div>
+            <div class="api-endpoint"><span class="api-method method-post">POST</span><span class="api-path">/api/v1/documents/</span></div>
+            <div class="api-endpoint"><span class="api-method method-get">GET</span><span class="api-path">/api/v1/documents/{id}/suggestions/</span></div>
+            <div class="api-endpoint"><span class="api-method method-get">GET</span><span class="api-path">/api/v1/search/</span></div>
+            <div class="api-endpoint"><span class="api-method method-get">GET</span><span class="api-path">/api/v1/search/similar/{id}/</span></div>
+            <div class="api-endpoint"><span class="api-method method-post">POST</span><span class="api-path">/api/v1/documents/{id}/signature_request/</span></div>
+            <div class="api-endpoint"><span class="api-method method-get">GET</span><span class="api-path">/api/v1/entities/graph/</span></div>
+            <div class="api-endpoint"><span class="api-method method-post">POST</span><span class="api-path">/api/v1/legal_holds/{id}/release/</span></div>
+            <div class="api-endpoint"><span class="api-method method-ws">WS</span><span class="api-path">ws://host/ws/status/</span></div>
+            <div class="api-endpoint"><span class="api-method method-ws">WS</span><span class="api-path">ws://host/ws/notifications/</span></div>
+          </div>
+        </div>
+
+        <div class="code-block">
+          <div class="code-header">
+            <div class="code-dot code-dot-red"></div>
+            <div class="code-dot code-dot-yellow"></div>
+            <div class="code-dot code-dot-green"></div>
+            <span class="code-title">api_example.sh</span>
+          </div>
+          <div class="code-body">
+<span class="comment"># Upload a document</span>
+<span class="method">curl</span> <span class="keyword">-X</span> POST <span class="url">https://vault.example.com/api/v1/documents/</span> \
+  <span class="keyword">-H</span> <span class="string">"Authorization: Token abc123"</span> \
+  <span class="keyword">-F</span> <span class="string">"document=@invoice.pdf"</span> \
+  <span class="keyword">-F</span> <span class="string">"title=Q4 Invoice"</span> \
+  <span class="keyword">-F</span> <span class="string">"correspondent=3"</span>
+
+<span class="comment"># Search with facets</span>
+<span class="method">curl</span> <span class="url">https://vault.example.com/api/v1/search/</span> \
+  <span class="keyword">-G</span> <span class="keyword">-d</span> <span class="string">"query=quarterly report"</span> \
+  <span class="keyword">-d</span> <span class="string">"tags__id=7"</span> \
+  <span class="keyword">-d</span> <span class="string">"created__gte=2026-01-01"</span>
+
+<span class="comment"># Chat with your documents</span>
+<span class="method">curl</span> <span class="keyword">-X</span> POST <span class="url">https://vault.example.com/api/v1/ai/chat/</span> \
+  <span class="keyword">-H</span> <span class="string">"Content-Type: application/json"</span> \
+  <span class="keyword">-d</span> <span class="string">'{"document_id": 42,
+       "question": "What is the total amount?"}'</span>
+
+<span class="comment"># Create an e-signature request</span>
+<span class="method">curl</span> <span class="keyword">-X</span> POST <span class="url">.../api/v1/documents/42/signature_request/</span> \
+  <span class="keyword">-d</span> <span class="string">'{"title": "NDA Signature",
+       "signers": [
+         {"name": "Jane", "email": "jane@co.com"}
+       ]}'</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================================
+       SECURITY
+       ==================================================================== -->
+  <section id="security">
+    <div class="container">
+      <div class="text-center">
+        <span class="section-label reveal">Security</span>
+        <h2 class="section-title reveal reveal-delay-1">Enterprise Security.<br>Zero Compromise.</h2>
+        <p class="section-subtitle mx-auto reveal reveal-delay-2">
+          OWASP Top 10 compliant, SOC 2 aligned, and GDPR-ready. From encryption at rest to legal hold, DocVault takes security as seriously as you do.
+        </p>
+      </div>
+
+      <div class="security-grid">
+        <div class="security-card reveal">
+          <div class="security-card-icon">&#128274;</div>
+          <h4>AES-256 Encryption at Rest</h4>
+          <p>Every file encrypted with AES-256-CBC using PBKDF2 key derivation with 100,000 iterations. Random IV per file, chunked processing for memory efficiency.</p>
+        </div>
+        <div class="security-card reveal reveal-delay-1">
+          <div class="security-card-icon">&#128272;</div>
+          <h4>SSO & Multi-Factor Auth</h4>
+          <p>OpenID Connect, LDAP/Active Directory, OAuth2 providers (Google, Microsoft, GitHub). TOTP/HOTP two-factor authentication with pyotp.</p>
+        </div>
+        <div class="security-card reveal reveal-delay-2">
+          <div class="security-card-icon">&#128203;</div>
+          <h4>Comprehensive Audit Trail</h4>
+          <p>Every model change logged with actor, target, and timestamp. The @audit_event decorator ensures nothing slips through. CSV/JSON export for compliance.</p>
+        </div>
+        <div class="security-card reveal reveal-delay-3">
+          <div class="security-card-icon">&#128737;</div>
+          <h4>Role-Based + Object ACLs</h4>
+          <p>Granular permission model: role-based access control, object-level ACLs via django-guardian, ownership semantics, and cabinet permission inheritance.</p>
+        </div>
+        <div class="security-card reveal reveal-delay-4">
+          <div class="security-card-icon">&#127760;</div>
+          <h4>IP Access Control</h4>
+          <p>Configurable IP whitelists and blacklists, rate limiting per user type (20/min anon, 120/min authenticated), CORS controls, and Content Security Policy headers.</p>
+        </div>
+        <div class="security-card reveal reveal-delay-5">
+          <div class="security-card-icon">&#128220;</div>
+          <h4>Document Signing (GPG)</h4>
+          <p>GPG/PGP digital signatures for document integrity verification. Check-in/check-out locking prevents concurrent editing conflicts. WORM storage mode available.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================================
+       DEPLOYMENT
+       ==================================================================== -->
+  <section id="deploy">
+    <div class="container">
+      <div class="text-center">
+        <span class="section-label reveal">Deployment</span>
+        <h2 class="section-title reveal reveal-delay-1">Production-Ready.<br>Your Infrastructure.</h2>
+        <p class="section-subtitle mx-auto reveal reveal-delay-2">
+          From a single docker compose command to a horizontally scaled Kubernetes cluster. Health checks, Prometheus metrics, and structured JSON logging included.
+        </p>
+      </div>
+
+      <div class="reveal reveal-delay-3">
+        <div class="deploy-tabs">
+          <button class="deploy-tab active" onclick="switchDeployTab(0)">Docker Compose</button>
+          <button class="deploy-tab" onclick="switchDeployTab(1)">Kubernetes</button>
+          <button class="deploy-tab" onclick="switchDeployTab(2)">Configuration</button>
+        </div>
+
+        <div class="deploy-content active" id="deploy-0">
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dot code-dot-red"></div>
+              <div class="code-dot code-dot-yellow"></div>
+              <div class="code-dot code-dot-green"></div>
+              <span class="code-title">docker-compose.yml</span>
+            </div>
+            <div class="code-body">
+<span class="keyword">services:</span>
+  <span class="method">web:</span>
+    <span class="keyword">image:</span> <span class="string">docvault/docvault:latest</span>
+    <span class="keyword">depends_on:</span> [db, redis, elasticsearch, minio]
+    <span class="keyword">ports:</span> [<span class="string">"8000:8000"</span>]
+    <span class="keyword">environment:</span>
+      <span class="keyword">DATABASE_URL:</span> <span class="string">postgres://docvault:secret@db:5432/docvault</span>
+      <span class="keyword">REDIS_URL:</span> <span class="string">redis://redis:6379</span>
+      <span class="keyword">STORAGE_BACKEND:</span> <span class="string">s3</span>
+
+  <span class="method">worker:</span>
+    <span class="keyword">image:</span> <span class="string">docvault/docvault:latest</span>
+    <span class="keyword">command:</span> <span class="string">celery -A docvault worker -Q default,processing</span>
+
+  <span class="method">beat:</span>
+    <span class="keyword">image:</span> <span class="string">docvault/docvault:latest</span>
+    <span class="keyword">command:</span> <span class="string">celery -A docvault beat</span>
+
+  <span class="method">db:</span>            <span class="comment"># PostgreSQL 16 Alpine</span>
+  <span class="method">redis:</span>         <span class="comment"># Redis 7 Alpine</span>
+  <span class="method">elasticsearch:</span> <span class="comment"># Elasticsearch 8.15</span>
+  <span class="method">minio:</span>         <span class="comment"># S3-compatible object storage</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="deploy-content" id="deploy-1">
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dot code-dot-red"></div>
+              <div class="code-dot code-dot-yellow"></div>
+              <div class="code-dot code-dot-green"></div>
+              <span class="code-title">helm install</span>
+            </div>
+            <div class="code-body">
+<span class="comment"># Install the DocVault Helm chart</span>
+<span class="method">helm</span> repo add docvault https://charts.docvault.io
+<span class="method">helm</span> repo update
+
+<span class="method">helm</span> install docvault docvault/docvault \
+  <span class="keyword">--namespace</span> docvault <span class="keyword">--create-namespace</span> \
+  <span class="keyword">--set</span> <span class="string">ingress.enabled=true</span> \
+  <span class="keyword">--set</span> <span class="string">ingress.hosts[0]=vault.example.com</span> \
+  <span class="keyword">--set</span> <span class="string">worker.replicas=4</span> \
+  <span class="keyword">--set</span> <span class="string">storage.backend=s3</span> \
+  <span class="keyword">--set</span> <span class="string">elasticsearch.replicas=3</span> \
+  <span class="keyword">--set</span> <span class="string">redis.sentinel.enabled=true</span>
+
+<span class="comment"># Horizontal Pod Autoscaler for workers</span>
+<span class="comment"># PersistentVolumeClaims for all data stores</span>
+<span class="comment"># Ingress with TLS termination</span>
+<span class="comment"># ConfigMaps &amp; Secrets for env configuration</span>
+<span class="comment"># Health &amp; readiness probes on all pods</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="deploy-content" id="deploy-2">
+          <div class="code-block">
+            <div class="code-header">
+              <div class="code-dot code-dot-red"></div>
+              <div class="code-dot code-dot-yellow"></div>
+              <div class="code-dot code-dot-green"></div>
+              <span class="code-title">.env (excerpt of 60+ settings)</span>
+            </div>
+            <div class="code-body">
+<span class="comment"># Core</span>
+<span class="keyword">DJANGO_SECRET_KEY</span>=<span class="string">your-production-secret</span>
+<span class="keyword">DATABASE_URL</span>=<span class="string">postgres://user:pass@host:5432/docvault</span>
+<span class="keyword">REDIS_URL</span>=<span class="string">redis://redis:6379</span>
+
+<span class="comment"># Storage</span>
+<span class="keyword">STORAGE_BACKEND</span>=<span class="string">s3</span>               <span class="comment"># local | s3</span>
+<span class="keyword">STORAGE_ENCRYPTION_ENABLED</span>=<span class="string">true</span>
+<span class="keyword">STORAGE_CONTENT_ADDRESSED</span>=<span class="string">true</span>  <span class="comment"># SHA-256 dedup</span>
+<span class="keyword">NON_DESTRUCTIVE_MODE</span>=<span class="string">true</span>
+
+<span class="comment"># OCR</span>
+<span class="keyword">OCR_LANGUAGE</span>=<span class="string">eng+deu+fra</span>
+<span class="keyword">OCR_MODE</span>=<span class="string">skip</span>                   <span class="comment"># skip | redo | force</span>
+<span class="keyword">OCR_OUTPUT_TYPE</span>=<span class="string">pdfa</span>
+
+<span class="comment"># AI / LLM</span>
+<span class="keyword">LLM_ENABLED</span>=<span class="string">true</span>
+<span class="keyword">LLM_PROVIDER</span>=<span class="string">openai</span>             <span class="comment"># openai | ollama</span>
+<span class="keyword">LLM_MODEL</span>=<span class="string">gpt-4o-mini</span>
+<span class="keyword">EMBEDDING_MODEL</span>=<span class="string">text-embedding-3-small</span>
+
+<span class="comment"># Auth</span>
+<span class="keyword">OIDC_ENABLED</span>=<span class="string">true</span>
+<span class="keyword">LDAP_ENABLED</span>=<span class="string">false</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================================
+       STATISTICS
+       ==================================================================== -->
+  <section class="stats-section" id="stats">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-card reveal">
+          <div class="stat-number" data-count="21">0</div>
+          <div class="stat-label">Django Applications</div>
+        </div>
+        <div class="stat-card reveal reveal-delay-1">
+          <div class="stat-number" data-count="407">0</div>
+          <div class="stat-label">Python Source Files</div>
+        </div>
+        <div class="stat-card reveal reveal-delay-2">
+          <div class="stat-number" data-count="109">0</div>
+          <div class="stat-label">Test Files</div>
+        </div>
+        <div class="stat-card reveal reveal-delay-3">
+          <div class="stat-number" data-count="107">0</div>
+          <div class="stat-label">Angular Components</div>
+        </div>
+        <div class="stat-card reveal reveal-delay-1">
+          <div class="stat-number" data-count="14">0</div>
+          <div class="stat-label">Processing Plugins</div>
+        </div>
+        <div class="stat-card reveal reveal-delay-2">
+          <div class="stat-number" data-count="6">0</div>
+          <div class="stat-label">Parser Backends</div>
+        </div>
+        <div class="stat-card reveal reveal-delay-3">
+          <div class="stat-number" data-count="12">0</div>
+          <div class="stat-label">Custom Field Types</div>
+        </div>
+        <div class="stat-card reveal reveal-delay-4">
+          <div class="stat-number" data-count="7">0</div>
+          <div class="stat-label">Celery Task Queues</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================================
+       TECH STACK
+       ==================================================================== -->
+  <section id="stack">
+    <div class="container">
+      <div class="text-center">
+        <span class="section-label reveal">Tech Stack</span>
+        <h2 class="section-title reveal reveal-delay-1">Battle-Tested Technologies</h2>
+        <p class="section-subtitle mx-auto reveal reveal-delay-2">
+          Every component chosen for production readiness and community support. No experimental frameworks, no lock-in.
+        </p>
+      </div>
+
+      <div class="tech-grid reveal reveal-delay-3">
+        <div class="tech-card">
+          <div class="tech-icon" style="background:rgba(16,185,129,0.12);color:var(--green);">Dj</div>
+          <div><div class="tech-card-name">Django 5</div><div class="tech-card-role">Backend Framework</div></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon" style="background:rgba(239,68,68,0.12);color:var(--red);">Ng</div>
+          <div><div class="tech-card-name">Angular 21</div><div class="tech-card-role">Frontend SPA</div></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon" style="background:rgba(99,130,255,0.12);color:var(--blue);">Pg</div>
+          <div><div class="tech-card-name">PostgreSQL 16</div><div class="tech-card-role">Primary Database</div></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon" style="background:rgba(245,158,11,0.12);color:var(--amber);">Es</div>
+          <div><div class="tech-card-name">Elasticsearch 8</div><div class="tech-card-role">Search Engine</div></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon" style="background:rgba(239,68,68,0.12);color:var(--red);">Rd</div>
+          <div><div class="tech-card-name">Redis 7</div><div class="tech-card-role">Cache & Broker</div></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon" style="background:rgba(16,185,129,0.12);color:var(--green);">Cy</div>
+          <div><div class="tech-card-name">Celery 5</div><div class="tech-card-role">Task Queue</div></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon" style="background:rgba(6,182,212,0.12);color:var(--cyan);">Dk</div>
+          <div><div class="tech-card-name">Docker</div><div class="tech-card-role">Containerization</div></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon" style="background:rgba(99,130,255,0.12);color:var(--blue);">K8</div>
+          <div><div class="tech-card-name">Kubernetes</div><div class="tech-card-role">Orchestration</div></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon" style="background:rgba(168,85,247,0.12);color:var(--purple);">S3</div>
+          <div><div class="tech-card-name">S3 / MinIO</div><div class="tech-card-role">Object Storage</div></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon" style="background:rgba(236,72,153,0.12);color:var(--pink);">Fa</div>
+          <div><div class="tech-card-name">FAISS</div><div class="tech-card-role">Vector Database</div></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon" style="background:rgba(245,158,11,0.12);color:var(--amber);">Sk</div>
+          <div><div class="tech-card-name">scikit-learn</div><div class="tech-card-role">ML Classification</div></div>
+        </div>
+        <div class="tech-card">
+          <div class="tech-icon" style="background:rgba(6,182,212,0.12);color:var(--cyan);">Oc</div>
+          <div><div class="tech-card-name">OCRmyPDF</div><div class="tech-card-role">OCR Engine</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================================
+       CTA
+       ==================================================================== -->
+  <section class="cta-section" id="cta">
+    <div class="container">
+      <div class="cta-card reveal">
+        <h2>Ready to Take Control<br>of Your Documents?</h2>
+        <p>DocVault is free, open-source, and built for everyone from individuals archiving personal files to enterprises managing millions of documents.</p>
+        <div class="cta-buttons">
+          <a href="https://github.com/docvault/docvault" class="btn btn-primary">
+            <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+            View on GitHub
+          </a>
+          <a href="https://docs.docvault.io" class="btn btn-secondary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+            Read the Docs
+          </a>
+          <a href="https://demo.docvault.io" class="btn btn-secondary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Live Demo
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====================================================================
+       FOOTER
+       ==================================================================== -->
+  <footer>
+    <div class="container">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24" style="color:var(--blue);">
+            <rect x="2" y="4" width="28" height="24" rx="4"/>
+            <path d="M8 12h16M8 17h10" stroke-linecap="round"/>
+          </svg>
+          <span>DocVault</span>
+        </div>
+        <div class="footer-text">&copy; 2026 DocVault Contributors. Licensed under AGPLv3.</div>
+        <ul class="footer-links">
+          <li><a href="https://github.com/docvault/docvault">GitHub</a></li>
+          <li><a href="https://docs.docvault.io">Docs</a></li>
+          <li><a href="https://docs.docvault.io/api">API Reference</a></li>
+          <li><a href="https://github.com/docvault/docvault/blob/main/CONTRIBUTING.md">Contribute</a></li>
+        </ul>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ====================================================================
+       JAVASCRIPT
+       ==================================================================== -->
+  <script>
+    /* ==================================================================
+       SMOOTH SCROLL
+       ================================================================== */
+    document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
+      anchor.addEventListener('click', function(e) {
+        var target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          e.preventDefault();
+          var offset = 80;
+          var top = target.getBoundingClientRect().top + window.pageYOffset - offset;
+          window.scrollTo({ top: top, behavior: 'smooth' });
+          // Close mobile nav
+          document.getElementById('navLinks').classList.remove('open');
+        }
+      });
+    });
+
+    /* ==================================================================
+       NAVBAR SCROLL EFFECT
+       ================================================================== */
+    var navbar = document.getElementById('navbar');
+    var lastScroll = 0;
+    window.addEventListener('scroll', function() {
+      var scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      if (scrollTop > 50) {
+        navbar.classList.add('scrolled');
+      } else {
+        navbar.classList.remove('scrolled');
+      }
+      lastScroll = scrollTop;
+    }, { passive: true });
+
+    /* ==================================================================
+       MOBILE NAV TOGGLE
+       ================================================================== */
+    document.getElementById('navToggle').addEventListener('click', function() {
+      document.getElementById('navLinks').classList.toggle('open');
+    });
+
+    /* ==================================================================
+       FEATURE ROW ACCORDION
+       ================================================================== */
+    var featureRows = document.querySelectorAll('[data-feature]');
+    featureRows.forEach(function(row) {
+      row.addEventListener('click', function() {
+        var isActive = this.classList.contains('active');
+        // Close all other rows (accordion behavior)
+        featureRows.forEach(function(r) {
+          r.classList.remove('active');
+        });
+        // Toggle clicked row
+        if (!isActive) {
+          this.classList.add('active');
+        }
+      });
+    });
+
+    // Auto-open the first feature row after it scrolls into view
+    var featuresObserver = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('active');
+          featuresObserver.disconnect();
+        }
+      });
+    }, { threshold: 0.3 });
+
+    if (featureRows.length > 0) {
+      featuresObserver.observe(featureRows[0]);
+    }
+
+    /* ==================================================================
+       INTERSECTION OBSERVER — REVEAL ANIMATIONS
+       ================================================================== */
+    var revealObserver = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, {
+      threshold: 0.1,
+      rootMargin: '0px 0px -40px 0px'
+    });
+
+    document.querySelectorAll('.reveal').forEach(function(el) {
+      revealObserver.observe(el);
+    });
+
+    /* ==================================================================
+       COUNTER ANIMATION
+       ================================================================== */
+    var counterObserver = new IntersectionObserver(function(entries) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting && !entry.target.dataset.counted) {
+          entry.target.dataset.counted = 'true';
+          animateCounter(entry.target);
+        }
+      });
+    }, { threshold: 0.5 });
+
+    document.querySelectorAll('[data-count]').forEach(function(el) {
+      counterObserver.observe(el);
+    });
+
+    function animateCounter(el) {
+      var target = parseInt(el.dataset.count, 10);
+      var suffix = el.dataset.suffix || '';
+      var duration = 1600;
+      var start = 0;
+      var startTime = null;
+
+      function step(timestamp) {
+        if (!startTime) startTime = timestamp;
+        var progress = Math.min((timestamp - startTime) / duration, 1);
+        // Ease out expo
+        var eased = 1 - Math.pow(2, -10 * progress);
+        var current = Math.floor(eased * target);
+        el.textContent = current + suffix;
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        } else {
+          el.textContent = target + suffix;
+        }
+      }
+      requestAnimationFrame(step);
+    }
+
+    /* ==================================================================
+       TYPING EFFECT
+       ================================================================== */
+    var phrases = [
+      'Enterprise-grade OCR, ML classification, and AI-powered search in one open-source platform.',
+      'The best of Paperless-ngx, Mayan EDMS, and Lodestone, combined and reimagined.',
+      '21 Django apps, 14 pipeline plugins, and zero vendor lock-in.',
+      'From e-signatures to legal hold. From barcode detection to vector search.'
+    ];
+    var phraseIndex = 0;
+    var charIndex = 0;
+    var isDeleting = false;
+    var typingEl = document.getElementById('heroTyping');
+    var typingSpeed = 30;
+    var deletingSpeed = 15;
+    var pauseTime = 3000;
+
+    function typeWriter() {
+      var currentPhrase = phrases[phraseIndex];
+
+      if (isDeleting) {
+        typingEl.textContent = currentPhrase.substring(0, charIndex - 1);
+        charIndex--;
+      } else {
+        typingEl.textContent = currentPhrase.substring(0, charIndex + 1);
+        charIndex++;
+      }
+
+      var delay = isDeleting ? deletingSpeed : typingSpeed;
+
+      if (!isDeleting && charIndex === currentPhrase.length) {
+        delay = pauseTime;
+        isDeleting = true;
+      } else if (isDeleting && charIndex === 0) {
+        isDeleting = false;
+        phraseIndex = (phraseIndex + 1) % phrases.length;
+        delay = 400;
+      }
+
+      setTimeout(typeWriter, delay);
+    }
+
+    // Start typing after page loads
+    setTimeout(typeWriter, 800);
+
+    /* ==================================================================
+       PIPELINE STEP ANIMATION
+       ================================================================== */
+    var pipelineSteps = document.querySelectorAll('.pipeline-step');
+    var currentPipelineStep = 0;
+
+    function animatePipeline() {
+      pipelineSteps.forEach(function(step) {
+        step.classList.remove('pipeline-active');
+      });
+      if (pipelineSteps[currentPipelineStep]) {
+        pipelineSteps[currentPipelineStep].classList.add('pipeline-active');
+      }
+      currentPipelineStep = (currentPipelineStep + 1) % pipelineSteps.length;
+    }
+
+    setInterval(animatePipeline, 2000);
+
+    /* ==================================================================
+       DEPLOY TABS
+       ================================================================== */
+    function switchDeployTab(index) {
+      document.querySelectorAll('.deploy-tab').forEach(function(tab, i) {
+        tab.classList.toggle('active', i === index);
+      });
+      document.querySelectorAll('.deploy-content').forEach(function(content, i) {
+        content.classList.toggle('active', i === index);
+      });
+    }
+
+    /* ==================================================================
+       PARALLAX ORBS (subtle mouse tracking)
+       ================================================================== */
+    var orbs = document.querySelectorAll('.orb');
+    var mouseX = 0, mouseY = 0;
+    var orbPositions = [];
+
+    document.addEventListener('mousemove', function(e) {
+      mouseX = e.clientX / window.innerWidth - 0.5;
+      mouseY = e.clientY / window.innerHeight - 0.5;
+    }, { passive: true });
+
+    function updateOrbs() {
+      orbs.forEach(function(orb, i) {
+        var factor = (i + 1) * 8;
+        var x = mouseX * factor;
+        var y = mouseY * factor;
+        orb.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+      });
+      requestAnimationFrame(updateOrbs);
+    }
+    requestAnimationFrame(updateOrbs);
+
+    /* ==================================================================
+       PERFORMANCE: will-change cleanup
+       ================================================================== */
+    document.querySelectorAll('.vault-node, .vault-ring').forEach(function(el) {
+      el.style.willChange = 'transform';
+    });
+  </script>
+
+</body>
+</html>

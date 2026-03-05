@@ -1,0 +1,150 @@
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-cpu me-2"></i>ML Classifier</h2>
+    <button
+      class="btn btn-primary"
+      (click)="triggerTraining()"
+      [disabled]="training()"
+    >
+      @if (training()) {
+        <span class="spinner-border spinner-border-sm me-1"></span>
+        Training...
+      } @else {
+        <i class="bi bi-play-fill me-1"></i>Train Now
+      }
+    </button>
+  </div>
+
+  @if (trainMessage()) {
+    <div class="alert alert-info alert-dismissible fade show" role="alert">
+      <i class="bi bi-info-circle me-1"></i>{{ trainMessage() }}
+      <button
+        type="button"
+        class="btn-close"
+        (click)="trainMessage.set(null)"
+      ></button>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="text-center py-5">
+      <div class="spinner-border text-primary"></div>
+      <p class="mt-2 text-muted">Loading classifier status...</p>
+    </div>
+  } @else if (error()) {
+    <div class="alert alert-danger">
+      <i class="bi bi-exclamation-triangle me-1"></i>{{ error() }}
+      <button class="btn btn-sm btn-outline-danger ms-2" (click)="loadStatus()">
+        Retry
+      </button>
+    </div>
+  } @else if (status()) {
+    <!-- Overall Status Card -->
+    <div class="row mb-4">
+      <div class="col-md-6 col-lg-4">
+        <div class="card">
+          <div class="card-body text-center">
+            <h5 class="card-title">Classifier Status</h5>
+            @if (status()!.available) {
+              <span class="badge bg-success fs-6 px-3 py-2">
+                <i class="bi bi-check-circle me-1"></i>Available
+              </span>
+            } @else {
+              <span class="badge bg-secondary fs-6 px-3 py-2">
+                <i class="bi bi-x-circle me-1"></i>Not Available
+              </span>
+            }
+            @if (status()!.format_version !== undefined) {
+              <p class="text-muted mt-2 mb-0">
+                Format version: {{ status()!.format_version }}
+              </p>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sub-Classifier Cards -->
+    <div class="row g-3">
+      <!-- Tags Classifier -->
+      <div class="col-md-6 col-lg-3">
+        <div class="card h-100">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-tag me-1"></i>Tags</span>
+            @if (status()!.tags_trained) {
+              <span class="badge bg-success">Trained</span>
+            } @else {
+              <span class="badge bg-secondary">Not Trained</span>
+            }
+          </div>
+          <div class="card-body">
+            <p class="card-text">
+              <small class="text-muted">Data Hash</small><br />
+              <code>{{ truncateHash(status()!.tags_data_hash) }}</code>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Correspondent Classifier -->
+      <div class="col-md-6 col-lg-3">
+        <div class="card h-100">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-person me-1"></i>Correspondent</span>
+            @if (status()!.correspondent_trained) {
+              <span class="badge bg-success">Trained</span>
+            } @else {
+              <span class="badge bg-secondary">Not Trained</span>
+            }
+          </div>
+          <div class="card-body">
+            <p class="card-text">
+              <small class="text-muted">Data Hash</small><br />
+              <code>{{ truncateHash(status()!.correspondent_data_hash) }}</code>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Document Type Classifier -->
+      <div class="col-md-6 col-lg-3">
+        <div class="card h-100">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-file-earmark me-1"></i>Document Type</span>
+            @if (status()!.document_type_trained) {
+              <span class="badge bg-success">Trained</span>
+            } @else {
+              <span class="badge bg-secondary">Not Trained</span>
+            }
+          </div>
+          <div class="card-body">
+            <p class="card-text">
+              <small class="text-muted">Data Hash</small><br />
+              <code>{{ truncateHash(status()!.document_type_data_hash) }}</code>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Storage Path Classifier -->
+      <div class="col-md-6 col-lg-3">
+        <div class="card h-100">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-folder2 me-1"></i>Storage Path</span>
+            @if (status()!.storage_path_trained) {
+              <span class="badge bg-success">Trained</span>
+            } @else {
+              <span class="badge bg-secondary">Not Trained</span>
+            }
+          </div>
+          <div class="card-body">
+            <p class="card-text">
+              <small class="text-muted">Data Hash</small><br />
+              <code>{{ truncateHash(status()!.storage_path_data_hash) }}</code>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

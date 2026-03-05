@@ -1,0 +1,77 @@
+<div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ transition.label }}</h5>
+        <button type="button" class="btn-close" (click)="onCancel()"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted">
+          {{ transition.origin_state_label }} &rarr;
+          {{ transition.destination_state_label }}
+        </p>
+        @for (field of fields; track field.id) {
+          <div class="mb-3">
+            <label class="form-label">
+              {{ field.label }}
+              @if (field.required) {
+                <span class="text-danger">*</span>
+              }
+            </label>
+            @if (field.field_type === 'text') {
+              <textarea
+                class="form-control form-control-sm"
+                [ngModel]="fieldValues()[field.name] || ''"
+                (ngModelChange)="setFieldValue(field.name, $event)"
+              ></textarea>
+            } @else if (field.field_type === 'boolean') {
+              <select
+                class="form-select form-select-sm"
+                [ngModel]="fieldValues()[field.name] || ''"
+                (ngModelChange)="setFieldValue(field.name, $event)"
+              >
+                <option value="">Select...</option>
+                <option value="true">Yes</option>
+                <option value="false">No</option>
+              </select>
+            } @else {
+              <input
+                [type]="
+                  field.field_type === 'integer'
+                    ? 'number'
+                    : field.field_type === 'date'
+                      ? 'date'
+                      : 'text'
+                "
+                class="form-control form-control-sm"
+                [ngModel]="fieldValues()[field.name] || ''"
+                (ngModelChange)="setFieldValue(field.name, $event)"
+              />
+            }
+            @if (field.help_text) {
+              <small class="form-text text-muted">{{ field.help_text }}</small>
+            }
+          </div>
+        }
+        <div class="mb-3">
+          <label class="form-label">Comment</label>
+          <textarea
+            class="form-control form-control-sm"
+            [ngModel]="comment()"
+            (ngModelChange)="comment.set($event)"
+            rows="2"
+            placeholder="Optional comment..."
+          ></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary btn-sm" (click)="onCancel()">
+          Cancel
+        </button>
+        <button class="btn btn-primary btn-sm" (click)="onExecute()">
+          Execute Transition
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

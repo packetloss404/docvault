@@ -1,0 +1,20 @@
+[project]
+name = "docvault"
+version = "0.1.0"
+description = "The Ultimate Open-Source Document Management System"
+requires-python = ">=3.12"
+license = "GPL-3.0-or-later"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "docvault.settings.testing"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]

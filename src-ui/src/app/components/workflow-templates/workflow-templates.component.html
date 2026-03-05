@@ -1,0 +1,102 @@
+<h2>Workflow Templates</h2>
+
+<div class="d-flex justify-content-between mb-3">
+  <p class="text-muted mb-0">Manage workflow templates for document lifecycle management.</p>
+  <button class="btn btn-primary btn-sm" (click)="showCreate.set(!showCreate())">
+    <i class="bi bi-plus-lg"></i> New Template
+  </button>
+</div>
+
+@if (showCreate()) {
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="row g-2 align-items-end">
+        <div class="col-md-5">
+          <label class="form-label">Label</label>
+          <input
+            type="text"
+            class="form-control form-control-sm"
+            [ngModel]="newLabel()"
+            (ngModelChange)="newLabel.set($event)"
+            placeholder="e.g. Invoice Approval"
+          />
+        </div>
+        <div class="col-md-3">
+          <div class="form-check mt-4">
+            <input
+              type="checkbox"
+              class="form-check-input"
+              id="autoLaunch"
+              [ngModel]="newAutoLaunch()"
+              (ngModelChange)="newAutoLaunch.set($event)"
+            />
+            <label class="form-check-label" for="autoLaunch">Auto-launch</label>
+          </div>
+        </div>
+        <div class="col-auto">
+          <button class="btn btn-primary btn-sm" (click)="createTemplate()" [disabled]="!newLabel()">
+            Create
+          </button>
+          <button class="btn btn-secondary btn-sm ms-1" (click)="showCreate.set(false)">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+}
+
+@if (loading()) {
+  <div class="text-center py-4">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+} @else if (templates().length === 0) {
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-diagram-3" style="font-size: 3rem;"></i>
+    <p class="mt-2">No workflow templates yet. Create one to get started.</p>
+  </div>
+} @else {
+  <div class="table-responsive">
+    <table class="table table-hover">
+      <thead>
+        <tr>
+          <th>Label</th>
+          <th>Internal Name</th>
+          <th>Auto-launch</th>
+          <th>States</th>
+          <th>Transitions</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (t of templates(); track t.id) {
+          <tr>
+            <td>
+              <a [routerLink]="['/workflows', t.id]" class="fw-semibold">{{ t.label }}</a>
+            </td>
+            <td><code>{{ t.internal_name }}</code></td>
+            <td>
+              @if (t.auto_launch) {
+                <span class="badge bg-success">Yes</span>
+              } @else {
+                <span class="badge bg-secondary">No</span>
+              }
+            </td>
+            <td>{{ t.state_count }}</td>
+            <td>{{ t.transition_count }}</td>
+            <td class="text-end">
+              <button
+                class="btn btn-outline-danger btn-sm"
+                (click)="deleteTemplate(t.id, t.label)"
+              >
+                <i class="bi bi-trash"></i>
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

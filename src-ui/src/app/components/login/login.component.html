@@ -1,0 +1,56 @@
+<div class="login-wrapper d-flex align-items-center justify-content-center min-vh-100">
+  <div class="card shadow-sm" style="width: 400px;">
+    <div class="card-body p-4">
+      <div class="text-center mb-4">
+        <h3 class="fw-bold">DocVault</h3>
+        <p class="text-muted">Sign in to your account</p>
+      </div>
+
+      @if (errorMessage) {
+        <div class="alert alert-danger" role="alert">
+          {{ errorMessage }}
+        </div>
+      }
+
+      <form (ngSubmit)="onSubmit()">
+        <div class="mb-3">
+          <label for="username" class="form-label">Username</label>
+          <input
+            type="text"
+            class="form-control"
+            id="username"
+            [(ngModel)]="username"
+            name="username"
+            required
+            autofocus
+          />
+        </div>
+
+        <div class="mb-3">
+          <label for="password" class="form-label">Password</label>
+          <input
+            type="password"
+            class="form-control"
+            id="password"
+            [(ngModel)]="password"
+            name="password"
+            required
+          />
+        </div>
+
+        <button
+          type="submit"
+          class="btn btn-primary w-100"
+          [disabled]="loading || !username || !password"
+        >
+          @if (loading) {
+            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+            Signing in...
+          } @else {
+            Sign in
+          }
+        </button>
+      </form>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,224 @@
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Sources</h2>
+  </div>
+
+  <!-- Tabs -->
+  <ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+      <button class="nav-link" [class.active]="activeTab() === 'sources'" (click)="activeTab.set('sources')">
+        <i class="bi bi-folder-symlink me-1"></i> Watch Folders
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" [class.active]="activeTab() === 'mail'" (click)="activeTab.set('mail')">
+        <i class="bi bi-envelope me-1"></i> Mail Accounts
+      </button>
+    </li>
+  </ul>
+
+  <!-- Watch Folders Tab -->
+  @if (activeTab() === 'sources') {
+    <div class="d-flex justify-content-end mb-3">
+      <button class="btn btn-primary btn-sm" (click)="openSourceForm()">
+        <i class="bi bi-plus-lg me-1"></i> Add Source
+      </button>
+    </div>
+
+    @if (showSourceForm()) {
+      <div class="card mb-3">
+        <div class="card-body">
+          <h5 class="card-title">{{ editingSource() ? 'Edit' : 'New' }} Source</h5>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Label</label>
+              <input type="text" class="form-control form-control-sm"
+                [ngModel]="sourceForm().label"
+                (ngModelChange)="sourceForm.set({...sourceForm(), label: $event})" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Type</label>
+              <select class="form-select form-select-sm"
+                [ngModel]="sourceForm().source_type"
+                (ngModelChange)="sourceForm.set({...sourceForm(), source_type: $event})">
+                <option value="watch_folder">Watch Folder</option>
+                <option value="staging">Staging Folder</option>
+                <option value="s3">S3 Bucket</option>
+              </select>
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Enabled</label>
+              <div class="form-check mt-1">
+                <input type="checkbox" class="form-check-input"
+                  [ngModel]="sourceForm().enabled"
+                  (ngModelChange)="sourceForm.set({...sourceForm(), enabled: $event})" />
+              </div>
+            </div>
+            <div class="col-md-3 d-flex align-items-end gap-2">
+              <button class="btn btn-primary btn-sm" (click)="saveSource()">Save</button>
+              <button class="btn btn-secondary btn-sm" (click)="showSourceForm.set(false)">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <div class="table-responsive">
+      <table class="table table-sm table-hover">
+        <thead>
+          <tr>
+            <th>Label</th>
+            <th>Type</th>
+            <th>Enabled</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (source of sources(); track source.id) {
+            <tr>
+              <td>{{ source.label }}</td>
+              <td><span class="badge bg-info text-dark">{{ source.source_type }}</span></td>
+              <td>
+                @if (source.enabled) {
+                  <span class="badge bg-success">Active</span>
+                } @else {
+                  <span class="badge bg-secondary">Disabled</span>
+                }
+              </td>
+              <td>
+                <button class="btn btn-outline-primary btn-sm me-1" (click)="openSourceForm(source)">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-outline-danger btn-sm" (click)="deleteSource(source.id)">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="4" class="text-muted text-center">No sources configured.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Mail Accounts Tab -->
+  @if (activeTab() === 'mail') {
+    <div class="d-flex justify-content-end mb-3">
+      <button class="btn btn-primary btn-sm" (click)="openMailForm()">
+        <i class="bi bi-plus-lg me-1"></i> Add Mail Account
+      </button>
+    </div>
+
+    @if (showMailForm()) {
+      <div class="card mb-3">
+        <div class="card-body">
+          <h5 class="card-title">{{ editingMailAccount() ? 'Edit' : 'New' }} Mail Account</h5>
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Name</label>
+              <input type="text" class="form-control form-control-sm"
+                [ngModel]="mailForm().name"
+                (ngModelChange)="mailForm.set({...mailForm(), name: $event})" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">IMAP Server</label>
+              <input type="text" class="form-control form-control-sm"
+                [ngModel]="mailForm().imap_server"
+                (ngModelChange)="mailForm.set({...mailForm(), imap_server: $event})" />
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Port</label>
+              <input type="number" class="form-control form-control-sm"
+                [ngModel]="mailForm().port"
+                (ngModelChange)="mailForm.set({...mailForm(), port: $event})" />
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Security</label>
+              <select class="form-select form-select-sm"
+                [ngModel]="mailForm().security"
+                (ngModelChange)="mailForm.set({...mailForm(), security: $event})">
+                <option value="none">None</option>
+                <option value="ssl">SSL</option>
+                <option value="starttls">STARTTLS</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Username</label>
+              <input type="text" class="form-control form-control-sm"
+                [ngModel]="mailForm().username"
+                (ngModelChange)="mailForm.set({...mailForm(), username: $event})" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Password</label>
+              <input type="password" class="form-control form-control-sm"
+                [ngModel]="mailForm().password"
+                (ngModelChange)="mailForm.set({...mailForm(), password: $event})" />
+            </div>
+            <div class="col-md-2">
+              <label class="form-label">Enabled</label>
+              <div class="form-check mt-1">
+                <input type="checkbox" class="form-check-input"
+                  [ngModel]="mailForm().enabled"
+                  (ngModelChange)="mailForm.set({...mailForm(), enabled: $event})" />
+              </div>
+            </div>
+            <div class="col-md-2 d-flex align-items-end gap-2">
+              <button class="btn btn-primary btn-sm" (click)="saveMailAccount()">Save</button>
+              <button class="btn btn-secondary btn-sm" (click)="showMailForm.set(false)">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    @if (testResult()) {
+      <div class="alert" [class.alert-success]="testResult()!.success" [class.alert-danger]="!testResult()!.success">
+        {{ testResult()!.message }}
+      </div>
+    }
+
+    <div class="table-responsive">
+      <table class="table table-sm table-hover">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Server</th>
+            <th>Username</th>
+            <th>Enabled</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (account of mailAccounts(); track account.id) {
+            <tr>
+              <td>{{ account.name }}</td>
+              <td>{{ account.imap_server }}:{{ account.port }}</td>
+              <td>{{ account.username }}</td>
+              <td>
+                @if (account.enabled) {
+                  <span class="badge bg-success">Active</span>
+                } @else {
+                  <span class="badge bg-secondary">Disabled</span>
+                }
+              </td>
+              <td>
+                <button class="btn btn-outline-info btn-sm me-1" (click)="testConnection(account.id)" title="Test Connection">
+                  <i class="bi bi-plug"></i>
+                </button>
+                <button class="btn btn-outline-primary btn-sm me-1" (click)="openMailForm(account)">
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-outline-danger btn-sm" (click)="deleteMailAccount(account.id)">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="5" class="text-muted text-center">No mail accounts configured.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

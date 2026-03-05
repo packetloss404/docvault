@@ -1,0 +1,89 @@
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Share Links</h2>
+  </div>
+
+  @if (loading()) {
+    <div class="text-center py-4">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+  } @else {
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>Document</th>
+            <th>Link</th>
+            <th>Version</th>
+            <th>Expiration</th>
+            <th>Password</th>
+            <th>Downloads</th>
+            <th>Created</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (link of shareLinks(); track link.id) {
+            <tr [class.table-warning]="link.is_expired">
+              <td>
+                <a [routerLink]="['/documents', link.document]" class="text-decoration-none">
+                  <i class="bi bi-file-earmark me-1"></i>{{ link.document_title }}
+                </a>
+              </td>
+              <td>
+                <code class="small">{{ link.slug }}</code>
+                <button
+                  class="btn btn-sm btn-link p-0 ms-1"
+                  (click)="copyToClipboard(link.slug)"
+                  title="Copy link to clipboard"
+                >
+                  <i class="bi bi-clipboard"></i>
+                </button>
+              </td>
+              <td>
+                <span class="badge bg-info text-dark">{{ link.file_version }}</span>
+              </td>
+              <td>
+                @if (link.is_expired) {
+                  <span class="badge bg-danger">Expired</span>
+                } @else if (!link.expiration) {
+                  <span class="text-muted small">Never</span>
+                } @else {
+                  <span class="small">{{ formatDate(link.expiration) }}</span>
+                }
+              </td>
+              <td>
+                @if (link.has_password) {
+                  <i class="bi bi-lock-fill text-success" title="Password protected"></i>
+                } @else {
+                  <i class="bi bi-unlock text-muted" title="No password"></i>
+                }
+              </td>
+              <td>
+                <span class="badge bg-secondary">{{ link.download_count }}</span>
+              </td>
+              <td class="text-muted small">{{ formatDate(link.created_at) }}</td>
+              <td>
+                <button
+                  class="btn btn-outline-danger btn-sm"
+                  (click)="revokeLink(link)"
+                  title="Revoke share link"
+                >
+                  <i class="bi bi-x-lg me-1"></i>Revoke
+                </button>
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="8" class="text-muted text-center py-4">
+                No share links yet. Create one from a document's detail page.
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

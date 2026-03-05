@@ -1,0 +1,24 @@
+apiVersion: v2
+name: docvault
+description: The Ultimate Open-Source Document Management System
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - document-management
+  - dms
+  - django
+  - angular
+home: https://github.com/docvault/docvault
+maintainers:
+  - name: DocVault Team
+    email: dev@docvault.io
+dependencies:
+  - name: postgresql
+    version: "~16.0"
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: "~20.0"
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled

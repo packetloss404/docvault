@@ -1,0 +1,250 @@
+@if (loading()) {
+  <div class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+} @else if (template(); as t) {
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a routerLink="/workflows">Workflows</a></li>
+      <li class="breadcrumb-item active">{{ t.label }}</li>
+    </ol>
+  </nav>
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-start mb-3">
+    @if (!editingLabel()) {
+      <div>
+        <h2>{{ t.label }}</h2>
+        <small class="text-muted">{{ t.internal_name }}</small>
+        @if (t.auto_launch) {
+          <span class="badge bg-success ms-2">Auto-launch</span>
+        }
+      </div>
+      <button class="btn btn-outline-primary btn-sm" (click)="startEditLabel()">
+        <i class="bi bi-pencil"></i> Edit
+      </button>
+    } @else {
+      <div class="row g-2 flex-grow-1 align-items-end">
+        <div class="col-md-5">
+          <label class="form-label">Label</label>
+          <input
+            type="text"
+            class="form-control form-control-sm"
+            [ngModel]="editLabel()"
+            (ngModelChange)="editLabel.set($event)"
+          />
+        </div>
+        <div class="col-md-3">
+          <div class="form-check mt-4">
+            <input
+              type="checkbox"
+              class="form-check-input"
+              [ngModel]="editAutoLaunch()"
+              (ngModelChange)="editAutoLaunch.set($event)"
+            />
+            <label class="form-check-label">Auto-launch</label>
+          </div>
+        </div>
+        <div class="col-auto">
+          <button class="btn btn-primary btn-sm" (click)="saveLabel()">Save</button>
+          <button class="btn btn-secondary btn-sm ms-1" (click)="editingLabel.set(false)">Cancel</button>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Tabs -->
+  <ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+      <a
+        class="nav-link"
+        [class.active]="activeTab() === 'states'"
+        (click)="setTab('states')"
+        role="button"
+      >States ({{ states().length }})</a>
+    </li>
+    <li class="nav-item">
+      <a
+        class="nav-link"
+        [class.active]="activeTab() === 'transitions'"
+        (click)="setTab('transitions')"
+        role="button"
+      >Transitions ({{ transitions().length }})</a>
+    </li>
+  </ul>
+
+  <!-- States Tab -->
+  @if (activeTab() === 'states') {
+    <div class="card mb-3">
+      <div class="card-header">Add State</div>
+      <div class="card-body">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label">Label</label>
+            <input
+              type="text"
+              class="form-control form-control-sm"
+              [ngModel]="newStateLabel()"
+              (ngModelChange)="newStateLabel.set($event)"
+              placeholder="e.g. Draft"
+            />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Completion %</label>
+            <input
+              type="number"
+              class="form-control form-control-sm"
+              [ngModel]="newStateCompletion()"
+              (ngModelChange)="newStateCompletion.set($event)"
+              min="0" max="100"
+            />
+          </div>
+          <div class="col-auto">
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="stateInitial"
+                [ngModel]="newStateInitial()" (ngModelChange)="newStateInitial.set($event)" />
+              <label class="form-check-label" for="stateInitial">Initial</label>
+            </div>
+          </div>
+          <div class="col-auto">
+            <div class="form-check">
+              <input type="checkbox" class="form-check-input" id="stateFinal"
+                [ngModel]="newStateFinal()" (ngModelChange)="newStateFinal.set($event)" />
+              <label class="form-check-label" for="stateFinal">Final</label>
+            </div>
+          </div>
+          <div class="col-auto">
+            <button class="btn btn-primary btn-sm" (click)="addState()" [disabled]="!newStateLabel()">
+              Add State
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    @if (states().length > 0) {
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>Label</th>
+            <th>Initial</th>
+            <th>Final</th>
+            <th>Completion</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of states(); track s.id) {
+            <tr>
+              <td>{{ s.label }}</td>
+              <td>
+                @if (s.initial) { <span class="badge bg-primary">Initial</span> }
+              </td>
+              <td>
+                @if (s.final) { <span class="badge bg-success">Final</span> }
+              </td>
+              <td>{{ s.completion }}%</td>
+              <td class="text-end">
+                <button class="btn btn-outline-danger btn-sm" (click)="deleteState(s.id)">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <p class="text-muted">No states defined yet.</p>
+    }
+  }
+
+  <!-- Transitions Tab -->
+  @if (activeTab() === 'transitions') {
+    <div class="card mb-3">
+      <div class="card-header">Add Transition</div>
+      <div class="card-body">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label">Label</label>
+            <input
+              type="text"
+              class="form-control form-control-sm"
+              [ngModel]="newTransLabel()"
+              (ngModelChange)="newTransLabel.set($event)"
+              placeholder="e.g. Submit for Review"
+            />
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">From State</label>
+            <select class="form-select form-select-sm"
+              [ngModel]="newTransOrigin()" (ngModelChange)="newTransOrigin.set($event)">
+              <option [ngValue]="null">Select...</option>
+              @for (s of states(); track s.id) {
+                <option [ngValue]="s.id">{{ s.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">To State</label>
+            <select class="form-select form-select-sm"
+              [ngModel]="newTransDest()" (ngModelChange)="newTransDest.set($event)">
+              <option [ngValue]="null">Select...</option>
+              @for (s of states(); track s.id) {
+                <option [ngValue]="s.id">{{ s.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Condition</label>
+            <input
+              type="text"
+              class="form-control form-control-sm"
+              [ngModel]="newTransCondition()"
+              (ngModelChange)="newTransCondition.set($event)"
+              placeholder="Optional"
+            />
+          </div>
+          <div class="col-auto">
+            <button class="btn btn-primary btn-sm" (click)="addTransition()"
+              [disabled]="!newTransLabel() || !newTransOrigin() || !newTransDest()">
+              Add Transition
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    @if (transitions().length > 0) {
+      <table class="table table-hover">
+        <thead>
+          <tr>
+            <th>Label</th>
+            <th>From</th>
+            <th>To</th>
+            <th>Condition</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of transitions(); track t.id) {
+            <tr>
+              <td>{{ t.label }}</td>
+              <td><span class="badge bg-secondary">{{ t.origin_state_label }}</span></td>
+              <td><span class="badge bg-secondary">{{ t.destination_state_label }}</span></td>
+              <td><code>{{ t.condition || '-' }}</code></td>
+              <td class="text-end">
+                <button class="btn btn-outline-danger btn-sm" (click)="deleteTransition(t.id)">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <p class="text-muted">No transitions defined yet. Add states first, then create transitions.</p>
+    }
+  }
+}

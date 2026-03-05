@@ -1,0 +1,578 @@
+@if (loading()) {
+  <div class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+  </div>
+} @else if (document(); as doc) {
+  <!-- Breadcrumb -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a routerLink="/documents">Documents</a>
+      </li>
+      <li class="breadcrumb-item active">{{ doc.title }}</li>
+    </ol>
+  </nav>
+
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+      <h2>{{ doc.title }}</h2>
+      <small class="text-muted">{{ doc.original_filename }}</small>
+    </div>
+    <div class="btn-group">
+      <a
+        [href]="getDownloadUrl('original')"
+        class="btn btn-outline-primary btn-sm"
+      >
+        <i class="bi bi-download"></i> Original
+      </a>
+      @if (doc.archive_filename) {
+        <a
+          [href]="getDownloadUrl('archive')"
+          class="btn btn-outline-secondary btn-sm"
+        >
+          <i class="bi bi-file-earmark-pdf"></i> Archive
+        </a>
+      }
+      <button class="btn btn-outline-danger btn-sm" (click)="deleteDocument()">
+        <i class="bi bi-trash"></i> Delete
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+      <a
+        class="nav-link"
+        [class.active]="activeTab() === 'details'"
+        (click)="setTab('details')"
+        role="button"
+        >Details</a
+      >
+    </li>
+    <li class="nav-item">
+      <a
+        class="nav-link"
+        [class.active]="activeTab() === 'content'"
+        (click)="setTab('content')"
+        role="button"
+        >Content</a
+      >
+    </li>
+    <li class="nav-item">
+      <a
+        class="nav-link"
+        [class.active]="activeTab() === 'preview'"
+        (click)="setTab('preview')"
+        role="button"
+        >Preview</a
+      >
+    </li>
+    <li class="nav-item">
+      <a
+        class="nav-link"
+        [class.active]="activeTab() === 'metadata'"
+        (click)="setTab('metadata')"
+        role="button"
+        >Metadata</a
+      >
+    </li>
+    <li class="nav-item">
+      <a
+        class="nav-link"
+        [class.active]="activeTab() === 'workflows'"
+        (click)="setTab('workflows')"
+        role="button"
+        >Workflows</a
+      >
+    </li>
+  </ul>
+
+  <!-- Tab Content -->
+  <div class="tab-content">
+    <!-- Details Tab -->
+    @if (activeTab() === 'details') {
+      <div class="card">
+        <div class="card-body">
+          @if (!editing()) {
+            <div class="row">
+              <div class="col-md-8">
+                <dl class="row mb-0">
+                  <dt class="col-sm-4">Title</dt>
+                  <dd class="col-sm-8">{{ doc.title }}</dd>
+
+                  <dt class="col-sm-4">Document Type</dt>
+                  <dd class="col-sm-8">
+                    {{ doc.document_type_name || 'None' }}
+                  </dd>
+
+                  <dt class="col-sm-4">Date</dt>
+                  <dd class="col-sm-8">
+                    {{ doc.created | date : 'mediumDate' }}
+                  </dd>
+
+                  <dt class="col-sm-4">Language</dt>
+                  <dd class="col-sm-8">{{ doc.language }}</dd>
+
+                  <dt class="col-sm-4">ASN</dt>
+                  <dd class="col-sm-8">
+                    {{ doc.archive_serial_number || 'None' }}
+                  </dd>
+
+                  <dt class="col-sm-4">Correspondent</dt>
+                  <dd class="col-sm-8">
+                    {{ doc.correspondent_name || 'None' }}
+                  </dd>
+
+                  <dt class="col-sm-4">Cabinet</dt>
+                  <dd class="col-sm-8">
+                    {{ doc.cabinet_name || 'None' }}
+                  </dd>
+
+                  <dt class="col-sm-4">Tags</dt>
+                  <dd class="col-sm-8">
+                    @if (doc.tag_ids && doc.tag_ids.length > 0) {
+                      @for (tagId of doc.tag_ids; track tagId) {
+                        @for (tag of allTags(); track tag.id) {
+                          @if (tag.id === tagId) {
+                            <span
+                              class="badge me-1"
+                              [style.background-color]="tag.color"
+                            >{{ tag.name }}</span>
+                          }
+                        }
+                      }
+                    } @else {
+                      None
+                    }
+                  </dd>
+
+                  <dt class="col-sm-4">Pages</dt>
+                  <dd class="col-sm-8">{{ doc.page_count }}</dd>
+
+                  <dt class="col-sm-4">Added</dt>
+                  <dd class="col-sm-8">{{ doc.added | date : 'medium' }}</dd>
+                </dl>
+                <button
+                  class="btn btn-primary btn-sm mt-3"
+                  (click)="startEdit()"
+                >
+                  <i class="bi bi-pencil"></i> Edit
+                </button>
+              </div>
+              <div class="col-md-4 text-center">
+                <img
+                  [src]="getPreviewUrl()"
+                  alt="Preview"
+                  class="img-fluid rounded shadow-sm"
+                  style="max-height: 280px;"
+                  onerror="this.style.display='none'"
+                />
+              </div>
+            </div>
+          } @else {
+            <!-- Edit Mode -->
+            <div class="row">
+              <div class="col-md-8">
+                <div class="mb-3">
+                  <label class="form-label">Title</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    [ngModel]="editTitle()"
+                    (ngModelChange)="editTitle.set($event)"
+                  />
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Document Type</label>
+                  <select
+                    class="form-select"
+                    [ngModel]="editDocumentType()"
+                    (ngModelChange)="editDocumentType.set($event)"
+                  >
+                    <option [ngValue]="null">None</option>
+                    @for (type of documentTypes(); track type.id) {
+                      <option [ngValue]="type.id">{{ type.name }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Correspondent</label>
+                  <select
+                    class="form-select"
+                    [ngModel]="editCorrespondent()"
+                    (ngModelChange)="editCorrespondent.set($event)"
+                  >
+                    <option [ngValue]="null">None</option>
+                    @for (c of allCorrespondents(); track c.id) {
+                      <option [ngValue]="c.id">{{ c.name }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Cabinet</label>
+                  <select
+                    class="form-select"
+                    [ngModel]="editCabinet()"
+                    (ngModelChange)="editCabinet.set($event)"
+                  >
+                    <option [ngValue]="null">None</option>
+                    @for (c of allCabinets(); track c.id) {
+                      <option [ngValue]="c.id">{{ c.name }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Language</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    [ngModel]="editLanguage()"
+                    (ngModelChange)="editLanguage.set($event)"
+                  />
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Archive Serial Number</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    [ngModel]="editAsn()"
+                    (ngModelChange)="editAsn.set($event)"
+                  />
+                </div>
+                <div class="btn-group">
+                  <button class="btn btn-primary btn-sm" (click)="saveEdit()">
+                    Save
+                  </button>
+                  <button
+                    class="btn btn-secondary btn-sm"
+                    (click)="cancelEdit()"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Versions -->
+      @if (versions().length > 0) {
+        <div class="card mt-3">
+          <div class="card-header">
+            <h6 class="mb-0">Version History</h6>
+          </div>
+          <div class="card-body p-0">
+            <table class="table table-sm mb-0">
+              <thead>
+                <tr>
+                  <th>Version</th>
+                  <th>Comment</th>
+                  <th>Created</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (ver of versions(); track ver.id) {
+                  <tr>
+                    <td>v{{ ver.version_number }}</td>
+                    <td>{{ ver.comment || '-' }}</td>
+                    <td>{{ ver.created_at | date : 'short' }}</td>
+                    <td>
+                      @if (ver.is_active) {
+                        <span class="badge bg-success">Active</span>
+                      }
+                    </td>
+                    <td>
+                      @if (!ver.is_active) {
+                        <button
+                          class="btn btn-outline-primary btn-sm"
+                          (click)="activateVersion(ver.id)"
+                        >
+                          Activate
+                        </button>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    }
+
+    <!-- Content Tab -->
+    @if (activeTab() === 'content') {
+      <div class="card">
+        <div class="card-body">
+          @if (doc.content) {
+            <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">{{ doc.content }}</pre>
+          } @else {
+            <p class="text-muted mb-0">No extracted content available.</p>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Preview Tab -->
+    @if (activeTab() === 'preview') {
+      <div class="card">
+        <div class="card-body text-center">
+          @if (doc.mime_type === 'application/pdf' || doc.archive_filename) {
+            <iframe
+              [src]="getDownloadUrl(doc.archive_filename ? 'archive' : 'original')"
+              style="width: 100%; height: 80vh; border: none;"
+              title="Document Preview"
+            ></iframe>
+          } @else if (doc.mime_type.startsWith('image/')) {
+            <img
+              [src]="getDownloadUrl('original')"
+              alt="Document Preview"
+              class="img-fluid"
+              style="max-height: 80vh;"
+            />
+          } @else {
+            <div class="py-5 text-muted">
+              <i class="bi bi-file-earmark" style="font-size: 3rem;"></i>
+              <p class="mt-2">
+                Preview not available for this file type.<br />
+                <a [href]="getDownloadUrl('original')">Download the file</a> to
+                view it.
+              </p>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Metadata Tab -->
+    @if (activeTab() === 'metadata') {
+      <!-- File Metadata -->
+      <div class="card">
+        <div class="card-header">
+          <h6 class="mb-0">File Information</h6>
+        </div>
+        <div class="card-body">
+          <dl class="row mb-0">
+            <dt class="col-sm-4">Original Filename</dt>
+            <dd class="col-sm-8">
+              <code>{{ doc.original_filename }}</code>
+            </dd>
+
+            <dt class="col-sm-4">MIME Type</dt>
+            <dd class="col-sm-8">
+              <code>{{ doc.mime_type }}</code>
+            </dd>
+
+            <dt class="col-sm-4">Checksum (SHA-256)</dt>
+            <dd class="col-sm-8">
+              <code class="small">{{ doc.checksum }}</code>
+            </dd>
+
+            @if (doc.archive_checksum) {
+              <dt class="col-sm-4">Archive Checksum</dt>
+              <dd class="col-sm-8">
+                <code class="small">{{ doc.archive_checksum }}</code>
+              </dd>
+            }
+
+            <dt class="col-sm-4">Storage Path</dt>
+            <dd class="col-sm-8">
+              <code>{{ doc.filename }}</code>
+            </dd>
+
+            @if (doc.archive_filename) {
+              <dt class="col-sm-4">Archive Path</dt>
+              <dd class="col-sm-8">
+                <code>{{ doc.archive_filename }}</code>
+              </dd>
+            }
+
+            <dt class="col-sm-4">Page Count</dt>
+            <dd class="col-sm-8">{{ doc.page_count }}</dd>
+
+            <dt class="col-sm-4">Language</dt>
+            <dd class="col-sm-8">{{ doc.language }}</dd>
+
+            <dt class="col-sm-4">UUID</dt>
+            <dd class="col-sm-8">
+              <code class="small">{{ doc.uuid }}</code>
+            </dd>
+
+            <dt class="col-sm-4">Owner ID</dt>
+            <dd class="col-sm-8">{{ doc.owner }}</dd>
+
+            <dt class="col-sm-4">Created At</dt>
+            <dd class="col-sm-8">{{ doc.created_at | date : 'medium' }}</dd>
+
+            <dt class="col-sm-4">Updated At</dt>
+            <dd class="col-sm-8">{{ doc.updated_at | date : 'medium' }}</dd>
+          </dl>
+        </div>
+      </div>
+
+      <!-- Custom Fields -->
+      <div class="card mt-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h6 class="mb-0">Custom Fields</h6>
+        </div>
+        <div class="card-body">
+          @if (customFieldInstances().length > 0) {
+            <table class="table table-sm mb-3">
+              <thead>
+                <tr>
+                  <th>Field</th>
+                  <th>Type</th>
+                  <th>Value</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (inst of customFieldInstances(); track inst.id) {
+                  <tr>
+                    <td>{{ inst.field_name }}</td>
+                    <td>
+                      <span class="badge bg-secondary">{{
+                        inst.field_data_type
+                      }}</span>
+                    </td>
+                    <td>{{ inst.value }}</td>
+                    <td class="text-end">
+                      <button
+                        class="btn btn-outline-danger btn-sm"
+                        (click)="removeCustomField(inst.id)"
+                      >
+                        <i class="bi bi-x"></i>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <p class="text-muted mb-3">No custom fields set.</p>
+          }
+
+          <!-- Add custom field form -->
+          <div class="row g-2 align-items-end">
+            <div class="col-auto">
+              <label class="form-label">Field</label>
+              <select
+                class="form-select form-select-sm"
+                [ngModel]="addFieldId()"
+                (ngModelChange)="addFieldId.set($event)"
+              >
+                <option [ngValue]="null">Select field...</option>
+                @for (f of allCustomFields(); track f.id) {
+                  <option [ngValue]="f.id">{{ f.name }} ({{ f.data_type }})</option>
+                }
+              </select>
+            </div>
+            <div class="col-auto">
+              <label class="form-label">Value</label>
+              <input
+                type="text"
+                class="form-control form-control-sm"
+                [ngModel]="addFieldValue()"
+                (ngModelChange)="addFieldValue.set($event)"
+              />
+            </div>
+            <div class="col-auto">
+              <button
+                class="btn btn-primary btn-sm"
+                (click)="addCustomField()"
+                [disabled]="!addFieldId()"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Document Metadata -->
+      <div class="card mt-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h6 class="mb-0">Structured Metadata</h6>
+        </div>
+        <div class="card-body">
+          @if (documentMetadata().length > 0) {
+            <table class="table table-sm mb-3">
+              <thead>
+                <tr>
+                  <th>Type</th>
+                  <th>Value</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (md of documentMetadata(); track md.id) {
+                  <tr>
+                    <td>{{ md.metadata_type_label }}</td>
+                    <td>{{ md.value }}</td>
+                    <td class="text-end">
+                      <button
+                        class="btn btn-outline-danger btn-sm"
+                        (click)="removeMetadata(md.id)"
+                      >
+                        <i class="bi bi-x"></i>
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          } @else {
+            <p class="text-muted mb-3">No metadata set.</p>
+          }
+
+          <!-- Add metadata form -->
+          <div class="row g-2 align-items-end">
+            <div class="col-auto">
+              <label class="form-label">Metadata Type</label>
+              <select
+                class="form-select form-select-sm"
+                [ngModel]="addMetadataTypeId()"
+                (ngModelChange)="addMetadataTypeId.set($event)"
+              >
+                <option [ngValue]="null">Select type...</option>
+                @for (mt of allMetadataTypes(); track mt.id) {
+                  <option [ngValue]="mt.id">{{ mt.label || mt.name }}</option>
+                }
+              </select>
+            </div>
+            <div class="col-auto">
+              <label class="form-label">Value</label>
+              <input
+                type="text"
+                class="form-control form-control-sm"
+                [ngModel]="addMetadataValue()"
+                (ngModelChange)="addMetadataValue.set($event)"
+              />
+            </div>
+            <div class="col-auto">
+              <button
+                class="btn btn-primary btn-sm"
+                (click)="addMetadata()"
+                [disabled]="!addMetadataTypeId()"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Workflows Tab -->
+    @if (activeTab() === 'workflows') {
+      <app-workflow-panel [documentId]="doc.id" />
+    }
+  </div>
+}
