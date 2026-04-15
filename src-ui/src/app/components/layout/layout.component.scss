@@ -3,3 +3,18 @@
   flex-direction: column;
   min-height: 100vh;
 }
+
+.sidebar-section-header {
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  opacity: 0.8;
+  padding-top: 0.5rem;
+  padding-bottom: 0.25rem;
+  user-select: none;
+
+  &:hover {
+    opacity: 1;
+  }
+}

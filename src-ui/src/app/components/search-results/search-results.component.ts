@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { SearchService } from '../../services/search.service';
+import { AnalyticsService } from '../../services/analytics.service';
 import { SearchResponse, SearchResult, SearchFacets } from '../../models/search.model';
 
 @Component({
@@ -22,6 +23,7 @@ export class SearchResultsComponent implements OnInit {
 
   constructor(
     private searchService: SearchService,
+    private analyticsService: AnalyticsService,
     private route: ActivatedRoute,
     private router: Router,
   ) {}
@@ -73,5 +75,15 @@ export class SearchResultsComponent implements OnInit {
 
   totalPages(): number {
     return Math.ceil(this.totalCount() / this.pageSize());
+  }
+
+  trackResultClick(result: SearchResult, position: number): void {
+    this.analyticsService
+      .trackClick({
+        query: this.query(),
+        document_id: result.id,
+        position,
+      })
+      .subscribe();
   }
 }

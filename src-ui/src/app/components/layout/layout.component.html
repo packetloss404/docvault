@@ -96,130 +96,177 @@
   <!-- Sidebar -->
   <div class="sidebar d-none d-md-block" [class.d-block]="!sidebarCollapsed" style="width: 240px;">
     <nav class="nav flex-column pt-2">
+      <!-- Top-level (always visible) -->
       <a class="nav-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
         <i class="bi bi-speedometer2"></i> Dashboard
       </a>
-      <a class="nav-link" routerLink="/documents" routerLinkActive="active">
-        <i class="bi bi-file-earmark-text"></i> Documents
-      </a>
-      <a class="nav-link" routerLink="/search" routerLinkActive="active">
-        <i class="bi bi-search"></i> Search
-      </a>
-      <a class="nav-link" routerLink="/tags" routerLinkActive="active">
-        <i class="bi bi-tags"></i> Tags
-      </a>
-      <a class="nav-link" routerLink="/correspondents" routerLinkActive="active">
-        <i class="bi bi-people"></i> Correspondents
-      </a>
-      <a class="nav-link" routerLink="/cabinets" routerLinkActive="active">
-        <i class="bi bi-folder"></i> Cabinets
-      </a>
 
-      @if (sidebarViews().length > 0) {
-        <hr class="border-secondary mx-3" />
-        <span class="nav-link text-muted small py-1"><i class="bi bi-bookmark"></i> Saved Views</span>
-        @for (view of sidebarViews(); track view.id) {
-          <a class="nav-link py-1 ps-4" [routerLink]="['/saved-views', view.id, 'results']">
-            {{ view.name }}
-          </a>
+      <!-- Documents -->
+      <a class="nav-link sidebar-section-header" role="button" (click)="toggleSection('documents')">
+        <i class="bi bi-chevron-right me-1 small" [class.bi-chevron-down]="isSectionOpen('documents')" [class.bi-chevron-right]="!isSectionOpen('documents')"></i>
+        <i class="bi bi-file-earmark-text me-1"></i> Documents
+      </a>
+      @if (isSectionOpen('documents')) {
+        <a class="nav-link ps-4" routerLink="/documents" routerLinkActive="active">
+          <i class="bi bi-files"></i> All Documents
+        </a>
+        <a class="nav-link ps-4" routerLink="/search" routerLinkActive="active">
+          <i class="bi bi-search"></i> Search
+        </a>
+        <a class="nav-link ps-4" routerLink="/saved-views" routerLinkActive="active">
+          <i class="bi bi-bookmarks"></i> Saved Views
+        </a>
+        @if (sidebarViews().length > 0) {
+          @for (view of sidebarViews(); track view.id) {
+            <a class="nav-link py-1 ps-5 small" [routerLink]="['/saved-views', view.id, 'results']">
+              {{ view.name }}
+            </a>
+          }
         }
       }
 
-      <hr class="border-secondary mx-3" />
+      <!-- Organize -->
+      <a class="nav-link sidebar-section-header" role="button" (click)="toggleSection('organize')">
+        <i class="bi me-1 small" [class.bi-chevron-down]="isSectionOpen('organize')" [class.bi-chevron-right]="!isSectionOpen('organize')"></i>
+        <i class="bi bi-collection me-1"></i> Organize
+      </a>
+      @if (isSectionOpen('organize')) {
+        <a class="nav-link ps-4" routerLink="/tags" routerLinkActive="active">
+          <i class="bi bi-tags"></i> Tags
+        </a>
+        <a class="nav-link ps-4" routerLink="/correspondents" routerLinkActive="active">
+          <i class="bi bi-people"></i> Correspondents
+        </a>
+        <a class="nav-link ps-4" routerLink="/cabinets" routerLinkActive="active">
+          <i class="bi bi-folder"></i> Cabinets
+        </a>
+        <a class="nav-link ps-4" routerLink="/custom-fields" routerLinkActive="active">
+          <i class="bi bi-input-cursor-text"></i> Custom Fields
+        </a>
+        <a class="nav-link ps-4" routerLink="/metadata-types" routerLinkActive="active">
+          <i class="bi bi-card-list"></i> Metadata Types
+        </a>
+      }
 
-      <a class="nav-link" routerLink="/saved-views" routerLinkActive="active">
-        <i class="bi bi-bookmarks"></i> Saved Views
+      <!-- Workflows -->
+      <a class="nav-link sidebar-section-header" role="button" (click)="toggleSection('workflows')">
+        <i class="bi me-1 small" [class.bi-chevron-down]="isSectionOpen('workflows')" [class.bi-chevron-right]="!isSectionOpen('workflows')"></i>
+        <i class="bi bi-diagram-3 me-1"></i> Workflows
       </a>
-      <a class="nav-link" routerLink="/custom-fields" routerLinkActive="active">
-        <i class="bi bi-input-cursor-text"></i> Custom Fields
-      </a>
-      <a class="nav-link" routerLink="/metadata-types" routerLinkActive="active">
-        <i class="bi bi-card-list"></i> Metadata Types
-      </a>
-      <a class="nav-link" routerLink="/workflows" routerLinkActive="active">
-        <i class="bi bi-diagram-3"></i> Workflows
-      </a>
-      <a class="nav-link" routerLink="/sources" routerLinkActive="active">
-        <i class="bi bi-inbox"></i> Sources
-      </a>
-      <a class="nav-link" routerLink="/notification-preferences" routerLinkActive="active">
-        <i class="bi bi-bell-slash"></i> Notification Settings
-      </a>
-      <a class="nav-link" routerLink="/classifier" routerLinkActive="active">
-        <i class="bi bi-cpu"></i> ML Classifier
-      </a>
-      <a class="nav-link" routerLink="/barcode-config" routerLinkActive="active">
-        <i class="bi bi-upc-scan"></i> Barcode & ASN
-      </a>
-      <a class="nav-link" routerLink="/ai-config" routerLinkActive="active">
-        <i class="bi bi-robot"></i> AI Configuration
-      </a>
-      <a class="nav-link" routerLink="/signature-requests" routerLinkActive="active">
-        <i class="bi bi-pen"></i> E-Signatures
-      </a>
-      <a class="nav-link" routerLink="/share-links" routerLinkActive="active">
-        <i class="bi bi-link-45deg"></i> Share Links
-      </a>
-      <a class="nav-link" routerLink="/activity" routerLinkActive="active">
-        <i class="bi bi-activity"></i> Activity Feed
-      </a>
-      <a class="nav-link" routerLink="/audit-log" routerLinkActive="active">
-        <i class="bi bi-journal-check"></i> Audit Log
-      </a>
-      <a class="nav-link" routerLink="/scanner" routerLinkActive="active">
-        <i class="bi bi-printer"></i> Scanners
-      </a>
+      @if (isSectionOpen('workflows')) {
+        <a class="nav-link ps-4" routerLink="/workflows" routerLinkActive="active">
+          <i class="bi bi-diagram-3"></i> Templates
+        </a>
+        <a class="nav-link ps-4" routerLink="/sources" routerLinkActive="active">
+          <i class="bi bi-inbox"></i> Sources
+        </a>
+        <a class="nav-link ps-4" routerLink="/notification-preferences" routerLinkActive="active">
+          <i class="bi bi-bell-slash"></i> Notifications
+        </a>
+      }
 
-      <hr class="border-secondary mx-3" />
-      <span class="nav-link text-muted small py-1"><i class="bi bi-door-open"></i> Contributor Portal</span>
-      <a class="nav-link" routerLink="/portals" routerLinkActive="active">
-        <i class="bi bi-door-open"></i> Portals
+      <!-- Ingest & Processing -->
+      <a class="nav-link sidebar-section-header" role="button" (click)="toggleSection('ingest')">
+        <i class="bi me-1 small" [class.bi-chevron-down]="isSectionOpen('ingest')" [class.bi-chevron-right]="!isSectionOpen('ingest')"></i>
+        <i class="bi bi-cloud-upload me-1"></i> Ingest
       </a>
-      <a class="nav-link" routerLink="/document-requests" routerLinkActive="active">
-        <i class="bi bi-send"></i> Doc Requests
-      </a>
-      <a class="nav-link" routerLink="/submission-review" routerLinkActive="active">
-        <i class="bi bi-check2-square"></i> Review Queue
-      </a>
+      @if (isSectionOpen('ingest')) {
+        <a class="nav-link ps-4" routerLink="/scanner" routerLinkActive="active">
+          <i class="bi bi-printer"></i> Scanners
+        </a>
+        <a class="nav-link ps-4" routerLink="/classifier" routerLinkActive="active">
+          <i class="bi bi-cpu"></i> ML Classifier
+        </a>
+        <a class="nav-link ps-4" routerLink="/barcode-config" routerLinkActive="active">
+          <i class="bi bi-upc-scan"></i> Barcode & ASN
+        </a>
+        <a class="nav-link ps-4" routerLink="/ai-config" routerLinkActive="active">
+          <i class="bi bi-robot"></i> AI Configuration
+        </a>
+      }
 
-      <hr class="border-secondary mx-3" />
-      <span class="nav-link text-muted small py-1"><i class="bi bi-eye"></i> OCR & Entities</span>
-      <a class="nav-link" routerLink="/zone-ocr" routerLinkActive="active">
-        <i class="bi bi-crop"></i> Zone OCR
+      <!-- Signatures & Sharing -->
+      <a class="nav-link sidebar-section-header" role="button" (click)="toggleSection('sharing')">
+        <i class="bi me-1 small" [class.bi-chevron-down]="isSectionOpen('sharing')" [class.bi-chevron-right]="!isSectionOpen('sharing')"></i>
+        <i class="bi bi-pen me-1"></i> Signatures & Sharing
       </a>
-      <a class="nav-link" routerLink="/zone-ocr-review" routerLinkActive="active">
-        <i class="bi bi-clipboard-check"></i> OCR Review
-      </a>
-      <a class="nav-link" routerLink="/entity-browser" routerLinkActive="active">
-        <i class="bi bi-diagram-3"></i> Entity Browser
-      </a>
+      @if (isSectionOpen('sharing')) {
+        <a class="nav-link ps-4" routerLink="/signature-requests" routerLinkActive="active">
+          <i class="bi bi-pen"></i> E-Signatures
+        </a>
+        <a class="nav-link ps-4" routerLink="/share-links" routerLinkActive="active">
+          <i class="bi bi-link-45deg"></i> Share Links
+        </a>
+      }
 
-      <hr class="border-secondary mx-3" />
-      <span class="nav-link text-muted small py-1"><i class="bi bi-bar-chart"></i> Search Admin</span>
-      <a class="nav-link" routerLink="/search-analytics" routerLinkActive="active">
-        <i class="bi bi-graph-up"></i> Search Analytics
+      <!-- Analytics & Search -->
+      <a class="nav-link sidebar-section-header" role="button" (click)="toggleSection('analytics')">
+        <i class="bi me-1 small" [class.bi-chevron-down]="isSectionOpen('analytics')" [class.bi-chevron-right]="!isSectionOpen('analytics')"></i>
+        <i class="bi bi-bar-chart me-1"></i> Analytics
       </a>
-      <a class="nav-link" routerLink="/synonyms" routerLinkActive="active">
-        <i class="bi bi-arrow-left-right"></i> Synonyms
-      </a>
-      <a class="nav-link" routerLink="/curations" routerLinkActive="active">
-        <i class="bi bi-pin-angle"></i> Curations
-      </a>
+      @if (isSectionOpen('analytics')) {
+        <a class="nav-link ps-4" routerLink="/search-analytics" routerLinkActive="active">
+          <i class="bi bi-graph-up"></i> Search Analytics
+        </a>
+        <a class="nav-link ps-4" routerLink="/synonyms" routerLinkActive="active">
+          <i class="bi bi-arrow-left-right"></i> Synonyms
+        </a>
+        <a class="nav-link ps-4" routerLink="/curations" routerLinkActive="active">
+          <i class="bi bi-pin-angle"></i> Curations
+        </a>
+        <a class="nav-link ps-4" routerLink="/zone-ocr" routerLinkActive="active">
+          <i class="bi bi-crop"></i> Zone OCR
+        </a>
+        <a class="nav-link ps-4" routerLink="/zone-ocr-review" routerLinkActive="active">
+          <i class="bi bi-clipboard-check"></i> OCR Review
+        </a>
+        <a class="nav-link ps-4" routerLink="/entity-browser" routerLinkActive="active">
+          <i class="bi bi-diagram-3"></i> Entity Browser
+        </a>
+      }
 
-      <hr class="border-secondary mx-3" />
-      <span class="nav-link text-muted small py-1"><i class="bi bi-shield-lock"></i> Legal Hold</span>
-      <a class="nav-link" routerLink="/legal-holds" routerLinkActive="active">
-        <i class="bi bi-shield-lock"></i> Legal Holds
+      <!-- Compliance -->
+      <a class="nav-link sidebar-section-header" role="button" (click)="toggleSection('compliance')">
+        <i class="bi me-1 small" [class.bi-chevron-down]="isSectionOpen('compliance')" [class.bi-chevron-right]="!isSectionOpen('compliance')"></i>
+        <i class="bi bi-shield-lock me-1"></i> Compliance
       </a>
+      @if (isSectionOpen('compliance')) {
+        <a class="nav-link ps-4" routerLink="/legal-holds" routerLinkActive="active">
+          <i class="bi bi-shield-lock"></i> Legal Holds
+        </a>
+        <a class="nav-link ps-4" routerLink="/physical-locations" routerLinkActive="active">
+          <i class="bi bi-building"></i> Physical Locations
+        </a>
+        <a class="nav-link ps-4" routerLink="/charge-outs" routerLinkActive="active">
+          <i class="bi bi-box-arrow-up-right"></i> Charge-Outs
+        </a>
+      }
 
-      <hr class="border-secondary mx-3" />
-      <span class="nav-link text-muted small py-1"><i class="bi bi-building"></i> Physical Records</span>
-      <a class="nav-link" routerLink="/physical-locations" routerLinkActive="active">
-        <i class="bi bi-building"></i> Locations
+      <!-- Admin -->
+      <a class="nav-link sidebar-section-header" role="button" (click)="toggleSection('admin')">
+        <i class="bi me-1 small" [class.bi-chevron-down]="isSectionOpen('admin')" [class.bi-chevron-right]="!isSectionOpen('admin')"></i>
+        <i class="bi bi-gear me-1"></i> Admin
       </a>
-      <a class="nav-link" routerLink="/charge-outs" routerLinkActive="active">
-        <i class="bi bi-box-arrow-up-right"></i> Charge-Outs
-      </a>
+      @if (isSectionOpen('admin')) {
+        <a class="nav-link ps-4" routerLink="/portals" routerLinkActive="active">
+          <i class="bi bi-door-open"></i> Portals
+        </a>
+        <a class="nav-link ps-4" routerLink="/document-requests" routerLinkActive="active">
+          <i class="bi bi-send"></i> Doc Requests
+        </a>
+        <a class="nav-link ps-4" routerLink="/submission-review" routerLinkActive="active">
+          <i class="bi bi-check2-square"></i> Review Queue
+        </a>
+        <a class="nav-link ps-4" routerLink="/activity" routerLinkActive="active">
+          <i class="bi bi-activity"></i> Activity Feed
+        </a>
+        <a class="nav-link ps-4" routerLink="/audit-log" routerLinkActive="active">
+          <i class="bi bi-journal-check"></i> Audit Log
+        </a>
+        <a class="nav-link ps-4" routerLink="/admin/storage" routerLinkActive="active">
+          <i class="bi bi-hdd-stack"></i> Storage
+        </a>
+      }
     </nav>
   </div>
 

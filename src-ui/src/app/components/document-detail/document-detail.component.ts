@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { DocumentService } from '../../services/document.service';
 import { OrganizationService } from '../../services/organization.service';
+import { CollaborationService } from '../../services/collaboration.service';
+import { LegalHoldService } from '../../services/legal-hold.service';
 import { Document, DocumentType, DocumentVersion } from '../../models/document.model';
 import {
   AutocompleteItem,
@@ -13,19 +15,33 @@ import {
   MetadataType,
   Tag,
 } from '../../models/organization.model';
+import { CheckoutStatus, ShareLink } from '../../models/collaboration.model';
 import { WorkflowPanelComponent } from '../workflow-panel/workflow-panel.component';
+import { CommentsComponent } from '../comments/comments.component';
+import { DocumentSignaturesComponent } from '../document-signatures/document-signatures.component';
+import { SuggestionPanelComponent } from '../suggestion-panel/suggestion-panel.component';
+import { RelationshipPanelComponent } from '../relationship-panel/relationship-panel.component';
 
 @Component({
   selector: 'app-document-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, WorkflowPanelComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterModule,
+    WorkflowPanelComponent,
+    CommentsComponent,
+    DocumentSignaturesComponent,
+    SuggestionPanelComponent,
+    RelationshipPanelComponent,
+  ],
   templateUrl: './document-detail.component.html',
 })
 export class DocumentDetailComponent implements OnInit {
   document = signal<Document | null>(null);
   documentTypes = signal<DocumentType[]>([]);
   versions = signal<DocumentVersion[]>([]);
-  activeTab = signal<'details' | 'content' | 'preview' | 'metadata' | 'workflows'>('details');
+  activeTab = signal<'details' | 'content' | 'preview' | 'metadata' | 'workflows' | 'signatures'>('details');
   editing = signal(false);
   loading = signal(true);
 
@@ -45,6 +61,15 @@ export class DocumentDetailComponent implements OnInit {
   addMetadataTypeId = signal<number | null>(null);
   addMetadataValue = signal<string>('');
 
+  // Legal hold
+  isHeld = signal(false);
+
+  // Collaboration
+  checkoutStatus = signal<CheckoutStatus | null>(null);
+  shareLinks = signal<ShareLink[]>([]);
+  newShareExpHours = signal<number | null>(24);
+  newSharePassword = signal('');
+
   // Edit form fields
   editTitle = signal('');
   editDocumentType = signal<number | null>(null);
@@ -58,6 +83,8 @@ export class DocumentDetailComponent implements OnInit {
     private router: Router,
     private documentService: DocumentService,
     private orgService: OrganizationService,
+    private collaborationService: CollaborationService,
+    private legalHoldService: LegalHoldService,
   ) {}
 
   ngOnInit(): void {
@@ -67,6 +94,9 @@ export class DocumentDetailComponent implements OnInit {
       this.loadVersions(id);
       this.loadCustomFields(id);
       this.loadDocumentMetadata(id);
+      this.loadLegalHoldStatus(id);
+      this.loadCheckoutStatus(id);
+      this.loadShareLinks(id);
     }
     this.loadDocumentTypes();
     this.loadOrganization();
@@ -112,7 +142,7 @@ export class DocumentDetailComponent implements OnInit {
     });
   }
 
-  setTab(tab: 'details' | 'content' | 'preview' | 'metadata' | 'workflows'): void {
+  setTab(tab: 'details' | 'content' | 'preview' | 'metadata' | 'workflows' | 'signatures'): void {
     this.activeTab.set(tab);
   }
 
@@ -258,6 +288,70 @@ export class DocumentDetailComponent implements OnInit {
     this.orgService.deleteDocumentMetadata(doc.id, instanceId).subscribe({
       next: () => this.loadDocumentMetadata(doc.id),
     });
+  }
+
+  // --- Legal Hold ---
+
+  loadLegalHoldStatus(docId: number): void {
+    this.legalHoldService.getHolds({ document: String(docId) }).subscribe({
+      next: (holds) => {
+        this.isHeld.set(holds.some((h) => h.status === 'active'));
+      },
+      error: () => this.isHeld.set(false),
+    });
+  }
+
+  // --- Collaboration ---
+
+  loadCheckoutStatus(docId: number): void {
+    this.collaborationService.getCheckoutStatus(docId).subscribe({
+      next: (status) => this.checkoutStatus.set(status),
+    });
+  }
+
+  loadShareLinks(docId: number): void {
+    this.collaborationService.getShareLinks().subscribe({
+      next: (links) => this.shareLinks.set(links.filter((l) => l.document === docId)),
+    });
+  }
+
+  checkout(): void {
+    const doc = this.document();
+    if (!doc) return;
+    this.collaborationService.checkout(doc.id).subscribe({
+      next: () => this.loadCheckoutStatus(doc.id),
+    });
+  }
+
+  checkin(): void {
+    const doc = this.document();
+    if (!doc) return;
+    this.collaborationService.checkin(doc.id).subscribe({
+      next: () => this.loadCheckoutStatus(doc.id),
+    });
+  }
+
+  createShareLink(): void {
+    const doc = this.document();
+    if (!doc) return;
+    const request: any = {};
+    if (this.newShareExpHours()) request.expiration_hours = this.newShareExpHours();
+    if (this.newSharePassword()) request.password = this.newSharePassword();
+    this.collaborationService.createShareLink(doc.id, request).subscribe({
+      next: () => {
+        this.newShareExpHours.set(24);
+        this.newSharePassword.set('');
+        this.loadShareLinks(doc.id);
+      },
+    });
+  }
+
+  getShareUrl(link: ShareLink): string {
+    return `${window.location.origin}/share/${link.slug}`;
+  }
+
+  copyShareUrl(link: ShareLink): void {
+    navigator.clipboard.writeText(this.getShareUrl(link));
   }
 
   formatFileSize(bytes: number): string {

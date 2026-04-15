@@ -28,6 +28,11 @@ export class LayoutComponent implements OnInit, OnDestroy {
   unreadCount = signal(0);
   currentTheme = signal<ThemeMode>('system');
 
+  // Sidebar section collapse state
+  sectionState: Record<string, boolean> = {};
+
+  private readonly SECTION_STATE_KEY = 'dv_sidebar_sections';
+
   private pollSubscription: Subscription | null = null;
   private mediaQuery: MediaQueryList | null = null;
   private mediaListener: ((e: MediaQueryListEvent) => void) | null = null;
@@ -41,6 +46,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.loadSectionState();
     this.auth.getProfile().subscribe();
     this.loadSidebarViews();
     this.loadUnreadCount();
@@ -157,5 +163,31 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   onLogout(): void {
     this.auth.logout().subscribe();
+  }
+
+  // --- Sidebar Sections ---
+
+  isSectionOpen(section: string): boolean {
+    return this.sectionState[section] !== false;
+  }
+
+  toggleSection(section: string): void {
+    this.sectionState[section] = !this.isSectionOpen(section);
+    this.saveSectionState();
+  }
+
+  private loadSectionState(): void {
+    try {
+      const stored = localStorage.getItem(this.SECTION_STATE_KEY);
+      if (stored) {
+        this.sectionState = JSON.parse(stored);
+      }
+    } catch {
+      this.sectionState = {};
+    }
+  }
+
+  private saveSectionState(): void {
+    localStorage.setItem(this.SECTION_STATE_KEY, JSON.stringify(this.sectionState));
   }
 }

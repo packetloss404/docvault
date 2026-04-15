@@ -31,7 +31,7 @@
         </p>
       }
 
-      @for (result of results(); track result.id) {
+      @for (result of results(); track result.id; let idx = $index) {
         <div class="card mb-2">
           <div class="card-body py-2 px-3">
             <div class="d-flex justify-content-between align-items-start">
@@ -39,6 +39,8 @@
                 <a
                   [routerLink]="['/documents', result.id]"
                   class="text-decoration-none"
+                  (click)="trackResultClick(result, idx + 1)"
+                  (auxclick)="trackResultClick(result, idx + 1)"
                 >
                   <h6 class="mb-1">
                     @if (result.highlights?.title) {

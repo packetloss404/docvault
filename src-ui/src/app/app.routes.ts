@@ -60,6 +60,13 @@ export const routes: Routes = [
           ).then((m) => m.SearchResultsComponent),
       },
       {
+        path: 'saved-views/:viewId/results',
+        loadComponent: () =>
+          import(
+            './components/saved-view-results/saved-view-results.component'
+          ).then((m) => m.SavedViewResultsComponent),
+      },
+      {
         path: 'saved-views',
         loadComponent: () =>
           import('./components/saved-views/saved-views.component').then(
@@ -304,6 +311,20 @@ export const routes: Routes = [
             './components/charge-out-dashboard/charge-out-dashboard.component'
           ).then((m) => m.ChargeOutDashboardComponent),
       },
+      {
+        path: 'admin/storage',
+        loadComponent: () =>
+          import('./components/storage-admin/storage-admin.component').then(
+            (m) => m.StorageAdminComponent,
+          ),
+      },
+      {
+        path: 'profile',
+        loadComponent: () =>
+          import('./components/profile/profile.component').then(
+            (m) => m.ProfileComponent,
+          ),
+      },
     ],
   },
   {
@@ -325,6 +346,13 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./components/public-signing/public-signing.component').then(
         (m) => m.PublicSigningComponent,
+      ),
+  },
+  {
+    path: 'share/:slug',
+    loadComponent: () =>
+      import('./components/public-share/public-share.component').then(
+        (m) => m.PublicShareComponent,
       ),
   },
   { path: '**', redirectTo: '' },

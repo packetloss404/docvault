@@ -341,29 +341,4 @@ export class OrganizationService {
     );
   }
 
-  // --- Bulk Operations ---
-
-  bulkAssign(data: {
-    document_ids: number[];
-    tag_ids?: number[];
-    remove_tag_ids?: number[];
-    correspondent_id?: number | null;
-    cabinet_id?: number | null;
-  }): Observable<{ updated: number }> {
-    return this.http.post<{ updated: number }>(
-      `${this.baseUrl}/bulk-assign/`,
-      data,
-    );
-  }
-
-  bulkSetCustomField(data: {
-    document_ids: number[];
-    field_id: number;
-    value: unknown;
-  }): Observable<{ updated: number }> {
-    return this.http.post<{ updated: number }>(
-      `${this.baseUrl}/bulk-set-custom-fields/`,
-      data,
-    );
-  }
 }
