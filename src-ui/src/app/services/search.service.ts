@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 import { PaginatedResponse } from '../models/document.model';
 import {
@@ -9,12 +10,16 @@ import {
   SavedViewListItem,
   SearchResponse,
 } from '../models/search.model';
+import { AnalyticsService } from './analytics.service';
 
 @Injectable({ providedIn: 'root' })
 export class SearchService {
   private readonly baseUrl = environment.apiUrl;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private analyticsService: AnalyticsService,
+  ) {}
 
   // --- Full-text Search ---
 
@@ -50,9 +55,18 @@ export class SearchService {
     if (params.created_before)
       httpParams = httpParams.set('created_before', params.created_before);
 
+    const startTime = Date.now();
     return this.http.get<SearchResponse>(`${this.baseUrl}/search/`, {
       params: httpParams,
-    });
+    }).pipe(
+      tap((res) => {
+        this.analyticsService.trackQuery({
+          query: params.query || '',
+          response_time_ms: Date.now() - startTime,
+          result_count: res.count,
+        }).subscribe();
+      }),
+    );
   }
 
   autocomplete(query: string): Observable<AutocompleteResult[]> {

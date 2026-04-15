@@ -154,6 +154,13 @@ export class OrganizationService {
     return this.http.delete<void>(`${this.baseUrl}/storage-paths/${id}/`);
   }
 
+  autocompleteStoragePath(query: string): Observable<AutocompleteItem[]> {
+    return this.http.get<AutocompleteItem[]>(
+      `${this.baseUrl}/storage-paths/autocomplete/`,
+      { params: new HttpParams().set('q', query) },
+    );
+  }
+
   // --- Custom Fields ---
 
   getCustomFields(): Observable<PaginatedResponse<CustomField>> {

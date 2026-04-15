@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { EntityService } from '../../services/entity.service';
-import { EntityAggregate, EntityType } from '../../models/entity.model';
+import { EntityAggregate, EntityCooccurrence, EntityType } from '../../models/entity.model';
 
 @Component({
   selector: 'app-entity-browser',
@@ -194,6 +194,42 @@ import { EntityAggregate, EntityType } from '../../models/entity.model';
                 </table>
               </div>
             </div>
+
+            <!-- Co-occurrence Section -->
+            @if (cooccurrence().length > 0) {
+              <div class="card mt-3">
+                <div class="card-header">
+                  <h6 class="mb-0">
+                    <i class="bi bi-diagram-3 me-1"></i>Related Entities (Co-occurrence)
+                  </h6>
+                </div>
+                <div class="card-body p-2">
+                  <div class="row g-2">
+                    @for (item of cooccurrence(); track item.entity.value + item.entity.entity_type) {
+                      <div class="col-md-4">
+                        <div class="card h-100 border-secondary">
+                          <div class="card-body py-2 px-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                              <div>
+                                <span
+                                  class="badge mb-1"
+                                  [style.background]="getTypeColor(item.entity.entity_type)"
+                                  [style.color]="getContrastColor(getTypeColor(item.entity.entity_type))"
+                                >
+                                  {{ getTypeLabel(item.entity.entity_type) }}
+                                </span>
+                                <div class="fw-semibold small">{{ item.entity.value }}</div>
+                              </div>
+                              <span class="badge bg-primary rounded-pill ms-2">{{ item.count }}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+            }
           }
         }
       </div>
@@ -209,6 +245,7 @@ export class EntityBrowserComponent implements OnInit {
   selectedTypes = signal(new Set<string>());
   selectedEntity = signal<EntityAggregate | null>(null);
   entityDocuments = signal<{ document_id: number; title: string }[]>([]);
+  cooccurrence = signal<EntityCooccurrence[]>([]);
 
   searchQuery = '';
   pageSize = 25;
@@ -294,16 +331,24 @@ export class EntityBrowserComponent implements OnInit {
 
   viewEntityDocuments(entity: EntityAggregate): void {
     this.selectedEntity.set(entity);
+    this.cooccurrence.set([]);
     this.entityService
       .getEntityDocuments(entity.entity_type, entity.value)
       .subscribe({
         next: (docs) => this.entityDocuments.set(docs),
       });
+    if (entity.id != null) {
+      this.entityService.getCooccurrence(entity.id).subscribe({
+        next: (items) => this.cooccurrence.set(items),
+        error: () => this.cooccurrence.set([]),
+      });
+    }
   }
 
   clearSelection(): void {
     this.selectedEntity.set(null);
     this.entityDocuments.set([]);
+    this.cooccurrence.set([]);
   }
 
   totalPages(): number {

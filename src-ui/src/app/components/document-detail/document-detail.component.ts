@@ -21,6 +21,14 @@ import { CommentsComponent } from '../comments/comments.component';
 import { DocumentSignaturesComponent } from '../document-signatures/document-signatures.component';
 import { SuggestionPanelComponent } from '../suggestion-panel/suggestion-panel.component';
 import { RelationshipPanelComponent } from '../relationship-panel/relationship-panel.component';
+import { DocumentChatComponent } from '../document-chat/document-chat.component';
+import { SimilarDocumentsComponent } from '../similar-documents/similar-documents.component';
+import { AnnotationToolbarComponent } from '../annotation-toolbar/annotation-toolbar.component';
+import { AnnotationPanelComponent } from '../annotation-panel/annotation-panel.component';
+import { AIService } from '../../services/ai.service';
+import { EsignatureService } from '../../services/esignature.service';
+import { ZoneOCRService } from '../../services/zone-ocr.service';
+import { PhysicalRecordService } from '../../services/physical-record.service';
 
 @Component({
   selector: 'app-document-detail',
@@ -34,6 +42,10 @@ import { RelationshipPanelComponent } from '../relationship-panel/relationship-p
     DocumentSignaturesComponent,
     SuggestionPanelComponent,
     RelationshipPanelComponent,
+    DocumentChatComponent,
+    SimilarDocumentsComponent,
+    AnnotationToolbarComponent,
+    AnnotationPanelComponent,
   ],
   templateUrl: './document-detail.component.html',
 })
@@ -41,9 +53,26 @@ export class DocumentDetailComponent implements OnInit {
   document = signal<Document | null>(null);
   documentTypes = signal<DocumentType[]>([]);
   versions = signal<DocumentVersion[]>([]);
-  activeTab = signal<'details' | 'content' | 'preview' | 'metadata' | 'workflows' | 'signatures'>('details');
+  activeTab = signal<'details' | 'content' | 'preview' | 'metadata' | 'workflows' | 'signatures' | 'ai' | 'zone-ocr' | 'physical'>('details');
   editing = signal(false);
   loading = signal(true);
+
+  // Legal hold
+  isHeld = signal(false);
+
+  // Collaboration
+  checkoutStatus = signal<CheckoutStatus | null>(null);
+  shareLinks = signal<ShareLink[]>([]);
+  newShareExpHours = signal<number | null>(24);
+  newSharePassword = signal('');
+
+  // AI / Signatures / Zone OCR / Physical signals
+  aiHealthy = signal(true);
+  signatureRequests = signal<any[]>([]);
+  zoneOcrTemplates = signal<any[]>([]);
+  zoneOcrResults = signal<any[]>([]);
+  selectedOcrTemplate = signal<number | null>(null);
+  physicalRecord = signal<any>(null);
 
   allTags = signal<Tag[]>([]);
   allCorrespondents = signal<AutocompleteItem[]>([]);
@@ -61,15 +90,6 @@ export class DocumentDetailComponent implements OnInit {
   addMetadataTypeId = signal<number | null>(null);
   addMetadataValue = signal<string>('');
 
-  // Legal hold
-  isHeld = signal(false);
-
-  // Collaboration
-  checkoutStatus = signal<CheckoutStatus | null>(null);
-  shareLinks = signal<ShareLink[]>([]);
-  newShareExpHours = signal<number | null>(24);
-  newSharePassword = signal('');
-
   // Edit form fields
   editTitle = signal('');
   editDocumentType = signal<number | null>(null);
@@ -85,6 +105,10 @@ export class DocumentDetailComponent implements OnInit {
     private orgService: OrganizationService,
     private collaborationService: CollaborationService,
     private legalHoldService: LegalHoldService,
+    private aiService: AIService,
+    private esignatureService: EsignatureService,
+    private zoneOcrService: ZoneOCRService,
+    private physicalRecordService: PhysicalRecordService,
   ) {}
 
   ngOnInit(): void {
@@ -94,6 +118,8 @@ export class DocumentDetailComponent implements OnInit {
       this.loadVersions(id);
       this.loadCustomFields(id);
       this.loadDocumentMetadata(id);
+      this.loadSignatureRequests(id);
+      this.loadPhysicalRecord(id);
       this.loadLegalHoldStatus(id);
       this.loadCheckoutStatus(id);
       this.loadShareLinks(id);
@@ -102,6 +128,8 @@ export class DocumentDetailComponent implements OnInit {
     this.loadOrganization();
     this.loadAllCustomFields();
     this.loadAllMetadataTypes();
+    this.loadAiStatus();
+    this.loadZoneOcrTemplates();
   }
 
   loadOrganization(): void {
@@ -142,8 +170,61 @@ export class DocumentDetailComponent implements OnInit {
     });
   }
 
-  setTab(tab: 'details' | 'content' | 'preview' | 'metadata' | 'workflows' | 'signatures'): void {
+  setTab(tab: 'details' | 'content' | 'preview' | 'metadata' | 'workflows' | 'signatures' | 'ai' | 'zone-ocr' | 'physical'): void {
     this.activeTab.set(tab);
+  }
+
+  // --- AI ---
+
+  loadAiStatus(): void {
+    this.aiService.getStatus().subscribe({
+      next: (status) => this.aiHealthy.set(status.llm_available),
+      error: () => this.aiHealthy.set(false),
+    });
+  }
+
+  // --- Signatures ---
+
+  loadSignatureRequests(id: number): void {
+    this.esignatureService.getRequests({ document: id.toString() }).subscribe({
+      next: (requests) => this.signatureRequests.set(requests),
+      error: () => this.signatureRequests.set([]),
+    });
+  }
+
+  requestSignature(): void {
+    const doc = this.document();
+    if (!doc) return;
+    this.esignatureService.createRequest(doc.id, { title: `Signature request for ${doc.title}` }).subscribe({
+      next: () => this.loadSignatureRequests(doc.id),
+    });
+  }
+
+  // --- Zone OCR ---
+
+  loadZoneOcrTemplates(): void {
+    this.zoneOcrService.getTemplates().subscribe({
+      next: (res) => this.zoneOcrTemplates.set(res.results),
+      error: () => this.zoneOcrTemplates.set([]),
+    });
+  }
+
+  runZoneOcr(): void {
+    const doc = this.document();
+    const templateId = this.selectedOcrTemplate();
+    if (!doc || !templateId) return;
+    this.zoneOcrService.testTemplate(templateId, doc.id).subscribe({
+      next: (results) => this.zoneOcrResults.set(results),
+    });
+  }
+
+  // --- Physical Record ---
+
+  loadPhysicalRecord(id: number): void {
+    this.physicalRecordService.getRecords({ document: id.toString() }).subscribe({
+      next: (res) => this.physicalRecord.set(res.results?.[0] ?? null),
+      error: () => this.physicalRecord.set(null),
+    });
   }
 
   startEdit(): void {

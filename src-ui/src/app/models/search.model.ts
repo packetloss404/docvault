@@ -26,6 +26,7 @@ export interface SearchFacets {
   document_types?: FacetBucket[];
   correspondents?: FacetBucket[];
   date_histogram?: FacetBucket[];
+  entities?: FacetBucket[];
 }
 
 export interface FacetBucket {
@@ -76,6 +77,21 @@ export interface FilterRule {
   rule_type: string;
   rule_type_display?: string;
   value: string;
+}
+
+/** A single named filter entry used inside a FilterGroup. */
+export interface Filter {
+  rule_type: string;
+  value: string;
+}
+
+/**
+ * A group of filters combined with either AND or OR logic.
+ * Multiple FilterGroups are always combined with AND between groups.
+ */
+export interface FilterGroup {
+  filters: Filter[];
+  operator: 'AND' | 'OR';
 }
 
 export const FILTER_RULE_TYPES: { value: string; label: string }[] = [

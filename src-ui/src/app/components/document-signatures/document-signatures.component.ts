@@ -138,13 +138,16 @@ export class DocumentSignaturesComponent implements OnInit {
     this.successMessage.set('');
     this.securityService.verifyDocumentSignatures(this.documentId).subscribe({
       next: (res) => {
-        this.signatures.set(res.results);
-        const allVerified = res.results.every((s) => s.verified);
-        if (allVerified) {
+        const allValid = res.results.every((r) => r.valid);
+        const errors = res.results.filter((r) => !r.valid);
+        if (allValid) {
           this.successMessage.set('All signatures verified successfully.');
         } else {
-          this.errorMessage.set('Some signatures could not be verified.');
+          this.errorMessage.set(
+            `${errors.length} signature(s) could not be verified.`,
+          );
         }
+        this.loadSignatures();
         this.verifying.set(false);
       },
       error: () => {

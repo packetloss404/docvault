@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -11,13 +11,14 @@ import {
   UserPreferences,
 } from '../../services/preferences.service';
 import { SavedViewListItem } from '../../models/search.model';
+import { GlobalSearchOverlayComponent } from '../global-search-overlay/global-search-overlay.component';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, GlobalSearchOverlayComponent],
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.scss',
 })
@@ -27,6 +28,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   sidebarViews = signal<SavedViewListItem[]>([]);
   unreadCount = signal(0);
   currentTheme = signal<ThemeMode>('system');
+  globalSearchOpen = signal(false);
 
   // Sidebar section collapse state
   sectionState: Record<string, boolean> = {};
@@ -44,6 +46,15 @@ export class LayoutComponent implements OnInit, OnDestroy {
     private notificationService: NotificationService,
     private preferencesService: PreferencesService,
   ) {}
+
+  @HostListener('document:keydown', ['$event'])
+  onGlobalKeydown(event: KeyboardEvent): void {
+    // Ctrl+K (Windows/Linux) or Cmd+K (Mac)
+    if (event.key === 'k' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      this.globalSearchOpen.set(!this.globalSearchOpen());
+    }
+  }
 
   ngOnInit(): void {
     this.loadSectionState();

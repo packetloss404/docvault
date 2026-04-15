@@ -44,6 +44,7 @@ export interface Cabinet {
   name: string;
   slug: string;
   parent: number | null;
+  order: number;
   document_count: number;
   children_count: number;
   owner: number | null;

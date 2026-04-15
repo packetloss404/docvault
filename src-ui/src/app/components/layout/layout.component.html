@@ -91,6 +91,12 @@
   </div>
 </nav>
 
+<!-- Global Search Overlay (Ctrl+K / Cmd+K) -->
+<app-global-search-overlay
+  [open]="globalSearchOpen()"
+  (closed)="globalSearchOpen.set(false)"
+/>
+
 <!-- Main Content Area -->
 <div class="d-flex">
   <!-- Sidebar -->

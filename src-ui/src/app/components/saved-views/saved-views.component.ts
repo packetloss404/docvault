@@ -7,6 +7,8 @@ import {
   SavedView,
   SavedViewListItem,
   FilterRule,
+  FilterGroup,
+  Filter,
   FILTER_RULE_TYPES,
 } from '../../models/search.model';
 
@@ -35,6 +37,11 @@ export class SavedViewsComponent implements OnInit {
 
   ruleTypes = FILTER_RULE_TYPES;
 
+  // --- Filter Groups (B2.4) ---
+  editFilterGroups = signal<FilterGroup[]>([]);
+  newGroupRuleType = signal<Record<number, string>>({});
+  newGroupRuleValue = signal<Record<number, string>>({});
+
   constructor(private searchService: SearchService) {}
 
   ngOnInit(): void {
@@ -58,6 +65,9 @@ export class SavedViewsComponent implements OnInit {
     this.editShowDashboard.set(false);
     this.editShowSidebar.set(false);
     this.editRules.set([]);
+    this.editFilterGroups.set([]);
+    this.newGroupRuleType.set({});
+    this.newGroupRuleValue.set({});
   }
 
   startEdit(viewItem: SavedViewListItem): void {
@@ -73,6 +83,9 @@ export class SavedViewsComponent implements OnInit {
         this.editShowDashboard.set(view.show_on_dashboard);
         this.editShowSidebar.set(view.show_in_sidebar);
         this.editRules.set([...view.filter_rules]);
+        this.editFilterGroups.set([]);
+        this.newGroupRuleType.set({});
+        this.newGroupRuleValue.set({});
       },
     });
   }
@@ -92,6 +105,65 @@ export class SavedViewsComponent implements OnInit {
 
   removeRule(index: number): void {
     this.editRules.update((rules) => rules.filter((_, i) => i !== index));
+  }
+
+  // --- Filter Group methods (B2.4) ---
+
+  addFilterGroup(): void {
+    this.editFilterGroups.update((groups) => [...groups, { filters: [], operator: 'AND' }]);
+  }
+
+  removeFilterGroup(groupIndex: number): void {
+    this.editFilterGroups.update((groups) => groups.filter((_, i) => i !== groupIndex));
+  }
+
+  toggleGroupOperator(groupIndex: number): void {
+    this.editFilterGroups.update((groups) =>
+      groups.map((g, i) =>
+        i === groupIndex ? { ...g, operator: g.operator === 'AND' ? 'OR' : 'AND' } : g,
+      ),
+    );
+  }
+
+  addFilterToGroup(groupIndex: number): void {
+    const ruleType = this.newGroupRuleType()[groupIndex] ?? 'title_contains';
+    const value = this.newGroupRuleValue()[groupIndex] ?? '';
+    if (!value.trim()) return;
+
+    this.editFilterGroups.update((groups) =>
+      groups.map((g, i) =>
+        i === groupIndex ? { ...g, filters: [...g.filters, { rule_type: ruleType, value }] } : g,
+      ),
+    );
+
+    // reset inputs for this group
+    this.newGroupRuleValue.update((v) => ({ ...v, [groupIndex]: '' }));
+  }
+
+  removeFilterFromGroup(groupIndex: number, filterIndex: number): void {
+    this.editFilterGroups.update((groups) =>
+      groups.map((g, i) =>
+        i === groupIndex
+          ? { ...g, filters: g.filters.filter((_, fi) => fi !== filterIndex) }
+          : g,
+      ),
+    );
+  }
+
+  getGroupRuleType(groupIndex: number): string {
+    return this.newGroupRuleType()[groupIndex] ?? 'title_contains';
+  }
+
+  setGroupRuleType(groupIndex: number, value: string): void {
+    this.newGroupRuleType.update((v) => ({ ...v, [groupIndex]: value }));
+  }
+
+  getGroupRuleValue(groupIndex: number): string {
+    return this.newGroupRuleValue()[groupIndex] ?? '';
+  }
+
+  setGroupRuleValue(groupIndex: number, value: string): void {
+    this.newGroupRuleValue.update((v) => ({ ...v, [groupIndex]: value }));
   }
 
   save(): void {

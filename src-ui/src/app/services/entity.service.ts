@@ -53,4 +53,10 @@ export class EntityService {
       `${this.baseUrl}/entities/${entityType}/${encodeURIComponent(value)}/documents/`,
     );
   }
+
+  getCooccurrence(entityId: number): Observable<{ entity: EntityAggregate; count: number }[]> {
+    return this.http.get<{ entity: EntityAggregate; count: number }[]>(
+      `${this.baseUrl}/entities/${entityId}/cooccurrence/`,
+    );
+  }
 }

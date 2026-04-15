@@ -70,19 +70,49 @@ class StemmerCache:
             )
 
     def stem(self, word: str) -> str:
-        """Stem a word using Snowball with LRU caching."""
+        """Stem a word using Snowball with Redis-backed + in-memory LRU caching.
+
+        Lookup order:
+          1. In-memory OrderedDict (fastest, avoids network round-trip)
+          2. Django cache (Redis in production) — key pattern ``stem:<word>``
+          3. Actual Snowball stemmer, result written to both tiers
+        """
         if self._stemmer is None:
             return word
 
+        # 1. In-memory LRU hit
         if word in self._cache:
             self._cache.move_to_end(word)
             return self._cache[word]
 
+        # 2. Redis / Django cache hit
+        cache_key = f"stem:{word}"
+        try:
+            from django.core.cache import cache as django_cache
+            cached = django_cache.get(cache_key)
+        except Exception:
+            cached = None
+
+        if cached is not None:
+            # Populate in-memory tier and return
+            if len(self._cache) >= self._capacity:
+                self._cache.popitem(last=False)
+            self._cache[word] = cached
+            return cached
+
+        # 3. Compute via stemmer
         result = self._stemmer.stem(word)
 
+        # Write to Redis / Django cache (TTL 24 h)
+        try:
+            from django.core.cache import cache as django_cache
+            django_cache.set(cache_key, result, timeout=86400)
+        except Exception:
+            pass
+
+        # Write to in-memory LRU
         if len(self._cache) >= self._capacity:
             self._cache.popitem(last=False)
-
         self._cache[word] = result
         return result
 

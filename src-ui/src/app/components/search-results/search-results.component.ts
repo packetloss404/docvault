@@ -5,11 +5,15 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { SearchService } from '../../services/search.service';
 import { AnalyticsService } from '../../services/analytics.service';
 import { SearchResponse, SearchResult, SearchFacets } from '../../models/search.model';
+import {
+  SearchFilterBuilderComponent,
+  FilterRow,
+} from '../search-filter-builder/search-filter-builder.component';
 
 @Component({
   selector: 'app-search-results',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, SearchFilterBuilderComponent],
   templateUrl: './search-results.component.html',
 })
 export class SearchResultsComponent implements OnInit {
@@ -20,6 +24,7 @@ export class SearchResultsComponent implements OnInit {
   query = signal('');
   currentPage = signal(1);
   pageSize = signal(25);
+  activeFilters = signal<FilterRow[]>([]);
 
   constructor(
     private searchService: SearchService,
@@ -75,6 +80,14 @@ export class SearchResultsComponent implements OnInit {
 
   totalPages(): number {
     return Math.ceil(this.totalCount() / this.pageSize());
+  }
+
+  onFiltersChange(filters: FilterRow[]): void {
+    this.activeFilters.set(filters);
+    this.currentPage.set(1);
+    if (this.query()) {
+      this.doSearch();
+    }
   }
 
   trackResultClick(result: SearchResult, position: number): void {

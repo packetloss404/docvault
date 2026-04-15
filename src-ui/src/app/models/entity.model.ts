@@ -22,7 +22,13 @@ export interface Entity {
 }
 
 export interface EntityAggregate {
+  id?: number;
   value: string;
   entity_type: string;
   document_count: number;
+}
+
+export interface EntityCooccurrence {
+  entity: EntityAggregate;
+  count: number;
 }

@@ -9,6 +9,7 @@ export interface Signature {
   verified: boolean;
   verified_at: string | null;
   created_at: string;
+  valid?: boolean;
 }
 
 export interface OTPStatus {
@@ -54,4 +55,34 @@ export interface ScannerDevice {
   model: string;
   type: string;
   label: string;
+}
+
+export interface Permission {
+  id: number;
+  codename: string;
+  name: string;
+  content_type: number;
+}
+
+export interface Group {
+  id: number;
+  name: string;
+  permissions: number[];
+}
+
+export interface Role {
+  id: number;
+  name: string;
+  permissions: number[];
+}
+
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  is_active: boolean;
+  is_staff: boolean;
+  groups: number[];
 }

@@ -1,11 +1,13 @@
 """Views for the documents module."""
 
 import hashlib
+import io
 import logging
 import tempfile
+import zipfile
 from pathlib import Path
 
-from django.http import FileResponse, Http404, HttpResponse
+from django.http import FileResponse, Http404, HttpResponse, StreamingHttpResponse
 from rest_framework import permissions, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
@@ -273,6 +275,111 @@ class DocumentViewSet(viewsets.ModelViewSet):
             DocumentVersionSerializer(version).data,
             status=status.HTTP_201_CREATED,
         )
+
+    @action(detail=False, methods=["post"], url_path="bulk-export", url_name="bulk-export")
+    def bulk_export(self, request):
+        """Stream a ZIP archive containing the original files for requested documents.
+
+        Request body: ``{"ids": [1, 2, 3]}``
+
+        The response is a ``StreamingHttpResponse`` with ``Content-Type: application/zip``.
+        Only documents the requesting user is permitted to view are included; unknown or
+        unauthorised IDs are silently skipped.
+        """
+        ids = request.data.get("ids")
+        if not isinstance(ids, list) or not ids:
+            return Response(
+                {"error": "'ids' must be a non-empty list of document IDs."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Restrict to documents the user can see
+        queryset = self.get_queryset().filter(pk__in=ids)
+
+        from storage.utils import get_storage_backend
+        backend = get_storage_backend()
+
+        def zip_generator():
+            """Yield ZIP file bytes incrementally.
+
+            Because Python's zipfile writes the central directory only on close,
+            we track the write position after each entry and yield only the newly
+            written bytes.  The final yield (after the context manager exits) picks
+            up the central directory and end-of-central-directory records.
+            """
+            buffer = io.BytesIO()
+            pos = 0
+
+            with zipfile.ZipFile(buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+                for doc in queryset:
+                    storage_name = doc.filename
+                    if not storage_name:
+                        continue
+                    if not backend.exists(storage_name):
+                        logger.warning(
+                            "bulk_export: file not found in storage for document %s (%s)",
+                            doc.pk, storage_name,
+                        )
+                        continue
+
+                    filename_in_zip = doc.original_filename or Path(storage_name).name
+                    # Prepend document ID to avoid name collisions
+                    filename_in_zip = f"{doc.pk}_{filename_in_zip}"
+
+                    file_handle = backend.open(storage_name)
+                    try:
+                        zf.writestr(filename_in_zip, file_handle.read())
+                    finally:
+                        file_handle.close()
+
+                    # Yield bytes written since last yield (local file header + data)
+                    buffer.seek(pos)
+                    chunk = buffer.read()
+                    if chunk:
+                        yield chunk
+                    pos = buffer.tell()
+
+            # Yield the central directory + end-of-central-directory records
+            buffer.seek(pos)
+            tail = buffer.read()
+            if tail:
+                yield tail
+
+        response = StreamingHttpResponse(zip_generator(), content_type="application/zip")
+        response["Content-Disposition"] = 'attachment; filename="docvault-export.zip"'
+        return response
+
+    @action(detail=True, methods=["get"], url_path="barcode-label", url_name="barcode-label")
+    def barcode_label(self, request, pk=None):
+        """Return a Code128 barcode PNG for the document's Archive Serial Number (ASN).
+
+        Returns 404 if no ASN is set on the document.
+        """
+        doc = self.get_object()
+
+        if doc.archive_serial_number is None:
+            raise Http404("This document has no Archive Serial Number assigned.")
+
+        try:
+            import barcode
+            from barcode.writer import ImageWriter
+        except ImportError:
+            logger.error(
+                "python-barcode is not installed. "
+                "Add 'python-barcode>=0.15' to requirements/base.txt."
+            )
+            return Response(
+                {"error": "Barcode generation library not available."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+
+        asn_value = str(doc.archive_serial_number)
+        Code128 = barcode.get_barcode_class("code128")
+        buffer = io.BytesIO()
+        Code128(asn_value, writer=ImageWriter()).write(buffer)
+        buffer.seek(0)
+
+        return HttpResponse(buffer.read(), content_type="image/png")
 
 
 class DocumentUploadView(APIView):

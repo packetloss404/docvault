@@ -48,15 +48,62 @@
     </div>
   }
 
+  <!-- Sortable Flat List (drag-and-drop reorder) -->
+  @if (cabinets().length > 0) {
+    <div class="card mb-4">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-grip-vertical text-muted"></i>
+        <span>Drag to reorder</span>
+      </div>
+      <div
+        class="list-group list-group-flush"
+        cdkDropList
+        [cdkDropListData]="cabinets()"
+        (cdkDropListDropped)="onDrop($event)"
+      >
+        @for (cabinet of cabinets(); track cabinet.id) {
+          <div
+            class="list-group-item d-flex align-items-center"
+            cdkDrag
+          >
+            <!-- drag handle -->
+            <span
+              class="text-muted me-3"
+              cdkDragHandle
+              style="cursor: grab;"
+              title="Drag to reorder"
+            >
+              <i class="bi bi-grip-vertical"></i>
+            </span>
+            <i class="bi bi-folder me-2 text-warning"></i>
+            <strong>{{ cabinet.name }}</strong>
+            <span class="badge bg-secondary ms-2">{{ cabinet.document_count }}</span>
+            <div class="btn-group btn-group-sm ms-auto">
+              <button class="btn btn-outline-primary btn-sm" (click)="startEdit(cabinet)">
+                Edit
+              </button>
+              <button class="btn btn-outline-danger btn-sm" (click)="deleteCabinet(cabinet)">
+                Delete
+              </button>
+            </div>
+            <!-- placeholder shown while dragging -->
+            <div *cdkDragPlaceholder class="list-group-item bg-light" style="height: 48px;"></div>
+          </div>
+        }
+      </div>
+    </div>
+  } @else {
+    <p class="text-muted">No cabinets yet.</p>
+  }
+
   <!-- Tree View -->
   @if (tree().length > 0) {
     <div class="card">
+      <div class="card-header">Tree View</div>
       <div class="card-body">
         <ng-container *ngTemplateOutlet="treeTemplate; context: { nodes: tree() }" />
       </div>
     </div>
-  } @else if (cabinets().length === 0) {
-    <p class="text-muted">No cabinets yet.</p>
   }
 
   <ng-template #treeTemplate let-nodes="nodes">
@@ -67,14 +114,6 @@
             <i class="bi bi-folder me-2 text-warning"></i>
             <strong>{{ node.name }}</strong>
             <span class="badge bg-secondary ms-2">{{ node.document_count }}</span>
-            <div class="btn-group btn-group-sm ms-auto">
-              <button class="btn btn-outline-primary btn-sm" (click)="startEdit(node)">
-                Edit
-              </button>
-              <button class="btn btn-outline-danger btn-sm" (click)="deleteCabinet(node)">
-                Delete
-              </button>
-            </div>
           </div>
           @if (node.children && node.children.length > 0) {
             <ng-container

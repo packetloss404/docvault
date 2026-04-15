@@ -109,6 +109,13 @@ export const routes: Routes = [
           ).then((m) => m.MetadataTypesComponent),
       },
       {
+        path: 'metadata-types/:id/edit',
+        loadComponent: () =>
+          import(
+            './components/doctype-editor/doctype-editor.component'
+          ).then((m) => m.DoctypeEditorComponent),
+      },
+      {
         path: 'workflows',
         loadComponent: () =>
           import(
@@ -310,6 +317,27 @@ export const routes: Routes = [
           import(
             './components/charge-out-dashboard/charge-out-dashboard.component'
           ).then((m) => m.ChargeOutDashboardComponent),
+      },
+      {
+        path: 'admin/users',
+        loadComponent: () =>
+          import('./components/admin-users/admin-users.component').then(
+            (m) => m.AdminUsersComponent,
+          ),
+      },
+      {
+        path: 'admin/groups',
+        loadComponent: () =>
+          import('./components/admin-groups/admin-groups.component').then(
+            (m) => m.AdminGroupsComponent,
+          ),
+      },
+      {
+        path: 'admin/roles',
+        loadComponent: () =>
+          import('./components/admin-roles/admin-roles.component').then(
+            (m) => m.AdminRolesComponent,
+          ),
       },
       {
         path: 'admin/storage',

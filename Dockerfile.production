@@ -83,6 +83,14 @@ COPY notifications/ notifications/
 COPY ml/ ml/
 COPY ai/ ai/
 COPY collaboration/ collaboration/
+COPY annotations/ annotations/
+COPY entities/ entities/
+COPY esignatures/ esignatures/
+COPY legal_hold/ legal_hold/
+COPY physical_records/ physical_records/
+COPY portal/ portal/
+COPY relationships/ relationships/
+COPY zone_ocr/ zone_ocr/
 
 # Copy Angular frontend build output into static files directory
 # Angular 21 with application builder outputs to dist/<project>/browser/

@@ -6,11 +6,15 @@ import { PaginatedResponse } from '../models/document.model';
 import {
   AuditLogEntry,
   GPGKey,
+  Group,
   OTPConfirmResponse,
   OTPSetupResponse,
   OTPStatus,
+  Permission,
+  Role,
   ScannerDevice,
   Signature,
+  User,
 } from '../models/security.model';
 
 export interface AuditLogQueryParams {
@@ -127,6 +131,70 @@ export class SecurityService {
       params: httpParams,
       responseType: 'blob',
     });
+  }
+
+  // --- Users ---
+
+  getUsers(): Observable<User[]> {
+    return this.http.get<User[]>(`${this.apiUrl}/security/users/`);
+  }
+
+  getUser(id: number): Observable<User> {
+    return this.http.get<User>(`${this.apiUrl}/security/users/${id}/`);
+  }
+
+  createUser(data: Partial<User> & { password?: string }): Observable<User> {
+    return this.http.post<User>(`${this.apiUrl}/security/users/`, data);
+  }
+
+  updateUser(id: number, data: Partial<User> & { password?: string }): Observable<User> {
+    return this.http.patch<User>(`${this.apiUrl}/security/users/${id}/`, data);
+  }
+
+  deleteUser(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/security/users/${id}/`);
+  }
+
+  // --- Groups ---
+
+  getGroups(): Observable<Group[]> {
+    return this.http.get<Group[]>(`${this.apiUrl}/security/groups/`);
+  }
+
+  createGroup(data: Partial<Group>): Observable<Group> {
+    return this.http.post<Group>(`${this.apiUrl}/security/groups/`, data);
+  }
+
+  updateGroup(id: number, data: Partial<Group>): Observable<Group> {
+    return this.http.patch<Group>(`${this.apiUrl}/security/groups/${id}/`, data);
+  }
+
+  deleteGroup(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/security/groups/${id}/`);
+  }
+
+  // --- Roles ---
+
+  getRoles(): Observable<Role[]> {
+    return this.http.get<Role[]>(`${this.apiUrl}/security/roles/`);
+  }
+
+  createRole(data: Partial<Role>): Observable<Role> {
+    return this.http.post<Role>(`${this.apiUrl}/security/roles/`, data);
+  }
+
+  updateRole(id: number, data: Partial<Role>): Observable<Role> {
+    return this.http.patch<Role>(`${this.apiUrl}/security/roles/${id}/`, data);
+  }
+
+  deleteRole(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/security/roles/${id}/`);
+  }
+
+  // --- Permissions ---
+
+  getPermissions(): Observable<Permission[]> {
+    return this.http.get<Permission[]>(`${this.apiUrl}/security/permissions/`);
   }
 
   // --- Scanners ---

@@ -1,13 +1,21 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import {
+  CdkDragDrop,
+  CdkDrag,
+  CdkDropList,
+  CdkDragPlaceholder,
+  CdkDragHandle,
+  moveItemInArray,
+} from '@angular/cdk/drag-drop';
 import { OrganizationService } from '../../services/organization.service';
 import { Cabinet, CabinetTreeNode } from '../../models/organization.model';
 
 @Component({
   selector: 'app-cabinets',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CdkDropList, CdkDrag, CdkDragPlaceholder, CdkDragHandle],
   templateUrl: './cabinets.component.html',
 })
 export class CabinetsComponent implements OnInit {
@@ -74,6 +82,19 @@ export class CabinetsComponent implements OnInit {
     if (!confirm(`Delete cabinet "${c.name}"?`)) return;
     this.orgService.deleteCabinet(c.id).subscribe({
       next: () => this.load(),
+    });
+  }
+
+  onDrop(event: CdkDragDrop<Cabinet[]>): void {
+    if (event.previousIndex === event.currentIndex) return;
+
+    const list = [...this.cabinets()];
+    moveItemInArray(list, event.previousIndex, event.currentIndex);
+    this.cabinets.set(list);
+
+    // Persist the new order: PATCH each cabinet with its updated position index
+    list.forEach((cabinet, index) => {
+      this.orgService.updateCabinet(cabinet.id, { order: index }).subscribe();
     });
   }
 }
