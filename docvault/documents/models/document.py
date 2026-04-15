@@ -113,6 +113,13 @@ class Document(SoftDeleteModel, AuditableModel, OwnedModel):
     # Legal hold
     is_held = models.BooleanField(default=False, db_index=True)
 
+    # Supersession
+    is_obsolete = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Set automatically when another document supersedes this one.",
+    )
+
     class Meta:
         ordering = ["-created"]
         indexes = [

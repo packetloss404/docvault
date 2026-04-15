@@ -2,7 +2,8 @@
 
 from django.conf import settings
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import include, path, re_path
+from django.views.generic import TemplateView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from core.health import health_view, metrics_view, readiness_view
@@ -35,9 +36,17 @@ urlpatterns = [
     path("api/v1/", include("storage.urls")),
     path("api/v1/", include("physical_records.urls")),
     path("api/v1/", include("core.urls")),
+    # Allauth (SSO/OIDC)
+    path("accounts/", include("allauth.urls")),
     # OpenAPI
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    # SPA deep-link fallback: serve index.html for all unmatched routes
+    re_path(
+        r"^(?!api/|admin/|health/|ready/|metrics/|static/|media/|accounts/|__debug__/).*$",
+        TemplateView.as_view(template_name="index.html"),
+        name="spa-fallback",
+    ),
 ]
 
 # Debug toolbar URLs

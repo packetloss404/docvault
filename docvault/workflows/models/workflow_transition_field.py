@@ -27,6 +27,11 @@ class WorkflowTransitionField(models.Model):
     required = models.BooleanField(default=False)
     default = models.CharField(max_length=512, blank=True, default="")
     help_text = models.CharField(max_length=512, blank=True, default="")
+    choices = models.JSONField(
+        blank=True,
+        null=True,
+        help_text="List of options for SELECT fields, e.g. [\"opt1\", \"opt2\"].",
+    )
 
     class Meta:
         ordering = ["transition", "name"]

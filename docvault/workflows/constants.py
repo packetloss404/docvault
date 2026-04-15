@@ -28,6 +28,7 @@ FIELD_TYPE_INTEGER = "integer"
 FIELD_TYPE_DATE = "date"
 FIELD_TYPE_BOOLEAN = "boolean"
 FIELD_TYPE_TEXT = "text"
+FIELD_TYPE_SELECT = "select"
 
 FIELD_TYPE_CHOICES = [
     (FIELD_TYPE_CHAR, "Character"),
@@ -35,6 +36,7 @@ FIELD_TYPE_CHOICES = [
     (FIELD_TYPE_DATE, "Date"),
     (FIELD_TYPE_BOOLEAN, "Boolean"),
     (FIELD_TYPE_TEXT, "Text"),
+    (FIELD_TYPE_SELECT, "Select"),
 ]
 
 # --------------------------------------------------------------------------

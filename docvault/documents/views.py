@@ -67,8 +67,30 @@ class DocumentViewSet(viewsets.ModelViewSet):
             created_by=self.request.user,
         )
 
+    def _check_legal_hold(self, instance):
+        """Raise 409 if document is under legal hold and user lacks override."""
+        if instance.is_held and not self.request.user.has_perm(
+            "legal_hold.override_hold"
+        ):
+            from rest_framework.exceptions import APIException
+
+            class LegalHoldConflict(APIException):
+                status_code = 409
+                default_detail = (
+                    "This document is under legal hold. "
+                    "Modifications and deletion are restricted."
+                )
+                default_code = "legal_hold_conflict"
+
+            raise LegalHoldConflict()
+
+    def perform_update(self, serializer):
+        self._check_legal_hold(serializer.instance)
+        serializer.save()
+
     def perform_destroy(self, instance):
         """Soft delete instead of hard delete."""
+        self._check_legal_hold(instance)
         instance.soft_delete()
 
     @action(detail=True, methods=["post"])

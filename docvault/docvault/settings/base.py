@@ -29,6 +29,9 @@ env = environ.Env(
     S3_SECRET_KEY=(str, ""),
     S3_BUCKET_NAME=(str, "docvault"),
     S3_REGION=(str, "us-east-1"),
+    OIDC_SERVER_URL=(str, ""),
+    OIDC_CLIENT_ID=(str, ""),
+    OIDC_CLIENT_SECRET=(str, ""),
 )
 
 # Read .env file if it exists
@@ -64,6 +67,7 @@ INSTALLED_APPS = [
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
+    "allauth.socialaccount.providers.openid_connect",
     "channels",
     "storages",
     "mptt",
@@ -209,6 +213,25 @@ SPECTACULAR_SETTINGS = {
 ACCOUNT_LOGIN_METHODS = {"username", "email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "username*", "password1*", "password2*"]
 ACCOUNT_EMAIL_VERIFICATION = "optional"
+
+# OIDC / SSO (optional, enabled when OIDC_SERVER_URL is set)
+_oidc_server_url = env("OIDC_SERVER_URL")
+if _oidc_server_url:
+    SOCIALACCOUNT_PROVIDERS = {
+        "openid_connect": {
+            "APPS": [
+                {
+                    "provider_id": "docvault-oidc",
+                    "name": "SSO",
+                    "client_id": env("OIDC_CLIENT_ID"),
+                    "secret": env("OIDC_CLIENT_SECRET"),
+                    "settings": {
+                        "server_url": _oidc_server_url,
+                    },
+                },
+            ],
+        },
+    }
 
 # django-guardian
 ANONYMOUS_USER_NAME = None

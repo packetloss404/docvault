@@ -186,6 +186,11 @@ class DocumentRelationshipListCreateView(APIView):
                 status=status.HTTP_409_CONFLICT,
             )
 
+        # Auto-mark target as obsolete when superseded
+        if rel_type.slug == "supersedes" and not target.is_obsolete:
+            target.is_obsolete = True
+            target.save(update_fields=["is_obsolete"])
+
         output = DocumentRelationshipSerializer(relationship).data
         return Response(output, status=status.HTTP_201_CREATED)
 
@@ -211,7 +216,21 @@ class DocumentRelationshipDeleteView(APIView):
             except DocumentRelationship.DoesNotExist:
                 raise Http404("Relationship not found.")
 
+        # If deleting a "supersedes" relationship, check if target should be un-obsoleted
+        target_doc = relationship.target_document
+        rel_type_slug = relationship.relationship_type.slug
+
         relationship.delete()
+
+        if rel_type_slug == "supersedes":
+            still_superseded = DocumentRelationship.objects.filter(
+                target_document=target_doc,
+                relationship_type__slug="supersedes",
+            ).exists()
+            if not still_superseded and target_doc.is_obsolete:
+                target_doc.is_obsolete = False
+                target_doc.save(update_fields=["is_obsolete"])
+
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
