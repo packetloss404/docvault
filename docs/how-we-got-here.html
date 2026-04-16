@@ -188,9 +188,8 @@
   <header>
     <h1>How DocVault got here</h1>
     <p class="lead">
-      Synthesis from archived research: <strong>Paperless-ngx</strong>, <strong>Mayan EDMS</strong>, and <strong>Lodestone</strong> as the three anchor open-source DMS products,
-      plus a <strong>broad market scan</strong> (45+ systems) for tier‑1 gaps. Mission statement in
-      <code>product-spec.md</code> (v1.0 draft, 2026‑03‑01) encodes this explicitly.
+      <strong>Lineage:</strong> comparative research anchored on <strong>Paperless-ngx</strong>, <strong>Mayan EDMS</strong>, and <strong>Lodestone</strong>, plus a <strong>45+ system</strong> market scan for tier‑1 gaps beyond those three.
+      <strong>Today’s repo:</strong> the root <code>README.md</code> is the live inventory—GPLv3 stack (Django&nbsp;5.2, DRF&nbsp;3.16, Django Channels, Celery&nbsp;5.6 + Beat, Angular&nbsp;21, Redis&nbsp;7, optional Elasticsearch&nbsp;8 + FAISS, S3/MinIO), OpenAPI at <code>/api/docs/</code>, Helm in <code>deploy/</code>, and a <strong>contributors welcome</strong> path via <code>CONTRIBUTING.md</code> + <code>CODE_OF_CONDUCT.md</code>.
     </p>
   </header>
 
@@ -198,7 +197,7 @@
     <section class="card" style="margin-bottom:2rem" aria-label="Six report lenses">
       <h3 style="margin-top:0">Six HTML5-focused lenses (one report)</h3>
       <p style="margin:0 0 0.75rem; color:var(--muted); font-size:0.9rem">
-        This page is assembled as if six specialist front-end agents each shipped one slice—stats, timeline, convergence SVG, adoption bars, matrix heat, and architecture copy—then merged into a single static document (no runtime JS).
+        This page is assembled as if six specialist front-end agents each shipped one slice—stats, timeline, convergence SVG, adoption bars, matrix heat, and architecture copy—then merged into a single static document (no runtime JS). Refresh the narrative from <code>README.md</code> whenever the shipped surface moves.
       </p>
       <ol style="margin:0; padding-left:1.25rem; columns:2; column-gap:2rem; font-size:0.88rem;">
         <li><strong>Metrics</strong> — headline counts from research artifacts.</li>
@@ -213,24 +212,24 @@
     <section class="grid-2" aria-label="Key figures">
       <div class="card">
         <div class="stat"><b>3</b><span>anchor OSS products in comparative matrix</span></div>
-        <p class="source-note">Source: <code>dev/archive/original-spec/research/comparative-analysis.md</code></p>
+        <p class="source-note">Research bundle (when present): <code>dev/archive/original-spec/research/comparative-analysis.md</code></p>
       </div>
       <div class="card">
         <div class="stat"><b>45+</b><span>systems reviewed for novel features</span></div>
-        <p class="source-note">Source: <code>extended-market-analysis.md</code> (Tier 1–3)</p>
+        <p class="source-note">Research: <code>extended-market-analysis.md</code> (Tier 1–3) in the same research folder</p>
       </div>
       <div class="card">
         <div class="stat"><b>33</b><span>numbered “adopt” bullets across three anchors</span></div>
-        <p class="source-note">5 + 13 + 15 from “Best-of-Breed Feature Selection” lists</p>
+        <p class="source-note">5 + 13 + 15 from comparative “Best-of-Breed Feature Selection” lists</p>
       </div>
       <div class="card">
-        <div class="stat"><b>1</b><span>architecture decision: modular monolith + SPA</span></div>
-        <p class="source-note">Rationale vs microservices / 100+ apps / plain monolith</p>
+        <div class="stat"><b>1,554</b><span>automated tests passing (README)</span></div>
+        <p class="source-note">Split ~1,029 Django + ~525 Angular — run targets in <code>README.md</code> / <code>CONTRIBUTING.md</code></p>
       </div>
     </section>
 
     <h2>Timeline (program narrative)</h2>
-    <p>Dates are <strong>documentation anchors</strong> from the repo spec draft, not git archaeology.</p>
+    <p>Early milestones are <strong>research and spec anchors</strong>; the tail reflects <strong>what this repository documents today</strong> (see <code>README.md</code>), not git archaeology.</p>
     <div class="timeline">
       <div class="timeline-item">
         <time>Research phase</time>
@@ -245,12 +244,20 @@
         <strong>45+ system scan</strong> — E-sign flows, zone OCR, contributor portals, NER facets, legal hold patterns, etc. (Tier 1 features).
       </div>
       <div class="timeline-item">
-        <time>2026‑03‑01</time>
-        <strong>Product spec draft</strong> — Vision ties Mayan + Paperless + Lodestone into one mission; seven principles (best-of-breed, modular monolith, AI-first, …).
+        <time>Vision → product draft</time>
+        <strong>Single-system mission</strong> — Combine Mayan workflows/security, Paperless ML/UX, Lodestone non-destructive + object storage posture; principles include modular monolith and AI-first (see historical product-spec where retained).
       </div>
       <div class="timeline-item">
-        <time>Build phase</time>
-        <strong>DocVault implementation</strong> — Django domain apps + <code>src-ui</code>; execution checklist in <code>dev/work/CHECKLIST.md</code>.
+        <time>Build phase (this repo)</time>
+        <strong>Modular monolith + SPA</strong> — ~21 Django domain apps under <code>docvault/</code> (AI, annotations, collaboration, documents, entities, esignatures, legal hold, ML, notifications, organization, physical records, portal, processing, relationships, search, security, sources, storage, workflows, zone OCR, …) plus Angular <code>src-ui</code>; agent-oriented execution in <code>dev/work/CHECKLIST.md</code> per <code>dev/AGENTS.md</code>.
+      </div>
+      <div class="timeline-item">
+        <time>Delivery surface today</time>
+        <strong>Shipped themes (README)</strong> — Zone OCR, contributor portals + document requests, e-signatures (public + verified external signers), legal hold, CAS/dedup, physical records, relationship graph, hybrid + semantic search with analytics, WebSocket notifications, RBAC admin, and more—wired through DRF and OpenAPI docs at <code>/api/docs/</code>.
+      </div>
+      <div class="timeline-item">
+        <time>Community</time>
+        <strong>Contributors welcome</strong> — <code>CONTRIBUTING.md</code>, <code>CODE_OF_CONDUCT.md</code>, issue templates under <code>.github/</code>, private disclosure via <code>SECURITY.md</code>.
       </div>
     </div>
 
@@ -282,7 +289,7 @@
         <!-- Core -->
         <rect x="460" y="110" width="280" height="100" rx="16" fill="url(#gD)" opacity="0.95"/>
         <text x="600" y="155" text-anchor="middle" fill="#fff" font-size="22" font-weight="800">DocVault</text>
-        <text x="600" y="182" text-anchor="middle" fill="#e8eef7" font-size="11" opacity="0.9">Modular monolith · DRF · Angular · ES + FAISS</text>
+        <text x="600" y="182" text-anchor="middle" fill="#e8eef7" font-size="11" opacity="0.9">Django 5.2 · DRF · Channels · Celery · Angular 21 · ES + FAISS · Redis</text>
       </svg>
     </div>
 
@@ -318,55 +325,55 @@
         <tr><td>Share links</td><td class="n">NO</td><td class="n">NO</td><td class="y">YES</td><td class="dv">YES</td></tr>
         <tr><td>WebSocket updates</td><td class="n">NO</td><td class="n">NO</td><td class="y">YES</td><td class="dv">YES</td></tr>
         <tr><td>Barcode / ASN</td><td class="n">NO</td><td class="n">NO</td><td class="y">YES</td><td class="dv">YES</td></tr>
+        <tr><td>Zone OCR / form templates</td><td class="n">NO</td><td class="n">NO</td><td class="n">NO</td><td class="dv">YES</td></tr>
+        <tr><td>Public contributor portal</td><td class="n">NO</td><td class="n">NO</td><td class="n">NO</td><td class="dv">YES</td></tr>
+        <tr><td>Legal hold (hard block)</td><td class="n">NO</td><td class="p">Patterns</td><td class="n">NO</td><td class="dv">YES (409)</td></tr>
       </tbody>
     </table>
 
     <h2>What each lane contributed (summary)</h2>
+    <p class="source-note" style="margin-top:-0.5rem">Below ties <strong>research intent</strong> to <strong>README‑listed capabilities</strong> in this codebase.</p>
     <div class="grid-2">
       <div class="card">
         <h3>Paperless-ngx</h3>
         <ul>
-          <li>Angular SPA + Django 5.x + DRF “gold path” for OSS DMS UX.</li>
-          <li>ML pipeline, barcodes, FAISS, LLM hooks, consume plugins, saved views, dark mode.</li>
+          <li>Angular SPA + Django + DRF as the default OSS DMS UX spine (now Angular&nbsp;21 + Bootstrap&nbsp;5.3 in <code>src-ui</code>).</li>
+          <li>ML classification, barcodes/ASN, hybrid + semantic search (FAISS), saved views, global command palette, LLM document chat/summarize/entities, Redis-backed ML caches.</li>
         </ul>
       </div>
       <div class="card">
         <h3>Mayan EDMS</h3>
         <ul>
-          <li>Enterprise workflows, generic ACLs, cabinets (MPTT), retention, encryption, LDAP/OIDC/OTP, quotas, scanners, signing.</li>
+          <li>Enterprise workflows (state machines, triggers, escalations), object ACLs via django-guardian, cabinets, retention, encryption-at-rest option, LDAP/OIDC/social auth + 2FA, quotas, audit logging, GPG signing.</li>
         </ul>
       </div>
       <div class="card">
         <h3>Lodestone</h3>
         <ul>
-          <li>Non-destructive originals, MinIO/S3 mental model, queue/worker scaling story (adapted to Celery, not 9 containers).</li>
+          <li>Non-destructive originals + configurable paths; S3/MinIO object storage; background processing mental model realized with Celery workers/Beat instead of microservice sprawl.</li>
         </ul>
       </div>
       <div class="card">
         <h3>45+ market scan</h3>
         <ul>
-          <li>Tier‑1 deltas: external e-sign, zone OCR, contributor portals, NER facets, analytics patterns—beyond the three anchors.</li>
+          <li>Tier‑1 deltas now reflected in apps such as <code>esignatures/</code>, <code>zone_ocr/</code>, <code>portal/</code>, <code>legal_hold/</code>, <code>entities/</code>, plus search analytics/synonyms/curations—beyond what the three anchors alone provided.</li>
         </ul>
       </div>
     </div>
 
-    <h2>Architecture decision (from comparative doc)</h2>
+    <h2>Architecture decision (research → repo)</h2>
     <div class="card">
       <ul>
         <li><strong>Rejected as default:</strong> Lodestone-style microservices sprawl for core team velocity.</li>
         <li><strong>Rejected as default:</strong> Mayan-scale 100+ app explosion for a greenfield codebase.</li>
-        <li><strong>Chosen:</strong> Modular monolith (clear Django app boundaries) + Angular SPA + Celery workers + ES/FAISS—stated explicitly in comparative analysis § “Architecture Decision”.</li>
+        <li><strong>Chosen:</strong> Modular monolith (clear Django app boundaries) + Angular SPA + Celery workers + optional Elasticsearch + FAISS + Redis + Channels—documented as the operational stack in <code>README.md</code> and embodied under <code>docvault/</code> + <code>src-ui/</code>.</li>
+        <li><strong>Ship &amp; observe:</strong> Production Docker + Helm chart under <code>deploy/</code>; health/readiness/metrics endpoints per README API table.</li>
       </ul>
     </div>
 
     <footer>
-      Generated for internal storytelling. Primary sources:
-      <code>dev/archive/original-spec/research/comparative-analysis.md</code>,
-      <code>paperless-ngx-analysis.md</code>,
-      <code>mayan-edms-analysis.md</code>,
-      <code>lodestone-analysis.md</code>,
-      <code>extended-market-analysis.md</code>,
-      <code>dev/archive/original-spec/product-spec.md</code> §1.
+      <strong>Lineage / research receipts</strong> (when bundled): <code>dev/archive/original-spec/research/</code> — comparative matrix, per-product deep dives, extended market tiers, and historical product-spec §1 if present.
+      <br /><strong>Current facts &amp; inventory:</strong> repository root <code>README.md</code> (features, stack, tests, structure), <code>CONTRIBUTING.md</code>, <code>dev/AGENTS.md</code>, <code>dev/work/CHECKLIST.md</code>.
       <br />HTML5 + inline SVG + CSS only (no external JS). File: <code>docs/how-we-got-here.html</code>
     </footer>
   </main>

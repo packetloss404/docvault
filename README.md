@@ -8,6 +8,8 @@
 
 The ultimate open-source document management system. Ingest, organize, search, and collaborate on documents with OCR, AI-powered search, workflows, e-signatures, and more.
 
+**Contributors welcome.** Pull requests, issues, docs, tests, and UX polish all help. Read [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md), skim [`dev/AGENTS.md`](dev/AGENTS.md) for where code lives, and grab a task from [`dev/work/CHECKLIST.md`](dev/work/CHECKLIST.md) if you want a concrete starting point. Security-sensitive reports belong in [`SECURITY.md`](SECURITY.md), not public issues.
+
 ---
 
 ## Features
@@ -290,7 +292,7 @@ docvault/
 
 ## Contributing
 
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, code style guidelines, and PR process.
+Contributions are welcome: bug fixes, features, documentation, translations, accessibility, and performance work. See [CONTRIBUTING.md](CONTRIBUTING.md) for environment setup, tests, and the PR flow. Everyone is expected to follow [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
 
 - [Report a bug](.github/ISSUE_TEMPLATE/bug_report.md)
 - [Request a feature](.github/ISSUE_TEMPLATE/feature_request.md)

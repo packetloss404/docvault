@@ -1,18 +1,26 @@
 # Contributing to DocVault
 
-Thank you for your interest in contributing to DocVault! This guide will help you get started.
+Thank you for your interest in contributing. **Contributors are welcome**—whether you ship code, tighten docs, add tests, improve accessibility, or file a careful bug report with repro steps.
+
+This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agree to uphold it.
+
+## Ways to help
+
+- **Code** — Small, focused PRs that match patterns in neighboring files (see [`dev/AGENTS.md`](dev/AGENTS.md)).
+- **Tasks** — Pick something from [`dev/work/CHECKLIST.md`](dev/work/CHECKLIST.md); NextGen UI work may reference [`dev/work/features/`](dev/work/features/).
+- **Quality** — Tests, type fixes, copy, and issue triage are all valuable.
 
 ## Development Setup
 
 ### Prerequisites
 - Python 3.12+
-- Node.js 20+
+- Node.js 22+ (match the version in the root README)
 - Redis (for Celery and caching)
 - PostgreSQL (or SQLite for local dev)
 
 ### Backend
 ```bash
-git clone git@github.com:packetloss404/docvault.git
+git clone https://github.com/packetloss404/docvault.git
 cd docvault
 python -m venv .venv
 source .venv/bin/activate  # or .venv\Scripts\activate on Windows
