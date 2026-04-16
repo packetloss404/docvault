@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>How DocVault Got Here — Four Lanes, One Product</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --text: #e8eef7;
+      --muted: #8b9cb3;
+      --lodestone: #5c9ead;
+      --mayan: #c9a227;
+      --paperless: #6ab04c;
+      --market: #a55eea;
+      --docvault: #4a90d9;
+      --accent: #00d4aa;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+    header {
+      background: linear-gradient(135deg, #1a2a3d 0%, #0f1419 50%, #1a2332 100%);
+      padding: 2.5rem 1.5rem 3rem;
+      border-bottom: 1px solid #2a3f55;
+    }
+    header h1 {
+      margin: 0 0 0.5rem;
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    header p.lead {
+      max-width: 52rem;
+      color: var(--muted);
+      font-size: 1.05rem;
+      margin: 0;
+    }
+    main { max-width: 1200px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+
+    h2 {
+      font-size: 1.35rem;
+      margin: 2.5rem 0 1rem;
+      color: var(--accent);
+      border-bottom: 1px solid #2a3f55;
+      padding-bottom: 0.35rem;
+    }
+    h3 { font-size: 1.05rem; color: #b8cce8; margin: 1.5rem 0 0.75rem; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+    @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 1.25rem 1.4rem;
+      border: 1px solid #2a3f55;
+    }
+    .stat {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .stat b {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #fff;
+    }
+    .stat span { color: var(--muted); font-size: 0.9rem; }
+
+    /* Timeline */
+    .timeline {
+      position: relative;
+      margin: 2rem 0;
+      padding-left: 1.5rem;
+      border-left: 3px solid #2a3f55;
+    }
+    .timeline-item {
+      position: relative;
+      margin-bottom: 1.75rem;
+      padding-left: 1.25rem;
+    }
+    .timeline-item::before {
+      content: "";
+      position: absolute;
+      left: -1.5rem;
+      top: 0.35rem;
+      width: 14px;
+      height: 14px;
+      background: var(--docvault);
+      border-radius: 50%;
+      border: 3px solid var(--bg);
+      margin-left: -7px;
+    }
+    .timeline-item time {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    /* Merge visual — 4 → 1 */
+    .merge-wrap {
+      margin: 2rem 0;
+      overflow-x: auto;
+    }
+    .merge-svg { width: 100%; min-width: 640px; height: 320px; }
+    .lane-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+
+    /* Horizontal bar chart */
+    .bars { margin: 1.5rem 0; }
+    .bar-row {
+      display: grid;
+      grid-template-columns: 140px 1fr 48px;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+      font-size: 0.85rem;
+    }
+    .bar-track {
+      height: 22px;
+      background: #243447;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .bar-fill { height: 100%; border-radius: 6px; transition: width 0.6s ease; }
+    .bar-fill.lodestone { background: linear-gradient(90deg, var(--lodestone), #7ec4d4); }
+    .bar-fill.mayan { background: linear-gradient(90deg, var(--mayan), #e8c547); }
+    .bar-fill.paperless { background: linear-gradient(90deg, var(--paperless), #9ae66a); }
+    .bar-fill.market { background: linear-gradient(90deg, var(--market), #c792ea); }
+
+    /* Matrix heat */
+    table.matrix {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.72rem;
+      margin: 1rem 0;
+    }
+    table.matrix th, table.matrix td {
+      border: 1px solid #2a3f55;
+      padding: 0.35rem 0.45rem;
+      text-align: center;
+    }
+    table.matrix th { background: #243447; color: #b8cce8; }
+    table.matrix th:first-child, table.matrix td:first-child {
+      text-align: left;
+      font-weight: 600;
+      color: #cdd9ea;
+    }
+    .y { background: rgba(106, 176, 76, 0.35); color: #b8f5a0; font-weight: 700; }
+    .p { background: rgba(201, 162, 39, 0.3); color: #ffe08a; }
+    .n { background: rgba(139, 156, 179, 0.2); color: var(--muted); }
+    .dv { background: rgba(74, 144, 217, 0.45); color: #a8d4ff; font-weight: 700; }
+
+    .pill {
+      display: inline-block;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      margin-right: 0.25rem;
+    }
+    .pill-l { background: var(--lodestone); color: #0a1219; }
+    .pill-m { background: var(--mayan); color: #1a1404; }
+    .pill-p { background: var(--paperless); color: #0a1219; }
+    .pill-x { background: var(--market); color: #fff; }
+
+    footer {
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #2a3f55;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+    .source-note { font-size: 0.78rem; color: var(--muted); margin-top: 0.5rem; }
+    a { color: #7ec8ff; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>How DocVault got here</h1>
+    <p class="lead">
+      Synthesis from archived research: <strong>Paperless-ngx</strong>, <strong>Mayan EDMS</strong>, and <strong>Lodestone</strong> as the three anchor open-source DMS products,
+      plus a <strong>broad market scan</strong> (45+ systems) for tier‑1 gaps. Mission statement in
+      <code>product-spec.md</code> (v1.0 draft, 2026‑03‑01) encodes this explicitly.
+    </p>
+  </header>
+
+  <main>
+    <section class="card" style="margin-bottom:2rem" aria-label="Six report lenses">
+      <h3 style="margin-top:0">Six HTML5-focused lenses (one report)</h3>
+      <p style="margin:0 0 0.75rem; color:var(--muted); font-size:0.9rem">
+        This page is assembled as if six specialist front-end agents each shipped one slice—stats, timeline, convergence SVG, adoption bars, matrix heat, and architecture copy—then merged into a single static document (no runtime JS).
+      </p>
+      <ol style="margin:0; padding-left:1.25rem; columns:2; column-gap:2rem; font-size:0.88rem;">
+        <li><strong>Metrics</strong> — headline counts from research artifacts.</li>
+        <li><strong>Chronology</strong> — program phases anchored on spec dates.</li>
+        <li><strong>Topology</strong> — four-lane merge into DocVault (SVG).</li>
+        <li><strong>Distribution</strong> — adopt-bullet counts as CSS bars.</li>
+        <li><strong>Evidence grid</strong> — matrix excerpt with heat classes.</li>
+        <li><strong>Rationale</strong> — modular monolith vs alternatives.</li>
+      </ol>
+    </section>
+
+    <section class="grid-2" aria-label="Key figures">
+      <div class="card">
+        <div class="stat"><b>3</b><span>anchor OSS products in comparative matrix</span></div>
+        <p class="source-note">Source: <code>dev/archive/original-spec/research/comparative-analysis.md</code></p>
+      </div>
+      <div class="card">
+        <div class="stat"><b>45+</b><span>systems reviewed for novel features</span></div>
+        <p class="source-note">Source: <code>extended-market-analysis.md</code> (Tier 1–3)</p>
+      </div>
+      <div class="card">
+        <div class="stat"><b>33</b><span>numbered “adopt” bullets across three anchors</span></div>
+        <p class="source-note">5 + 13 + 15 from “Best-of-Breed Feature Selection” lists</p>
+      </div>
+      <div class="card">
+        <div class="stat"><b>1</b><span>architecture decision: modular monolith + SPA</span></div>
+        <p class="source-note">Rationale vs microservices / 100+ apps / plain monolith</p>
+      </div>
+    </section>
+
+    <h2>Timeline (program narrative)</h2>
+    <p>Dates are <strong>documentation anchors</strong> from the repo spec draft, not git archaeology.</p>
+    <div class="timeline">
+      <div class="timeline-item">
+        <time>Research phase</time>
+        <strong>Deep dives completed</strong> — Paperless-ngx (Angular + Django + ML barcodes), Mayan (ACLs, workflows, 100+ apps), Lodestone (non-destructive, MinIO, microservices).
+      </div>
+      <div class="timeline-item">
+        <time>Comparative lock</time>
+        <strong>Feature matrix + “adopt” lists</strong> — Explicit YES/NO/Our column; 33 adoption bullets grouped by source product.
+      </div>
+      <div class="timeline-item">
+        <time>Extended market</time>
+        <strong>45+ system scan</strong> — E-sign flows, zone OCR, contributor portals, NER facets, legal hold patterns, etc. (Tier 1 features).
+      </div>
+      <div class="timeline-item">
+        <time>2026‑03‑01</time>
+        <strong>Product spec draft</strong> — Vision ties Mayan + Paperless + Lodestone into one mission; seven principles (best-of-breed, modular monolith, AI-first, …).
+      </div>
+      <div class="timeline-item">
+        <time>Build phase</time>
+        <strong>DocVault implementation</strong> — Django domain apps + <code>src-ui</code>; execution checklist in <code>dev/work/CHECKLIST.md</code>.
+      </div>
+    </div>
+
+    <h2>Visual — four lanes converging</h2>
+    <p><span class="pill pill-p">Paperless</span><span class="pill pill-m">Mayan</span><span class="pill pill-l">Lodestone</span><span class="pill pill-x">Market scan</span></p>
+    <div class="merge-wrap">
+      <svg class="merge-svg" viewBox="0 0 800 320" aria-label="Four inputs merging into DocVault">
+        <defs>
+          <linearGradient id="gP" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#6ab04c"/><stop offset="100%" stop-color="#9ae66a"/></linearGradient>
+          <linearGradient id="gM" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#c9a227"/><stop offset="100%" stop-color="#e8c547"/></linearGradient>
+          <linearGradient id="gL" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#5c9ead"/><stop offset="100%" stop-color="#7ec4d4"/></linearGradient>
+          <linearGradient id="gX" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#a55eea"/><stop offset="100%" stop-color="#c792ea"/></linearGradient>
+          <linearGradient id="gD" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#4a90d9"/><stop offset="100%" stop-color="#00d4aa"/></linearGradient>
+        </defs>
+        <!-- Lanes -->
+        <rect x="40" y="30" width="140" height="44" rx="10" fill="url(#gP)"/>
+        <text x="110" y="58" text-anchor="middle" class="lane-label" fill="#0a1219">Paperless-ngx</text>
+        <rect x="40" y="100" width="140" height="44" rx="10" fill="url(#gM)"/>
+        <text x="110" y="128" text-anchor="middle" class="lane-label" fill="#1a1404">Mayan EDMS</text>
+        <rect x="40" y="170" width="140" height="44" rx="10" fill="url(#gL)"/>
+        <text x="110" y="198" text-anchor="middle" class="lane-label" fill="#0a1219">Lodestone</text>
+        <rect x="40" y="240" width="140" height="44" rx="10" fill="url(#gX)"/>
+        <text x="110" y="268" text-anchor="middle" class="lane-label" fill="#fff">45+ market</text>
+        <!-- Flow paths -->
+        <path d="M 180 52 C 320 52, 340 100, 420 150" fill="none" stroke="#6ab04c" stroke-width="3" opacity="0.85"/>
+        <path d="M 180 122 C 300 122, 360 130, 420 155" fill="none" stroke="#c9a227" stroke-width="3" opacity="0.85"/>
+        <path d="M 180 192 C 280 192, 360 165, 420 158" fill="none" stroke="#5c9ead" stroke-width="3" opacity="0.85"/>
+        <path d="M 180 262 C 260 262, 340 185, 420 162" fill="none" stroke="#a55eea" stroke-width="3" opacity="0.85"/>
+        <!-- Core -->
+        <rect x="460" y="110" width="280" height="100" rx="16" fill="url(#gD)" opacity="0.95"/>
+        <text x="600" y="155" text-anchor="middle" fill="#fff" font-size="22" font-weight="800">DocVault</text>
+        <text x="600" y="182" text-anchor="middle" fill="#e8eef7" font-size="11" opacity="0.9">Modular monolith · DRF · Angular · ES + FAISS</text>
+      </svg>
+    </div>
+
+    <h2>Data — adoption weight by source</h2>
+    <p>Counts = numbered bullets under “From X (Adopt)” in comparative analysis (proxy for deliberate design lift).</p>
+    <div class="bars card">
+      <div class="bar-row"><span>Lodestone</span><div class="bar-track"><div class="bar-fill lodestone" style="width:24%"></div></div><span>5</span></div>
+      <div class="bar-row"><span>Mayan EDMS</span><div class="bar-track"><div class="bar-fill mayan" style="width:62%"></div></div><span>13</span></div>
+      <div class="bar-row"><span>Paperless-ngx</span><div class="bar-track"><div class="bar-fill paperless" style="width:72%"></div></div><span>15</span></div>
+      <div class="bar-row"><span>Market scan</span><div class="bar-track"><div class="bar-fill market" style="width:100%"></div></div><span>Tiered</span></div>
+      <p class="source-note">Bar lengths normalized to max anchor count (15). “Market scan” is qualitative tiers, shown full width.</p>
+    </div>
+
+    <h2>Heat excerpt — matrix vs DocVault column</h2>
+    <p>Subset of the comparative feature matrix (Y / partial / gap). <span class="y" style="padding:0 4px">Y</span> = strong in that product.</p>
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th>Feature</th>
+          <th>Lodestone</th>
+          <th>Mayan</th>
+          <th>Paperless</th>
+          <th>DocVault</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Vector / semantic search</td><td class="n">NO</td><td class="n">NO</td><td class="y">YES</td><td class="dv">YES</td></tr>
+        <tr><td>ML auto-classification</td><td class="n">NO</td><td class="n">NO</td><td class="y">YES</td><td class="dv">YES</td></tr>
+        <tr><td>Workflow engine</td><td class="n">NO</td><td class="y">YES</td><td class="p">Trigger</td><td class="dv">State + triggers</td></tr>
+        <tr><td>Check-in / out</td><td class="n">NO</td><td class="y">YES</td><td class="n">NO</td><td class="dv">YES</td></tr>
+        <tr><td>Non-destructive</td><td class="y">YES</td><td class="n">NO</td><td class="n">NO</td><td class="dv">Configurable</td></tr>
+        <tr><td>Object ACLs</td><td class="n">NO</td><td class="y">YES</td><td class="y">guardian</td><td class="dv">YES</td></tr>
+        <tr><td>Share links</td><td class="n">NO</td><td class="n">NO</td><td class="y">YES</td><td class="dv">YES</td></tr>
+        <tr><td>WebSocket updates</td><td class="n">NO</td><td class="n">NO</td><td class="y">YES</td><td class="dv">YES</td></tr>
+        <tr><td>Barcode / ASN</td><td class="n">NO</td><td class="n">NO</td><td class="y">YES</td><td class="dv">YES</td></tr>
+      </tbody>
+    </table>
+
+    <h2>What each lane contributed (summary)</h2>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Paperless-ngx</h3>
+        <ul>
+          <li>Angular SPA + Django 5.x + DRF “gold path” for OSS DMS UX.</li>
+          <li>ML pipeline, barcodes, FAISS, LLM hooks, consume plugins, saved views, dark mode.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Mayan EDMS</h3>
+        <ul>
+          <li>Enterprise workflows, generic ACLs, cabinets (MPTT), retention, encryption, LDAP/OIDC/OTP, quotas, scanners, signing.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Lodestone</h3>
+        <ul>
+          <li>Non-destructive originals, MinIO/S3 mental model, queue/worker scaling story (adapted to Celery, not 9 containers).</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>45+ market scan</h3>
+        <ul>
+          <li>Tier‑1 deltas: external e-sign, zone OCR, contributor portals, NER facets, analytics patterns—beyond the three anchors.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>Architecture decision (from comparative doc)</h2>
+    <div class="card">
+      <ul>
+        <li><strong>Rejected as default:</strong> Lodestone-style microservices sprawl for core team velocity.</li>
+        <li><strong>Rejected as default:</strong> Mayan-scale 100+ app explosion for a greenfield codebase.</li>
+        <li><strong>Chosen:</strong> Modular monolith (clear Django app boundaries) + Angular SPA + Celery workers + ES/FAISS—stated explicitly in comparative analysis § “Architecture Decision”.</li>
+      </ul>
+    </div>
+
+    <footer>
+      Generated for internal storytelling. Primary sources:
+      <code>dev/archive/original-spec/research/comparative-analysis.md</code>,
+      <code>paperless-ngx-analysis.md</code>,
+      <code>mayan-edms-analysis.md</code>,
+      <code>lodestone-analysis.md</code>,
+      <code>extended-market-analysis.md</code>,
+      <code>dev/archive/original-spec/product-spec.md</code> §1.
+      <br />HTML5 + inline SVG + CSS only (no external JS). File: <code>docs/how-we-got-here.html</code>
+    </footer>
+  </main>
+</body>
+</html>
