@@ -325,6 +325,12 @@ docvault/
 
 ---
 
+## Planning & backlog
+
+**For AI / human contributors:** read [`AGENTS.md`](AGENTS.md) → [`dev/AGENTS.md`](dev/AGENTS.md) (checklist, repo map, completion steps). Sprint plan: [`dev/work/SPRINT-PLAN.md`](dev/work/SPRINT-PLAN.md). Checklist: [`dev/work/CHECKLIST.md`](dev/work/CHECKLIST.md) (all items complete).
+
+---
+
 ## License
 
 This project is licensed under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.en.html).
