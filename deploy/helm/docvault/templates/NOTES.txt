@@ -44,4 +44,4 @@ IMPORTANT — Post-install steps:
 
   3. Change the DJANGO_SECRET_KEY in your values.yaml before going to production!
 
-For more information visit: https://github.com/docvault/docvault
+For more information visit: https://github.com/packetloss404/docvault

@@ -1,381 +1,1009 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>How DocVault Got Here — Four Lanes, One Product</title>
-  <style>
-    :root {
-      --bg: #0f1419;
-      --panel: #1a2332;
-      --text: #e8eef7;
-      --muted: #8b9cb3;
-      --lodestone: #5c9ead;
-      --mayan: #c9a227;
-      --paperless: #6ab04c;
-      --market: #a55eea;
-      --docvault: #4a90d9;
-      --accent: #00d4aa;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.55;
-    }
-    header {
-      background: linear-gradient(135deg, #1a2a3d 0%, #0f1419 50%, #1a2332 100%);
-      padding: 2.5rem 1.5rem 3rem;
-      border-bottom: 1px solid #2a3f55;
-    }
-    header h1 {
-      margin: 0 0 0.5rem;
-      font-size: clamp(1.6rem, 4vw, 2.4rem);
-      font-weight: 700;
-      letter-spacing: -0.02em;
-    }
-    header p.lead {
-      max-width: 52rem;
-      color: var(--muted);
-      font-size: 1.05rem;
-      margin: 0;
-    }
-    main { max-width: 1200px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How DocVault Got Here — DocVault</title>
+<meta name="description" content="How DocVault combines influences from Paperless-ngx, Mayan EDMS, Lodestone, and a broad market scan into one open-source document management system.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-    h2 {
-      font-size: 1.35rem;
-      margin: 2.5rem 0 1rem;
-      color: var(--accent);
-      border-bottom: 1px solid #2a3f55;
-      padding-bottom: 0.35rem;
-    }
-    h3 { font-size: 1.05rem; color: #b8cce8; margin: 1.5rem 0 0.75rem; }
+:root {
+  --bg-base: #0a0a0f;
+  --bg-surface: #111118;
+  --bg-elevated: #1a1a24;
+  --bg-glass: rgba(255,255,255,0.03);
+  --border-subtle: rgba(255,255,255,0.06);
+  --border-glow: rgba(255,255,255,0.1);
+  --text-primary: #f0f0f5;
+  --text-secondary: rgba(240,240,245,0.6);
+  --text-muted: rgba(240,240,245,0.35);
+  --violet: #7c3aed;
+  --violet-light: #a78bfa;
+  --cyan: #06b6d4;
+  --cyan-light: #67e8f9;
+  --emerald: #10b981;
+  --emerald-light: #6ee7b7;
+  --amber: #f59e0b;
+  --gradient-primary: linear-gradient(135deg, #7c3aed, #06b6d4);
+  --gradient-accent: linear-gradient(135deg, #7c3aed, #06b6d4, #10b981);
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-code: 'JetBrains Mono', monospace;
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --lodestone: #5c9ead;
+  --mayan: #c9a227;
+  --paperless: #6ab04c;
+  --market: #a55eea;
+  --docvault-core: #4a90d9;
+}
 
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
-    @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
-    .card {
-      background: var(--panel);
-      border-radius: 12px;
-      padding: 1.25rem 1.4rem;
-      border: 1px solid #2a3f55;
-    }
-    .stat {
-      display: flex;
-      align-items: baseline;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-    .stat b {
-      font-size: 2rem;
-      font-weight: 800;
-      color: #fff;
-    }
-    .stat span { color: var(--muted); font-size: 0.9rem; }
+body {
+  font-family: var(--font-body);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
 
-    /* Timeline */
-    .timeline {
-      position: relative;
-      margin: 2rem 0;
-      padding-left: 1.5rem;
-      border-left: 3px solid #2a3f55;
-    }
-    .timeline-item {
-      position: relative;
-      margin-bottom: 1.75rem;
-      padding-left: 1.25rem;
-    }
-    .timeline-item::before {
-      content: "";
-      position: absolute;
-      left: -1.5rem;
-      top: 0.35rem;
-      width: 14px;
-      height: 14px;
-      background: var(--docvault);
-      border-radius: 50%;
-      border: 3px solid var(--bg);
-      margin-left: -7px;
-    }
-    .timeline-item time {
-      display: block;
-      font-size: 0.8rem;
-      color: var(--accent);
-      font-weight: 600;
-      margin-bottom: 0.25rem;
-    }
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.015;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
 
-    /* Merge visual — 4 → 1 */
-    .merge-wrap {
-      margin: 2rem 0;
-      overflow-x: auto;
-    }
-    .merge-svg { width: 100%; min-width: 640px; height: 320px; }
-    .lane-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+a { color: var(--cyan-light); text-decoration: none; transition: color 0.2s; }
+a:hover { color: var(--violet-light); }
 
-    /* Horizontal bar chart */
-    .bars { margin: 1.5rem 0; }
-    .bar-row {
-      display: grid;
-      grid-template-columns: 140px 1fr 48px;
-      align-items: center;
-      gap: 0.75rem;
-      margin-bottom: 0.5rem;
-      font-size: 0.85rem;
-    }
-    .bar-track {
-      height: 22px;
-      background: #243447;
-      border-radius: 6px;
-      overflow: hidden;
-    }
-    .bar-fill { height: 100%; border-radius: 6px; transition: width 0.6s ease; }
-    .bar-fill.lodestone { background: linear-gradient(90deg, var(--lodestone), #7ec4d4); }
-    .bar-fill.mayan { background: linear-gradient(90deg, var(--mayan), #e8c547); }
-    .bar-fill.paperless { background: linear-gradient(90deg, var(--paperless), #9ae66a); }
-    .bar-fill.market { background: linear-gradient(90deg, var(--market), #c792ea); }
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
 
-    /* Matrix heat */
-    table.matrix {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.72rem;
-      margin: 1rem 0;
-    }
-    table.matrix th, table.matrix td {
-      border: 1px solid #2a3f55;
-      padding: 0.35rem 0.45rem;
-      text-align: center;
-    }
-    table.matrix th { background: #243447; color: #b8cce8; }
-    table.matrix th:first-child, table.matrix td:first-child {
-      text-align: left;
-      font-weight: 600;
-      color: #cdd9ea;
-    }
-    .y { background: rgba(106, 176, 76, 0.35); color: #b8f5a0; font-weight: 700; }
-    .p { background: rgba(201, 162, 39, 0.3); color: #ffe08a; }
-    .n { background: rgba(139, 156, 179, 0.2); color: var(--muted); }
-    .dv { background: rgba(74, 144, 217, 0.45); color: #a8d4ff; font-weight: 700; }
+.gradient-text {
+  background: var(--gradient-accent);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
 
-    .pill {
-      display: inline-block;
-      padding: 0.2rem 0.55rem;
-      border-radius: 999px;
-      font-size: 0.7rem;
-      font-weight: 700;
-      margin-right: 0.25rem;
-    }
-    .pill-l { background: var(--lodestone); color: #0a1219; }
-    .pill-m { background: var(--mayan); color: #1a1404; }
-    .pill-p { background: var(--paperless); color: #0a1219; }
-    .pill-x { background: var(--market); color: #fff; }
+/* ----- Nav (matches index.html) ----- */
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  padding: 20px 0;
+  transition: all 0.4s var(--ease-out-expo);
+}
 
-    footer {
-      margin-top: 3rem;
-      padding-top: 1.5rem;
-      border-top: 1px solid #2a3f55;
-      color: var(--muted);
-      font-size: 0.8rem;
-    }
-    .source-note { font-size: 0.78rem; color: var(--muted); margin-top: 0.5rem; }
-    a { color: #7ec8ff; }
-  </style>
+.nav.scrolled {
+  padding: 10px 0;
+  background: rgba(10,10,15,0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.nav-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+}
+
+.nav-logo svg { width: 32px; height: 32px; }
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  list-style: none;
+}
+
+.nav-links a {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.nav-links a:hover { color: var(--text-primary); }
+
+.nav-links a.nav-active {
+  color: var(--cyan-light);
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.3s var(--ease-out-expo);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--gradient-primary);
+  color: white;
+  box-shadow: 0 0 20px rgba(124,58,237,0.3);
+}
+
+.btn-primary:hover {
+  box-shadow: 0 0 40px rgba(124,58,237,0.5);
+  transform: translateY(-2px);
+  color: white;
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-glow);
+}
+
+.btn-outline:hover {
+  background: rgba(255,255,255,0.05);
+  border-color: rgba(255,255,255,0.2);
+  color: var(--text-primary);
+}
+
+.btn-lg { padding: 14px 32px; font-size: 1rem; border-radius: 12px; }
+
+.hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  cursor: pointer;
+  padding: 4px;
+  background: none;
+  border: none;
+}
+
+.hamburger span {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: var(--text-primary);
+  transition: all 0.3s;
+  border-radius: 2px;
+}
+
+.hamburger.active span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.hamburger.active span:nth-child(2) { opacity: 0; }
+.hamburger.active span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* ----- Hero (index-style mesh + type) ----- */
+.lineage-hero {
+  position: relative;
+  padding: 140px 0 72px;
+  overflow: hidden;
+}
+
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.hero-bg .orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.35;
+  animation: orbFloat 22s infinite;
+}
+
+.hero-bg .orb-1 {
+  width: 520px; height: 520px;
+  background: var(--violet);
+  top: -15%; left: -10%;
+}
+
+.hero-bg .orb-2 {
+  width: 420px; height: 420px;
+  background: var(--cyan);
+  top: 10%; right: -8%;
+  animation-delay: -9s;
+}
+
+.hero-bg .orb-3 {
+  width: 360px; height: 360px;
+  background: var(--emerald);
+  bottom: 0; left: 35%;
+  animation-delay: -14s;
+}
+
+@keyframes orbFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(30px, -40px) scale(1.08); }
+  50% { transform: translate(-20px, 25px) scale(0.96); }
+  75% { transform: translate(35px, 15px) scale(1.04); }
+}
+
+.dot-grid {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0.12;
+  background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.28) 1px, transparent 0);
+  background-size: 40px 40px;
+}
+
+.lineage-hero-inner {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 100px;
+  background: rgba(124,58,237,0.1);
+  border: 1px solid rgba(124,58,237,0.25);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--violet-light);
+  margin-bottom: 24px;
+}
+
+.lineage-hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 5vw, 3.75rem);
+  font-weight: 400;
+  line-height: 1.12;
+  margin-bottom: 20px;
+  letter-spacing: -0.02em;
+}
+
+.lineage-hero h1 em {
+  font-style: italic;
+}
+
+.lineage-lead {
+  font-size: clamp(1rem, 1.8vw, 1.15rem);
+  color: var(--text-secondary);
+  text-align: left;
+  max-width: 52rem;
+  margin: 0 auto;
+}
+
+.lineage-lead strong { color: var(--text-primary); }
+
+code {
+  font-family: var(--font-code);
+  font-size: 0.88em;
+  background: rgba(255,255,255,0.06);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  color: var(--cyan-light);
+}
+
+/* ----- Main sections ----- */
+.lineage-main section {
+  padding: 72px 0;
+  position: relative;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.section-header .overline {
+  font-family: var(--font-code);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--cyan);
+  margin-bottom: 12px;
+}
+
+.section-header h2 {
+  font-family: var(--font-display);
+  font-size: clamp(1.75rem, 3.5vw, 2.75rem);
+  font-weight: 400;
+  line-height: 1.2;
+  margin-bottom: 12px;
+}
+
+.section-header p {
+  font-size: 1.05rem;
+  color: var(--text-secondary);
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.lineage-card {
+  padding: 28px;
+  border-radius: 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  transition: border-color 0.3s var(--ease-out-expo), box-shadow 0.3s;
+}
+
+.lineage-card:hover {
+  border-color: rgba(124,58,237,0.25);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+}
+
+.lineage-card h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 12px;
+}
+
+.lineage-card p,
+.lineage-card li {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+.lineage-card ul { margin: 0; padding-left: 1.2rem; }
+.lineage-card li { margin-bottom: 8px; }
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .grid-2 { grid-template-columns: 1fr; }
+}
+
+.stat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.stat-row b {
+  font-size: 2rem;
+  font-weight: 800;
+  font-family: var(--font-code);
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.stat-row span {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.source-note {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 10px;
+  line-height: 1.45;
+}
+
+.timeline {
+  position: relative;
+  margin: 2rem 0;
+  padding-left: 1.25rem;
+  border-left: 2px solid var(--border-glow);
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 1.6rem;
+  padding-left: 1.25rem;
+}
+
+.timeline-item::before {
+  content: "";
+  position: absolute;
+  left: -1.25rem;
+  top: 0.35rem;
+  width: 12px;
+  height: 12px;
+  background: var(--gradient-primary);
+  border-radius: 50%;
+  margin-left: -7px;
+  border: 2px solid var(--bg-base);
+}
+
+.timeline-item time {
+  display: block;
+  font-family: var(--font-code);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--cyan);
+  margin-bottom: 6px;
+}
+
+.timeline-item strong { color: var(--text-primary); }
+
+.merge-wrap {
+  margin: 2rem 0;
+  overflow-x: auto;
+  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  padding: 16px;
+}
+
+.merge-svg { width: 100%; min-width: 640px; height: 320px; display: block; }
+.lane-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 132px 1fr 44px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.bar-track {
+  height: 22px;
+  background: var(--bg-elevated);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+
+.bar-fill { height: 100%; border-radius: 8px; }
+.bar-fill.lodestone { background: linear-gradient(90deg, var(--lodestone), #7ec4d4); }
+.bar-fill.mayan { background: linear-gradient(90deg, var(--mayan), #e8c547); }
+.bar-fill.paperless { background: linear-gradient(90deg, var(--paperless), #9ae66a); }
+.bar-fill.market { background: linear-gradient(90deg, var(--market), #c792ea); }
+
+table.matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.72rem;
+  margin: 1rem 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+}
+
+table.matrix th, table.matrix td {
+  border: 1px solid var(--border-subtle);
+  padding: 0.4rem 0.5rem;
+  text-align: center;
+}
+
+table.matrix th {
+  background: var(--bg-elevated);
+  color: var(--cyan-light);
+  font-weight: 600;
+}
+
+table.matrix th:first-child, table.matrix td:first-child {
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.y { background: rgba(16,185,129,0.2); color: var(--emerald-light); font-weight: 700; }
+.p { background: rgba(245,158,11,0.15); color: #fcd34d; }
+.n { background: rgba(255,255,255,0.03); color: var(--text-muted); }
+.dv { background: rgba(124,58,237,0.22); color: var(--violet-light); font-weight: 700; }
+
+.pill {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin: 0 6px 8px 0;
+  letter-spacing: 0.03em;
+}
+
+.pill-l { background: rgba(92,158,173,0.35); color: #b8e4ef; border: 1px solid rgba(92,158,173,0.4); }
+.pill-m { background: rgba(201,162,39,0.2); color: #fde68a; border: 1px solid rgba(201,162,39,0.35); }
+.pill-p { background: rgba(106,176,76,0.22); color: #bbf7d0; border: 1px solid rgba(106,176,76,0.35); }
+.pill-x { background: rgba(165,94,234,0.22); color: #e9d5ff; border: 1px solid rgba(165,94,234,0.35); }
+
+.disclaimer-callout {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  background: rgba(124,58,237,0.08);
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  max-width: 52rem;
+  margin-left: auto;
+  margin-right: auto;
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+}
+
+.disclaimer-callout strong { color: var(--text-primary); }
+
+.lineage-page-footer {
+  margin-top: 0;
+  padding: 48px 0 56px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+
+.lineage-page-footer strong { color: var(--text-secondary); }
+
+/* Site footer (matches index.html) */
+footer {
+  padding: 48px 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.footer-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.footer-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+.footer-logo a { color: inherit; }
+.footer-logo a:hover { color: var(--cyan-light); }
+
+.footer-copy {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.footer-links {
+  display: flex;
+  gap: 20px;
+  list-style: none;
+  flex-wrap: wrap;
+}
+
+.footer-links a {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  transition: color 0.2s;
+}
+
+.footer-links a:hover { color: var(--text-primary); }
+
+@media (max-width: 768px) {
+  .lineage-card ol { columns: 1; }
+
+  .nav-links { display: none; }
+  .hamburger { display: flex; }
+
+  .nav-links.mobile-open {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgba(10,10,15,0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: 24px;
+    border-bottom: 1px solid var(--border-subtle);
+    gap: 16px;
+  }
+
+  .lineage-main section { padding: 56px 0; }
+  .lineage-hero { padding: 120px 0 56px; }
+}
+
+@media (max-width: 480px) {
+  .nav-actions .btn-outline { display: none; }
+}
+</style>
 </head>
 <body>
-  <header>
-    <h1>How DocVault got here</h1>
-    <p class="lead">
-      <strong>Lineage:</strong> comparative research anchored on <strong>Paperless-ngx</strong>, <strong>Mayan EDMS</strong>, and <strong>Lodestone</strong>, plus a <strong>45+ system</strong> market scan for tier‑1 gaps beyond those three.
-      <strong>Today’s repo:</strong> the root <code>README.md</code> is the live inventory—GPLv3 stack (Django&nbsp;5.2, DRF&nbsp;3.16, Django Channels, Celery&nbsp;5.6 + Beat, Angular&nbsp;21, Redis&nbsp;7, optional Elasticsearch&nbsp;8 + FAISS, S3/MinIO), OpenAPI at <code>/api/docs/</code>, Helm in <code>deploy/</code>, and a <strong>contributors welcome</strong> path via <code>CONTRIBUTING.md</code> + <code>CODE_OF_CONDUCT.md</code>.
-    </p>
-  </header>
 
-  <main>
-    <section class="card" style="margin-bottom:2rem" aria-label="Six report lenses">
-      <h3 style="margin-top:0">Six HTML5-focused lenses (one report)</h3>
-      <p style="margin:0 0 0.75rem; color:var(--muted); font-size:0.9rem">
-        This page is assembled as if six specialist front-end agents each shipped one slice—stats, timeline, convergence SVG, adoption bars, matrix heat, and architecture copy—then merged into a single static document (no runtime JS). Refresh the narrative from <code>README.md</code> whenever the shipped surface moves.
-      </p>
-      <ol style="margin:0; padding-left:1.25rem; columns:2; column-gap:2rem; font-size:0.88rem;">
-        <li><strong>Metrics</strong> — headline counts from research artifacts.</li>
-        <li><strong>Chronology</strong> — program phases anchored on spec dates.</li>
-        <li><strong>Topology</strong> — four-lane merge into DocVault (SVG).</li>
-        <li><strong>Distribution</strong> — adopt-bullet counts as CSS bars.</li>
-        <li><strong>Evidence grid</strong> — matrix excerpt with heat classes.</li>
-        <li><strong>Rationale</strong> — modular monolith vs alternatives.</li>
-      </ol>
-    </section>
-
-    <section class="grid-2" aria-label="Key figures">
-      <div class="card">
-        <div class="stat"><b>3</b><span>anchor OSS products in comparative matrix</span></div>
-        <p class="source-note">Research bundle (when present): <code>dev/archive/original-spec/research/comparative-analysis.md</code></p>
-      </div>
-      <div class="card">
-        <div class="stat"><b>45+</b><span>systems reviewed for novel features</span></div>
-        <p class="source-note">Research: <code>extended-market-analysis.md</code> (Tier 1–3) in the same research folder</p>
-      </div>
-      <div class="card">
-        <div class="stat"><b>33</b><span>numbered “adopt” bullets across three anchors</span></div>
-        <p class="source-note">5 + 13 + 15 from comparative “Best-of-Breed Feature Selection” lists</p>
-      </div>
-      <div class="card">
-        <div class="stat"><b>1,554</b><span>automated tests passing (README)</span></div>
-        <p class="source-note">Split ~1,029 Django + ~525 Angular — run targets in <code>README.md</code> / <code>CONTRIBUTING.md</code></p>
-      </div>
-    </section>
-
-    <h2>Timeline (program narrative)</h2>
-    <p>Early milestones are <strong>research and spec anchors</strong>; the tail reflects <strong>what this repository documents today</strong> (see <code>README.md</code>), not git archaeology.</p>
-    <div class="timeline">
-      <div class="timeline-item">
-        <time>Research phase</time>
-        <strong>Deep dives completed</strong> — Paperless-ngx (Angular + Django + ML barcodes), Mayan (ACLs, workflows, 100+ apps), Lodestone (non-destructive, MinIO, microservices).
-      </div>
-      <div class="timeline-item">
-        <time>Comparative lock</time>
-        <strong>Feature matrix + “adopt” lists</strong> — Explicit YES/NO/Our column; 33 adoption bullets grouped by source product.
-      </div>
-      <div class="timeline-item">
-        <time>Extended market</time>
-        <strong>45+ system scan</strong> — E-sign flows, zone OCR, contributor portals, NER facets, legal hold patterns, etc. (Tier 1 features).
-      </div>
-      <div class="timeline-item">
-        <time>Vision → product draft</time>
-        <strong>Single-system mission</strong> — Combine Mayan workflows/security, Paperless ML/UX, Lodestone non-destructive + object storage posture; principles include modular monolith and AI-first (see historical product-spec where retained).
-      </div>
-      <div class="timeline-item">
-        <time>Build phase (this repo)</time>
-        <strong>Modular monolith + SPA</strong> — ~21 Django domain apps under <code>docvault/</code> (AI, annotations, collaboration, documents, entities, esignatures, legal hold, ML, notifications, organization, physical records, portal, processing, relationships, search, security, sources, storage, workflows, zone OCR, …) plus Angular <code>src-ui</code>; agent-oriented execution in <code>dev/work/CHECKLIST.md</code> per <code>dev/AGENTS.md</code>.
-      </div>
-      <div class="timeline-item">
-        <time>Delivery surface today</time>
-        <strong>Shipped themes (README)</strong> — Zone OCR, contributor portals + document requests, e-signatures (public + verified external signers), legal hold, CAS/dedup, physical records, relationship graph, hybrid + semantic search with analytics, WebSocket notifications, RBAC admin, and more—wired through DRF and OpenAPI docs at <code>/api/docs/</code>.
-      </div>
-      <div class="timeline-item">
-        <time>Community</time>
-        <strong>Contributors welcome</strong> — <code>CONTRIBUTING.md</code>, <code>CODE_OF_CONDUCT.md</code>, issue templates under <code>.github/</code>, private disclosure via <code>SECURITY.md</code>.
-      </div>
-    </div>
-
-    <h2>Visual — four lanes converging</h2>
-    <p><span class="pill pill-p">Paperless</span><span class="pill pill-m">Mayan</span><span class="pill pill-l">Lodestone</span><span class="pill pill-x">Market scan</span></p>
-    <div class="merge-wrap">
-      <svg class="merge-svg" viewBox="0 0 800 320" aria-label="Four inputs merging into DocVault">
-        <defs>
-          <linearGradient id="gP" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#6ab04c"/><stop offset="100%" stop-color="#9ae66a"/></linearGradient>
-          <linearGradient id="gM" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#c9a227"/><stop offset="100%" stop-color="#e8c547"/></linearGradient>
-          <linearGradient id="gL" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#5c9ead"/><stop offset="100%" stop-color="#7ec4d4"/></linearGradient>
-          <linearGradient id="gX" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#a55eea"/><stop offset="100%" stop-color="#c792ea"/></linearGradient>
-          <linearGradient id="gD" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#4a90d9"/><stop offset="100%" stop-color="#00d4aa"/></linearGradient>
-        </defs>
-        <!-- Lanes -->
-        <rect x="40" y="30" width="140" height="44" rx="10" fill="url(#gP)"/>
-        <text x="110" y="58" text-anchor="middle" class="lane-label" fill="#0a1219">Paperless-ngx</text>
-        <rect x="40" y="100" width="140" height="44" rx="10" fill="url(#gM)"/>
-        <text x="110" y="128" text-anchor="middle" class="lane-label" fill="#1a1404">Mayan EDMS</text>
-        <rect x="40" y="170" width="140" height="44" rx="10" fill="url(#gL)"/>
-        <text x="110" y="198" text-anchor="middle" class="lane-label" fill="#0a1219">Lodestone</text>
-        <rect x="40" y="240" width="140" height="44" rx="10" fill="url(#gX)"/>
-        <text x="110" y="268" text-anchor="middle" class="lane-label" fill="#fff">45+ market</text>
-        <!-- Flow paths -->
-        <path d="M 180 52 C 320 52, 340 100, 420 150" fill="none" stroke="#6ab04c" stroke-width="3" opacity="0.85"/>
-        <path d="M 180 122 C 300 122, 360 130, 420 155" fill="none" stroke="#c9a227" stroke-width="3" opacity="0.85"/>
-        <path d="M 180 192 C 280 192, 360 165, 420 158" fill="none" stroke="#5c9ead" stroke-width="3" opacity="0.85"/>
-        <path d="M 180 262 C 260 262, 340 185, 420 162" fill="none" stroke="#a55eea" stroke-width="3" opacity="0.85"/>
-        <!-- Core -->
-        <rect x="460" y="110" width="280" height="100" rx="16" fill="url(#gD)" opacity="0.95"/>
-        <text x="600" y="155" text-anchor="middle" fill="#fff" font-size="22" font-weight="800">DocVault</text>
-        <text x="600" y="182" text-anchor="middle" fill="#e8eef7" font-size="11" opacity="0.9">Django 5.2 · DRF · Channels · Celery · Angular 21 · ES + FAISS · Redis</text>
+<nav class="nav" id="navbar">
+  <div class="nav-inner">
+    <a href="index.html#hero" class="nav-logo">
+      <svg viewBox="0 0 32 32" fill="none">
+        <rect x="2" y="4" width="28" height="24" rx="4" stroke="url(#lg)" stroke-width="2"/>
+        <path d="M9 12h14M9 16h10M9 20h12" stroke="url(#lg)" stroke-width="1.5" stroke-linecap="round"/>
+        <defs><linearGradient id="lg" x1="0" y1="0" x2="32" y2="32"><stop stop-color="#7c3aed"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs>
       </svg>
+      DocVault
+    </a>
+
+    <ul class="nav-links" id="navLinks">
+      <li><a href="index.html#features">Features</a></li>
+      <li><a href="how-we-got-here.html" class="nav-active" aria-current="page">How we got here</a></li>
+      <li><a href="index.html#pipeline">Pipeline</a></li>
+      <li><a href="index.html#architecture">Architecture</a></li>
+      <li><a href="index.html#api">API</a></li>
+      <li><a href="index.html#security">Security</a></li>
+      <li><a href="index.html#deploy">Deploy</a></li>
+    </ul>
+
+    <div class="nav-actions">
+      <a href="https://github.com/packetloss404/docvault" class="btn btn-outline" style="padding:8px 16px;font-size:0.8rem;" target="_blank" rel="noopener noreferrer">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        Star
+      </a>
+      <a href="index.html#deploy" class="btn btn-primary" style="padding:8px 20px;font-size:0.8rem;">Get Started</a>
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
     </div>
+  </div>
+</nav>
 
-    <h2>Data — adoption weight by source</h2>
-    <p>Counts = numbered bullets under “From X (Adopt)” in comparative analysis (proxy for deliberate design lift).</p>
-    <div class="bars card">
-      <div class="bar-row"><span>Lodestone</span><div class="bar-track"><div class="bar-fill lodestone" style="width:24%"></div></div><span>5</span></div>
-      <div class="bar-row"><span>Mayan EDMS</span><div class="bar-track"><div class="bar-fill mayan" style="width:62%"></div></div><span>13</span></div>
-      <div class="bar-row"><span>Paperless-ngx</span><div class="bar-track"><div class="bar-fill paperless" style="width:72%"></div></div><span>15</span></div>
-      <div class="bar-row"><span>Market scan</span><div class="bar-track"><div class="bar-fill market" style="width:100%"></div></div><span>Tiered</span></div>
-      <p class="source-note">Bar lengths normalized to max anchor count (15). “Market scan” is qualitative tiers, shown full width.</p>
-    </div>
+<section class="lineage-hero" id="top">
+  <div class="hero-bg">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+  <div class="dot-grid"></div>
+  <div class="container lineage-hero-inner">
+    <div class="hero-badge">Lineage &middot; Design story</div>
+    <h1>How DocVault <em class="gradient-text">got here</em></h1>
+    <p class="lineage-lead">
+      <strong>Lineage:</strong> comparative research anchored on <strong>Paperless-ngx</strong>, <strong>Mayan EDMS</strong>, and <strong>Lodestone</strong>, plus a <strong>45+ system</strong> market scan for tier‑1 gaps beyond those three.
+      <strong style="display:block;margin-top:14px;">Today’s repo:</strong> the root <code>README.md</code> is the live inventory—GPLv3 stack (Django&nbsp;5.2, DRF&nbsp;3.16, Django Channels, Celery&nbsp;5.6 + Beat, Angular&nbsp;21, Redis&nbsp;7, optional Elasticsearch&nbsp;8 + FAISS, S3/MinIO), OpenAPI at <code>/api/docs/</code>, Helm in <code>deploy/</code>, and a <strong>contributors welcome</strong> path via <code>CONTRIBUTING.md</code> + <code>CODE_OF_CONDUCT.md</code>.
+    </p>
+  </div>
+</section>
 
-    <h2>Heat excerpt — matrix vs DocVault column</h2>
-    <p>Subset of the comparative feature matrix (Y / partial / gap). <span class="y" style="padding:0 4px">Y</span> = strong in that product.</p>
-    <table class="matrix">
-      <thead>
-        <tr>
-          <th>Feature</th>
-          <th>Lodestone</th>
-          <th>Mayan</th>
-          <th>Paperless</th>
-          <th>DocVault</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td>Vector / semantic search</td><td class="n">NO</td><td class="n">NO</td><td class="y">YES</td><td class="dv">YES</td></tr>
-        <tr><td>ML auto-classification</td><td class="n">NO</td><td class="n">NO</td><td class="y">YES</td><td class="dv">YES</td></tr>
-        <tr><td>Workflow engine</td><td class="n">NO</td><td class="y">YES</td><td class="p">Trigger</td><td class="dv">State + triggers</td></tr>
-        <tr><td>Check-in / out</td><td class="n">NO</td><td class="y">YES</td><td class="n">NO</td><td class="dv">YES</td></tr>
-        <tr><td>Non-destructive</td><td class="y">YES</td><td class="n">NO</td><td class="n">NO</td><td class="dv">Configurable</td></tr>
-        <tr><td>Object ACLs</td><td class="n">NO</td><td class="y">YES</td><td class="y">guardian</td><td class="dv">YES</td></tr>
-        <tr><td>Share links</td><td class="n">NO</td><td class="n">NO</td><td class="y">YES</td><td class="dv">YES</td></tr>
-        <tr><td>WebSocket updates</td><td class="n">NO</td><td class="n">NO</td><td class="y">YES</td><td class="dv">YES</td></tr>
-        <tr><td>Barcode / ASN</td><td class="n">NO</td><td class="n">NO</td><td class="y">YES</td><td class="dv">YES</td></tr>
-        <tr><td>Zone OCR / form templates</td><td class="n">NO</td><td class="n">NO</td><td class="n">NO</td><td class="dv">YES</td></tr>
-        <tr><td>Public contributor portal</td><td class="n">NO</td><td class="n">NO</td><td class="n">NO</td><td class="dv">YES</td></tr>
-        <tr><td>Legal hold (hard block)</td><td class="n">NO</td><td class="p">Patterns</td><td class="n">NO</td><td class="dv">YES (409)</td></tr>
-      </tbody>
-    </table>
-
-    <h2>What each lane contributed (summary)</h2>
-    <p class="source-note" style="margin-top:-0.5rem">Below ties <strong>research intent</strong> to <strong>README‑listed capabilities</strong> in this codebase.</p>
-    <div class="grid-2">
-      <div class="card">
-        <h3>Paperless-ngx</h3>
-        <ul>
-          <li>Angular SPA + Django + DRF as the default OSS DMS UX spine (now Angular&nbsp;21 + Bootstrap&nbsp;5.3 in <code>src-ui</code>).</li>
-          <li>ML classification, barcodes/ASN, hybrid + semantic search (FAISS), saved views, global command palette, LLM document chat/summarize/entities, Redis-backed ML caches.</li>
-        </ul>
-      </div>
-      <div class="card">
-        <h3>Mayan EDMS</h3>
-        <ul>
-          <li>Enterprise workflows (state machines, triggers, escalations), object ACLs via django-guardian, cabinets, retention, encryption-at-rest option, LDAP/OIDC/social auth + 2FA, quotas, audit logging, GPG signing.</li>
-        </ul>
-      </div>
-      <div class="card">
-        <h3>Lodestone</h3>
-        <ul>
-          <li>Non-destructive originals + configurable paths; S3/MinIO object storage; background processing mental model realized with Celery workers/Beat instead of microservice sprawl.</li>
-        </ul>
-      </div>
-      <div class="card">
-        <h3>45+ market scan</h3>
-        <ul>
-          <li>Tier‑1 deltas now reflected in apps such as <code>esignatures/</code>, <code>zone_ocr/</code>, <code>portal/</code>, <code>legal_hold/</code>, <code>entities/</code>, plus search analytics/synonyms/curations—beyond what the three anchors alone provided.</li>
-        </ul>
+<main class="lineage-main">
+  <section>
+    <div class="container">
+      <div class="lineage-card">
+        <h3>About this page</h3>
+        <p style="margin-bottom:12px;">One self-contained HTML file (no external scripts): a short visual story of <strong>where ideas came from</strong> and <strong>how the codebase is organized today</strong>. Numbers and stack details should track the root <code>README.md</code> over time.</p>
+        <ol style="margin:0; padding-left:1.25rem; columns:2; column-gap:2rem; font-size:0.9rem; color:var(--text-secondary);">
+          <li style="margin-bottom:8px;"><strong style="color:var(--text-primary);">Metrics</strong> — headline counts from internal research notes.</li>
+          <li style="margin-bottom:8px;"><strong style="color:var(--text-primary);">Chronology</strong> — phases from research through shipping (not a git timeline).</li>
+          <li style="margin-bottom:8px;"><strong style="color:var(--text-primary);">Convergence</strong> — four inputs merging into one product (diagram).</li>
+          <li style="margin-bottom:8px;"><strong style="color:var(--text-primary);">Adoption mix</strong> — “adopt” bullets from each anchor product.</li>
+          <li style="margin-bottom:8px;"><strong style="color:var(--text-primary);">Comparison grid</strong> — high-level snapshot (see disclaimer below the table).</li>
+          <li style="margin-bottom:8px;"><strong style="color:var(--text-primary);">Architecture</strong> — why a modular monolith won over heavier patterns.</li>
+        </ol>
       </div>
     </div>
+  </section>
 
-    <h2>Architecture decision (research → repo)</h2>
-    <div class="card">
-      <ul>
-        <li><strong>Rejected as default:</strong> Lodestone-style microservices sprawl for core team velocity.</li>
-        <li><strong>Rejected as default:</strong> Mayan-scale 100+ app explosion for a greenfield codebase.</li>
-        <li><strong>Chosen:</strong> Modular monolith (clear Django app boundaries) + Angular SPA + Celery workers + optional Elasticsearch + FAISS + Redis + Channels—documented as the operational stack in <code>README.md</code> and embodied under <code>docvault/</code> + <code>src-ui/</code>.</li>
-        <li><strong>Ship &amp; observe:</strong> Production Docker + Helm chart under <code>deploy/</code>; health/readiness/metrics endpoints per README API table.</li>
+  <section>
+    <div class="container">
+      <div class="section-header">
+        <div class="overline">// Figures</div>
+        <h2>At a glance</h2>
+        <p>Research scale and current test coverage from the project README.</p>
+      </div>
+      <div class="grid-2">
+        <div class="lineage-card">
+          <div class="stat-row"><b>3</b><span>anchor OSS products in comparative matrix</span></div>
+          <p class="source-note">Comparative write-up: <code>dev/archive/original-spec/research/comparative-analysis.md</code> (published with some checkouts of this repo)</p>
+        </div>
+        <div class="lineage-card">
+          <div class="stat-row"><b>45+</b><span>systems reviewed for novel features</span></div>
+          <p class="source-note">Same folder: <code>extended-market-analysis.md</code> (Tier 1–3)</p>
+        </div>
+        <div class="lineage-card">
+          <div class="stat-row"><b>33</b><span>numbered “adopt” bullets across three anchors</span></div>
+          <p class="source-note">5 + 13 + 15 from comparative “Best-of-Breed Feature Selection” lists</p>
+        </div>
+        <div class="lineage-card">
+          <div class="stat-row"><b>1,554</b><span>automated tests passing (README)</span></div>
+          <p class="source-note">Split ~1,029 Django + ~525 Angular — run targets in <code>README.md</code> / <code>CONTRIBUTING.md</code></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="section-header">
+        <div class="overline">// Timeline</div>
+        <h2>Program narrative</h2>
+        <p>Early milestones are research and spec anchors; the tail reflects what this repository documents today, not git archaeology.</p>
+      </div>
+      <div class="timeline">
+        <div class="timeline-item">
+          <time>Research phase</time>
+          <strong>Deep dives completed</strong> — Paperless-ngx (Angular + Django + ML barcodes), Mayan (ACLs, workflows, 100+ apps), Lodestone (non-destructive, MinIO, microservices).
+        </div>
+        <div class="timeline-item">
+          <time>Comparative lock</time>
+          <strong>Feature matrix + “adopt” lists</strong> — Explicit YES/NO/Our column; 33 adoption bullets grouped by source product.
+        </div>
+        <div class="timeline-item">
+          <time>Extended market</time>
+          <strong>45+ system scan</strong> — E-sign flows, zone OCR, contributor portals, NER facets, legal hold patterns, etc. (Tier 1 features).
+        </div>
+        <div class="timeline-item">
+          <time>Vision → product draft</time>
+          <strong>Single-system mission</strong> — Combine Mayan workflows/security, Paperless ML/UX, Lodestone non-destructive + object storage posture; principles include modular monolith and AI-first (see historical product-spec where retained).
+        </div>
+        <div class="timeline-item">
+          <time>Build phase (this repo)</time>
+          <strong>Modular monolith + SPA</strong> — ~21 Django domain apps under <code>docvault/</code> (AI, annotations, collaboration, documents, entities, esignatures, legal hold, ML, notifications, organization, physical records, portal, processing, relationships, search, security, sources, storage, workflows, zone OCR, …) plus Angular <code>src-ui</code>. Ongoing work is tracked in <code>dev/work/CHECKLIST.md</code>; see <code>CONTRIBUTING.md</code> to pick up a task, and <code>dev/AGENTS.md</code> for a maintainer-style map of the tree.
+        </div>
+        <div class="timeline-item">
+          <time>Delivery surface today</time>
+          <strong>Shipped themes (README)</strong> — Zone OCR, contributor portals + document requests, e-signatures (public + verified external signers), legal hold, CAS/dedup, physical records, relationship graph, hybrid + semantic search with analytics, WebSocket notifications, RBAC admin, and more—wired through DRF and OpenAPI docs at <code>/api/docs/</code>.
+        </div>
+        <div class="timeline-item">
+          <time>Community</time>
+          <strong>Contributors welcome</strong> — <code>CONTRIBUTING.md</code>, <code>CODE_OF_CONDUCT.md</code>, issue templates under <code>.github/</code>, private disclosure via <code>SECURITY.md</code>.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="section-header">
+        <div class="overline">// Visual</div>
+        <h2>Four lanes converging</h2>
+        <p>Paperless-ngx, Mayan EDMS, Lodestone, and a cross-industry scan feeding one product core.</p>
+      </div>
+      <p style="text-align:center;margin-bottom:16px;">
+        <span class="pill pill-p">Paperless</span><span class="pill pill-m">Mayan</span><span class="pill pill-l">Lodestone</span><span class="pill pill-x">Market scan</span>
+      </p>
+      <div class="merge-wrap">
+        <svg class="merge-svg" viewBox="0 0 800 320" aria-label="Four inputs merging into DocVault">
+          <defs>
+            <linearGradient id="gP" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#6ab04c"/><stop offset="100%" stop-color="#9ae66a"/></linearGradient>
+            <linearGradient id="gM" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#c9a227"/><stop offset="100%" stop-color="#e8c547"/></linearGradient>
+            <linearGradient id="gL" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#5c9ead"/><stop offset="100%" stop-color="#7ec4d4"/></linearGradient>
+            <linearGradient id="gX" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#a55eea"/><stop offset="100%" stop-color="#c792ea"/></linearGradient>
+            <linearGradient id="gD" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#7c3aed"/><stop offset="50%" stop-color="#06b6d4"/><stop offset="100%" stop-color="#10b981"/></linearGradient>
+          </defs>
+          <rect x="40" y="30" width="140" height="44" rx="10" fill="url(#gP)"/>
+          <text x="110" y="58" text-anchor="middle" class="lane-label" fill="#0a1219">Paperless-ngx</text>
+          <rect x="40" y="100" width="140" height="44" rx="10" fill="url(#gM)"/>
+          <text x="110" y="128" text-anchor="middle" class="lane-label" fill="#1a1404">Mayan EDMS</text>
+          <rect x="40" y="170" width="140" height="44" rx="10" fill="url(#gL)"/>
+          <text x="110" y="198" text-anchor="middle" class="lane-label" fill="#0a1219">Lodestone</text>
+          <rect x="40" y="240" width="140" height="44" rx="10" fill="url(#gX)"/>
+          <text x="110" y="268" text-anchor="middle" class="lane-label" fill="#fff">45+ market</text>
+          <path d="M 180 52 C 320 52, 340 100, 420 150" fill="none" stroke="#6ab04c" stroke-width="3" opacity="0.85"/>
+          <path d="M 180 122 C 300 122, 360 130, 420 155" fill="none" stroke="#c9a227" stroke-width="3" opacity="0.85"/>
+          <path d="M 180 192 C 280 192, 360 165, 420 158" fill="none" stroke="#5c9ead" stroke-width="3" opacity="0.85"/>
+          <path d="M 180 262 C 260 262, 340 185, 420 162" fill="none" stroke="#a55eea" stroke-width="3" opacity="0.85"/>
+          <rect x="460" y="110" width="280" height="100" rx="16" fill="url(#gD)" opacity="0.95"/>
+          <text x="600" y="155" text-anchor="middle" fill="#fff" font-size="22" font-weight="800">DocVault</text>
+          <text x="600" y="182" text-anchor="middle" fill="rgba(255,255,255,0.88)" font-size="11" opacity="0.95">Django 5.2 · DRF · Channels · Celery · Angular 21 · ES + FAISS · Redis</text>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="section-header">
+        <div class="overline">// Data</div>
+        <h2>Adoption weight by source</h2>
+        <p>Counts = numbered bullets under “From X (Adopt)” in comparative analysis (proxy for deliberate design lift).</p>
+      </div>
+      <div class="lineage-card bars">
+        <div class="bar-row"><span>Lodestone</span><div class="bar-track"><div class="bar-fill lodestone" style="width:24%"></div></div><span>5</span></div>
+        <div class="bar-row"><span>Mayan EDMS</span><div class="bar-track"><div class="bar-fill mayan" style="width:62%"></div></div><span>13</span></div>
+        <div class="bar-row"><span>Paperless-ngx</span><div class="bar-track"><div class="bar-fill paperless" style="width:72%"></div></div><span>15</span></div>
+        <div class="bar-row"><span>Market scan</span><div class="bar-track"><div class="bar-fill market" style="width:100%"></div></div><span>Tiered</span></div>
+        <p class="source-note" style="margin-top:12px;">Bar lengths normalized to max anchor count (15). “Market scan” is qualitative tiers, shown full width.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="section-header">
+        <div class="overline">// Matrix</div>
+        <h2>Heat excerpt</h2>
+        <p>Subset of the comparative feature matrix (Y / partial / gap). <span class="y" style="padding:2px 6px;border-radius:4px;">Y</span> = strong in that product.</p>
+      </div>
+      <p class="disclaimer-callout">
+        <strong>Disclaimer:</strong> This grid is an <strong>illustrative synthesis</strong> from internal research—not an independent audit of Paperless-ngx, Mayan EDMS, or Lodestone, and not a promise about every edge case in DocVault. Product capabilities change; confirm behavior in each project’s own docs and releases.
+      </p>
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Lodestone</th>
+            <th>Mayan</th>
+            <th>Paperless</th>
+            <th>DocVault</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Vector / semantic search</td><td class="n">NO</td><td class="n">NO</td><td class="y">YES</td><td class="dv">YES</td></tr>
+          <tr><td>ML auto-classification</td><td class="n">NO</td><td class="n">NO</td><td class="y">YES</td><td class="dv">YES</td></tr>
+          <tr><td>Workflow engine</td><td class="n">NO</td><td class="y">YES</td><td class="p">Trigger</td><td class="dv">State + triggers</td></tr>
+          <tr><td>Check-in / out</td><td class="n">NO</td><td class="y">YES</td><td class="n">NO</td><td class="dv">YES</td></tr>
+          <tr><td>Non-destructive</td><td class="y">YES</td><td class="n">NO</td><td class="n">NO</td><td class="dv">Configurable</td></tr>
+          <tr><td>Object ACLs</td><td class="n">NO</td><td class="y">YES</td><td class="y">guardian</td><td class="dv">YES</td></tr>
+          <tr><td>Share links</td><td class="n">NO</td><td class="n">NO</td><td class="y">YES</td><td class="dv">YES</td></tr>
+          <tr><td>WebSocket updates</td><td class="n">NO</td><td class="n">NO</td><td class="y">YES</td><td class="dv">YES</td></tr>
+          <tr><td>Barcode / ASN</td><td class="n">NO</td><td class="n">NO</td><td class="y">YES</td><td class="dv">YES</td></tr>
+          <tr><td>Zone OCR / form templates</td><td class="n">NO</td><td class="n">NO</td><td class="n">NO</td><td class="dv">YES</td></tr>
+          <tr><td>Public contributor portal</td><td class="n">NO</td><td class="n">NO</td><td class="n">NO</td><td class="dv">YES</td></tr>
+          <tr><td>Legal hold (hard block)</td><td class="n">NO</td><td class="p">Patterns</td><td class="n">NO</td><td class="dv">YES (409)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="section-header">
+        <div class="overline">// Sources</div>
+        <h2>What each lane contributed</h2>
+        <p>Research intent mapped to README-listed capabilities in this codebase.</p>
+      </div>
+      <div class="grid-2">
+        <div class="lineage-card">
+          <h3>Paperless-ngx</h3>
+          <ul>
+            <li>Angular SPA + Django + DRF as the default OSS DMS UX spine (now Angular&nbsp;21 + Bootstrap&nbsp;5.3 in <code>src-ui</code>).</li>
+            <li>ML classification, barcodes/ASN, hybrid + semantic search (FAISS), saved views, global command palette, LLM document chat/summarize/entities, Redis-backed ML caches.</li>
+          </ul>
+        </div>
+        <div class="lineage-card">
+          <h3>Mayan EDMS</h3>
+          <ul>
+            <li>Enterprise workflows (state machines, triggers, escalations), object ACLs via django-guardian, cabinets, retention, encryption-at-rest option, LDAP/OIDC/social auth + 2FA, quotas, audit logging, GPG signing.</li>
+          </ul>
+        </div>
+        <div class="lineage-card">
+          <h3>Lodestone</h3>
+          <ul>
+            <li>Non-destructive originals + configurable paths; S3/MinIO object storage; background processing realized with Celery workers/Beat instead of microservice sprawl.</li>
+          </ul>
+        </div>
+        <div class="lineage-card">
+          <h3>45+ market scan</h3>
+          <ul>
+            <li>Tier‑1 deltas reflected in apps such as <code>esignatures/</code>, <code>zone_ocr/</code>, <code>portal/</code>, <code>legal_hold/</code>, <code>entities/</code>, plus search analytics/synonyms/curations—beyond what the three anchors alone provided.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="section-header">
+        <div class="overline">// Architecture</div>
+        <h2>Research → repo</h2>
+        <p>Why the codebase is shaped as a modular monolith with a separate SPA.</p>
+      </div>
+      <div class="lineage-card">
+        <ul style="list-style:disc; padding-left:1.25rem; color:var(--text-secondary);">
+          <li style="margin-bottom:12px;"><strong style="color:var(--text-primary);">Rejected as default:</strong> Lodestone-style microservices sprawl for core team velocity.</li>
+          <li style="margin-bottom:12px;"><strong style="color:var(--text-primary);">Rejected as default:</strong> Mayan-scale 100+ app explosion for a greenfield codebase.</li>
+          <li style="margin-bottom:12px;"><strong style="color:var(--text-primary);">Chosen:</strong> Modular monolith (clear Django app boundaries) + Angular SPA + Celery workers + optional Elasticsearch + FAISS + Redis + Channels—documented in <code>README.md</code> and embodied under <code>docvault/</code> + <code>src-ui/</code>.</li>
+          <li><strong style="color:var(--text-primary);">Ship &amp; observe:</strong> Production Docker + Helm under <code>deploy/</code>; health/readiness/metrics endpoints per README API table.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="lineage-page-footer">
+        <p><strong>Historical research</strong> — Comparative notes, per-product deep dives, and extended market tiers may appear under <code>dev/archive/original-spec/research/</code> in copies of this repository that ship that bundle.</p>
+        <p style="margin-top:12px;"><strong>What to trust for “today”</strong> — Root <code>README.md</code> (features, stack, tests, layout), plus <code>CONTRIBUTING.md</code> for how to contribute.</p>
+        <p style="margin-top:12px;">Built with HTML5, inline SVG, and CSS only (no external JavaScript). <a href="index.html">Back to home</a></p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-logo">
+        <a href="index.html#hero">
+          <svg viewBox="0 0 32 32" fill="none" width="24" height="24" style="display:inline-block;vertical-align:middle;margin-right:8px;">
+            <rect x="2" y="4" width="28" height="24" rx="4" stroke="url(#lg2)" stroke-width="2"/>
+            <path d="M9 12h14M9 16h10M9 20h12" stroke="url(#lg2)" stroke-width="1.5" stroke-linecap="round"/>
+            <defs><linearGradient id="lg2" x1="0" y1="0" x2="32" y2="32"><stop stop-color="#7c3aed"/><stop offset="1" stop-color="#06b6d4"/></linearGradient></defs>
+          </svg>
+          DocVault
+        </a>
+      </div>
+      <span class="footer-copy">Built with Django, Angular, and a whole lot of open-source love.</span>
+      <ul class="footer-links">
+        <li><a href="https://github.com/packetloss404/docvault" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+        <li><a href="https://github.com/packetloss404/docvault/blob/main/README.md" target="_blank" rel="noopener noreferrer">Docs</a></li>
+        <li><a href="https://github.com/packetloss404/docvault/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contribute</a></li>
+        <li><a href="how-we-got-here.html">How we got here</a></li>
+        <li><a href="index.html#api">API</a></li>
+        <li><a href="https://github.com/packetloss404/docvault/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">License</a></li>
       </ul>
     </div>
+  </div>
+</footer>
 
-    <footer>
-      <strong>Lineage / research receipts</strong> (when bundled): <code>dev/archive/original-spec/research/</code> — comparative matrix, per-product deep dives, extended market tiers, and historical product-spec §1 if present.
-      <br /><strong>Current facts &amp; inventory:</strong> repository root <code>README.md</code> (features, stack, tests, structure), <code>CONTRIBUTING.md</code>, <code>dev/AGENTS.md</code>, <code>dev/work/CHECKLIST.md</code>.
-      <br />HTML5 + inline SVG + CSS only (no external JS). File: <code>docs/how-we-got-here.html</code>
-    </footer>
-  </main>
+<script>
+(function() {
+  'use strict';
+  var nav = document.getElementById('navbar');
+  var hamburger = document.getElementById('hamburger');
+  var navLinks = document.getElementById('navLinks');
+
+  window.addEventListener('scroll', function() {
+    nav.classList.toggle('scrolled', window.scrollY > 60);
+  }, { passive: true });
+
+  hamburger.addEventListener('click', function() {
+    hamburger.classList.toggle('active');
+    navLinks.classList.toggle('mobile-open');
+  });
+
+  navLinks.querySelectorAll('a').forEach(function(a) {
+    a.addEventListener('click', function() {
+      hamburger.classList.remove('active');
+      navLinks.classList.remove('mobile-open');
+    });
+  });
+})();
+</script>
 </body>
 </html>
