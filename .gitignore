@@ -14,7 +14,7 @@ venv/
 env/
 
 # Django
-db.sqlite3
+*.sqlite3
 media/
 staticfiles/
 *.log
@@ -40,3 +40,6 @@ coverage.xml
 
 # pytest
 .pytest_cache/
+
+# Claude Code
+.claude/

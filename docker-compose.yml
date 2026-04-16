@@ -1,3 +1,8 @@
+# ==========================================================================
+# DEVELOPMENT ONLY — Do not use these credentials in production.
+# See .env.example for production configuration.
+# ==========================================================================
+
 x-app-env: &app-env
   DJANGO_SECRET_KEY: dev-secret-key-change-in-production
   DJANGO_DEBUG: "true"
