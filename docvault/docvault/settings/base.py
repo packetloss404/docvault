@@ -243,6 +243,9 @@ CORS_ALLOW_CREDENTIALS = True
 
 # Whitenoise
 STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },

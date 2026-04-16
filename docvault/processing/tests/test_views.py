@@ -1,7 +1,7 @@
 """Tests for processing API views."""
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
@@ -100,6 +100,7 @@ class ProcessingTaskViewSetTest(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
+@override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)
 class DocumentUploadViewTest(TestCase):
     """Tests for the document upload endpoint."""
 
