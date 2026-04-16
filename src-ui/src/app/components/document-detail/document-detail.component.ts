@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -15,6 +15,7 @@ import {
   MetadataType,
   Tag,
 } from '../../models/organization.model';
+import { SummaryResponse, EntityResponse, TitleSuggestion } from '../../models/ai.model';
 import { CheckoutStatus, ShareLink } from '../../models/collaboration.model';
 import { WorkflowPanelComponent } from '../workflow-panel/workflow-panel.component';
 import { CommentsComponent } from '../comments/comments.component';
@@ -73,6 +74,26 @@ export class DocumentDetailComponent implements OnInit {
   zoneOcrResults = signal<any[]>([]);
   selectedOcrTemplate = signal<number | null>(null);
   physicalRecord = signal<any>(null);
+
+  // AI stretch-action signals
+  aiSummary = signal<SummaryResponse | null>(null);
+  aiSummaryLoading = signal(false);
+  aiEntities = signal<EntityResponse | null>(null);
+  aiEntitiesLoading = signal(false);
+  aiSuggestedTitle = signal<TitleSuggestion | null>(null);
+  aiSuggestedTitleLoading = signal(false);
+
+  // Content-tab in-text search
+  contentSearchQuery = signal('');
+  highlightedContent = computed(() => {
+    const doc = this.document();
+    const content = doc?.content ?? '';
+    const query = this.contentSearchQuery().trim();
+    if (!query) return this.escapeHtml(content);
+    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escapedQuery})`, 'gi');
+    return this.escapeHtml(content).replace(regex, '<mark>$1</mark>');
+  });
 
   allTags = signal<Tag[]>([]);
   allCorrespondents = signal<AutocompleteItem[]>([]);
@@ -445,5 +466,74 @@ export class DocumentDetailComponent implements OnInit {
       i++;
     }
     return `${size.toFixed(1)} ${units[i]}`;
+  }
+
+  // --- AI stretch actions ---
+
+  summarizeDocument(): void {
+    const doc = this.document();
+    if (!doc) return;
+    this.aiSummaryLoading.set(true);
+    this.aiSummary.set(null);
+    this.aiService.summarize(doc.id).subscribe({
+      next: (res) => {
+        this.aiSummary.set(res);
+        this.aiSummaryLoading.set(false);
+      },
+      error: () => {
+        this.aiSummary.set({ summary: null, error: 'Failed to generate summary.' });
+        this.aiSummaryLoading.set(false);
+      },
+    });
+  }
+
+  extractEntities(): void {
+    const doc = this.document();
+    if (!doc) return;
+    this.aiEntitiesLoading.set(true);
+    this.aiEntities.set(null);
+    this.aiService.extractEntities(doc.id).subscribe({
+      next: (res) => {
+        this.aiEntities.set(res);
+        this.aiEntitiesLoading.set(false);
+      },
+      error: () => {
+        this.aiEntities.set({ entities: null, error: 'Failed to extract entities.' });
+        this.aiEntitiesLoading.set(false);
+      },
+    });
+  }
+
+  suggestTitle(): void {
+    const doc = this.document();
+    if (!doc) return;
+    this.aiSuggestedTitleLoading.set(true);
+    this.aiSuggestedTitle.set(null);
+    this.aiService.suggestTitle(doc.id).subscribe({
+      next: (res) => {
+        this.aiSuggestedTitle.set(res);
+        this.aiSuggestedTitleLoading.set(false);
+      },
+      error: () => {
+        this.aiSuggestedTitle.set({ suggested_title: null, error: 'Failed to suggest title.' });
+        this.aiSuggestedTitleLoading.set(false);
+      },
+    });
+  }
+
+  aiEntitiesKeys(): string[] {
+    const entities = this.aiEntities()?.entities;
+    return entities ? Object.keys(entities) : [];
+  }
+
+  // --- Content search helper ---
+
+  private escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 }

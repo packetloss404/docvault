@@ -45,5 +45,11 @@ urlpatterns = [
         views.PublicSigningDeclineView.as_view(),
         name="public-signing-decline",
     ),
+    # External signer identity verification
+    path(
+        "esignatures/verify/",
+        views.ExternalSignerVerifyView.as_view(),
+        name="esignatures-verify",
+    ),
     path("", include(router.urls)),
 ]

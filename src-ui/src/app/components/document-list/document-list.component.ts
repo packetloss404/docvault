@@ -14,6 +14,15 @@ import {
 } from '../../models/document.model';
 import { Tag, Correspondent } from '../../models/organization.model';
 
+const COLUMN_PREFS_KEY = 'dv_doc_list_columns';
+
+export interface ColumnDef {
+  key: string;
+  label: string;
+  sortable?: boolean;
+  sortField?: string;
+}
+
 @Component({
   selector: 'app-document-list',
   standalone: true,
@@ -21,6 +30,72 @@ import { Tag, Correspondent } from '../../models/organization.model';
   templateUrl: './document-list.component.html',
 })
 export class DocumentListComponent implements OnInit {
+  // --- Column configuration ---
+  readonly availableColumns: ColumnDef[] = [
+    { key: 'title', label: 'Title', sortable: true, sortField: 'title' },
+    { key: 'document_type', label: 'Type' },
+    { key: 'correspondent', label: 'Correspondent' },
+    { key: 'cabinet', label: 'Cabinet' },
+    { key: 'created', label: 'Created', sortable: true, sortField: 'created' },
+    { key: 'added', label: 'Added', sortable: true, sortField: 'added' },
+    { key: 'archive_serial_number', label: 'ASN' },
+    { key: 'page_count', label: 'Pages' },
+    { key: 'tags', label: 'Tags' },
+  ];
+
+  readonly defaultColumns = ['title', 'document_type', 'correspondent', 'created'];
+
+  selectedColumns = signal<string[]>(this.defaultColumns);
+  showColumnDropdown = signal(false);
+
+  isColumnSelected(key: string): boolean {
+    return this.selectedColumns().includes(key);
+  }
+
+  toggleColumn(key: string): void {
+    const current = this.selectedColumns();
+    if (current.includes(key)) {
+      // Keep at least one column
+      if (current.length <= 1) return;
+      this.selectedColumns.set(current.filter((k) => k !== key));
+    } else {
+      // Maintain declaration order
+      const ordered = this.availableColumns
+        .map((c) => c.key)
+        .filter((k) => [...current, key].includes(k));
+      this.selectedColumns.set(ordered);
+    }
+    this.saveColumnPrefs();
+  }
+
+  loadColumnPrefs(): void {
+    try {
+      const stored = localStorage.getItem(COLUMN_PREFS_KEY);
+      if (stored) {
+        const parsed: string[] = JSON.parse(stored);
+        const valid = parsed.filter((k) =>
+          this.availableColumns.some((c) => c.key === k),
+        );
+        if (valid.length > 0) {
+          this.selectedColumns.set(valid);
+        }
+      }
+    } catch {
+      // Ignore parse errors; use defaults
+    }
+  }
+
+  saveColumnPrefs(): void {
+    try {
+      localStorage.setItem(
+        COLUMN_PREFS_KEY,
+        JSON.stringify(this.selectedColumns()),
+      );
+    } catch {
+      // Ignore storage errors
+    }
+  }
+
   documents = signal<Document[]>([]);
   documentTypes = signal<DocumentType[]>([]);
   totalCount = signal(0);
@@ -68,6 +143,7 @@ export class DocumentListComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.loadColumnPrefs();
     this.loadDocumentTypes();
     this.loadDocuments();
   }

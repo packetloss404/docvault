@@ -48,7 +48,40 @@
         }
       </select>
     </div>
-    <div class="col-md-3 text-end">
+    <div class="col-md-3 d-flex align-items-center justify-content-end gap-2">
+      <!-- Columns dropdown -->
+      <div class="dropdown">
+        <button
+          class="btn btn-sm btn-outline-secondary dropdown-toggle"
+          type="button"
+          (click)="showColumnDropdown.set(!showColumnDropdown())"
+          title="Configure visible columns"
+        >
+          <i class="bi bi-layout-three-columns me-1"></i>Columns
+        </button>
+        @if (showColumnDropdown()) {
+          <div
+            class="dropdown-menu show p-2"
+            style="min-width: 180px;"
+            (click)="$event.stopPropagation()"
+          >
+            @for (col of availableColumns; track col.key) {
+              <div class="form-check">
+                <input
+                  type="checkbox"
+                  class="form-check-input"
+                  [id]="'col-' + col.key"
+                  [checked]="isColumnSelected(col.key)"
+                  (change)="toggleColumn(col.key)"
+                />
+                <label class="form-check-label" [for]="'col-' + col.key">
+                  {{ col.label }}
+                </label>
+              </div>
+            }
+          </div>
+        }
+      </div>
       <span class="text-muted small">
         Page {{ currentPage() }} of {{ totalPages() }}
       </span>
@@ -273,30 +306,22 @@
               />
             </th>
             <th style="width: 40px;"></th>
-            <th
-              role="button"
-              (click)="sortBy('title')"
-              class="user-select-none"
-            >
-              Title <i class="bi" [ngClass]="getSortIcon('title')"></i>
-            </th>
-            <th>Type</th>
-            <th
-              role="button"
-              (click)="sortBy('created')"
-              class="user-select-none"
-            >
-              Date <i class="bi" [ngClass]="getSortIcon('created')"></i>
-            </th>
-            <th
-              role="button"
-              (click)="sortBy('added')"
-              class="user-select-none"
-            >
-              Added <i class="bi" [ngClass]="getSortIcon('added')"></i>
-            </th>
-            <th>Pages</th>
-            <th>ASN</th>
+            @for (col of availableColumns; track col.key) {
+              @if (isColumnSelected(col.key)) {
+                @if (col.sortable) {
+                  <th
+                    role="button"
+                    (click)="sortBy(col.sortField!)"
+                    class="user-select-none"
+                  >
+                    {{ col.label }}
+                    <i class="bi" [ngClass]="getSortIcon(col.sortField!)"></i>
+                  </th>
+                } @else {
+                  <th>{{ col.label }}</th>
+                }
+              }
+            }
           </tr>
         </thead>
         <tbody>
@@ -323,28 +348,67 @@
                   onerror="this.style.display='none'"
                 />
               </td>
-              <td>
-                <strong>{{ doc.title }}</strong>
-                <br />
-                <small class="text-muted">{{ doc.original_filename }}</small>
-              </td>
-              <td>
-                @if (doc.document_type_name) {
-                  <span class="badge bg-info text-dark">{{
-                    doc.document_type_name
-                  }}</span>
-                }
-              </td>
-              <td>{{ doc.created | date : 'mediumDate' }}</td>
-              <td>{{ doc.added | date : 'short' }}</td>
-              <td>{{ doc.page_count }}</td>
-              <td>
-                @if (doc.archive_serial_number) {
-                  <span class="badge bg-secondary">{{
-                    doc.archive_serial_number
-                  }}</span>
-                }
-              </td>
+              @if (isColumnSelected('title')) {
+                <td>
+                  <strong>{{ doc.title }}</strong>
+                  <br />
+                  <small class="text-muted">{{ doc.original_filename }}</small>
+                </td>
+              }
+              @if (isColumnSelected('document_type')) {
+                <td>
+                  @if (doc.document_type_name) {
+                    <span class="badge bg-info text-dark">{{
+                      doc.document_type_name
+                    }}</span>
+                  }
+                </td>
+              }
+              @if (isColumnSelected('correspondent')) {
+                <td>
+                  @if (doc.correspondent_name) {
+                    <span class="badge bg-secondary">{{
+                      doc.correspondent_name
+                    }}</span>
+                  }
+                </td>
+              }
+              @if (isColumnSelected('cabinet')) {
+                <td>
+                  @if (doc.cabinet_name) {
+                    <span class="badge bg-dark">{{ doc.cabinet_name }}</span>
+                  }
+                </td>
+              }
+              @if (isColumnSelected('created')) {
+                <td>{{ doc.created | date : 'mediumDate' }}</td>
+              }
+              @if (isColumnSelected('added')) {
+                <td>{{ doc.added | date : 'short' }}</td>
+              }
+              @if (isColumnSelected('archive_serial_number')) {
+                <td>
+                  @if (doc.archive_serial_number) {
+                    <span class="badge bg-secondary">{{
+                      doc.archive_serial_number
+                    }}</span>
+                  }
+                </td>
+              }
+              @if (isColumnSelected('page_count')) {
+                <td>{{ doc.page_count }}</td>
+              }
+              @if (isColumnSelected('tags')) {
+                <td>
+                  @if (doc.tag_ids && doc.tag_ids.length > 0) {
+                    <div class="d-flex flex-wrap gap-1">
+                      @for (tagId of doc.tag_ids; track tagId) {
+                        <span class="badge bg-warning text-dark">#{{ tagId }}</span>
+                      }
+                    </div>
+                  }
+                </td>
+              }
             </tr>
           }
         </tbody>

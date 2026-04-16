@@ -176,6 +176,13 @@ export class LayoutComponent implements OnInit, OnDestroy {
     this.auth.logout().subscribe();
   }
 
+  // --- Role checks ---
+
+  isAdmin(): boolean {
+    const user = this.auth.currentUser();
+    return !!(user?.is_staff || user?.is_superuser);
+  }
+
   // --- Sidebar Sections ---
 
   isSectionOpen(section: string): boolean {

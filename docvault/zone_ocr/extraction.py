@@ -44,6 +44,60 @@ DATE_FORMATS = [
 ]
 
 
+def compare_zone_similarity(extracted_image, reference_image):
+    """Compare two PIL images using histogram correlation (perceptual similarity).
+
+    Returns a float between 0.0 (no similarity) and 1.0 (identical).  If PIL
+    is not available or either image is None the function logs a warning and
+    returns None so callers can skip the check gracefully.
+
+    The comparison converts both images to greyscale and computes the
+    normalised dot-product (Bhattacharyya-adjacent) of their 256-bin
+    histograms.  This is intentionally lightweight — it is used as a quick
+    sanity check that the extracted zone region looks roughly like the
+    template reference crop, not as a precise perceptual-hash comparison.
+
+    Args:
+        extracted_image: PIL Image of the just-extracted zone region.
+        reference_image: PIL Image of the corresponding template zone region.
+
+    Returns:
+        Similarity score (float 0.0-1.0), or None if comparison is not possible.
+    """
+    if extracted_image is None or reference_image is None:
+        return None
+
+    try:
+        from PIL import ImageOps  # noqa: F401 — checks PIL availability
+
+        # Work in greyscale to reduce sensitivity to colour shifts
+        ext_grey = extracted_image.convert("L")
+        ref_grey = reference_image.convert("L")
+
+        ext_hist = ext_grey.histogram()  # list of 256 ints
+        ref_hist = ref_grey.histogram()
+
+        # Normalised cross-correlation of histogram bins
+        dot = sum(a * b for a, b in zip(ext_hist, ref_hist))
+        norm_ext = sum(v * v for v in ext_hist) ** 0.5
+        norm_ref = sum(v * v for v in ref_hist) ** 0.5
+
+        if norm_ext == 0 or norm_ref == 0:
+            return 0.0
+
+        return dot / (norm_ext * norm_ref)
+
+    except ImportError:
+        logger.warning(
+            "Pillow is not available; perceptual zone similarity check skipped. "
+            "Install Pillow to enable histogram-based template matching."
+        )
+        return None
+    except Exception as exc:
+        logger.warning("Zone similarity comparison failed: %s", exc)
+        return None
+
+
 def match_template(document, templates):
     """Select the best matching ZoneOCRTemplate for a document.
 

@@ -42,6 +42,7 @@ class ZoneOCRPlugin(ProcessingPlugin):
 
         from .extraction import (
             apply_preprocessing,
+            compare_zone_similarity,
             extract_field_from_content,
             extract_field_value,
             match_template,
@@ -102,6 +103,72 @@ class ZoneOCRPlugin(ProcessingPlugin):
                         field_type=zone_field.field_type,
                         preprocessing=zone_field.preprocessing,
                     )
+
+                    # Perceptual similarity check: compare the extracted zone
+                    # region against the template's sample page image to catch
+                    # gross layout mismatches before trusting the OCR result.
+                    # This is a best-effort quality gate — if Pillow is absent
+                    # or the template has no sample image, we proceed normally.
+                    if template.sample_page_image:
+                        try:
+                            from PIL import Image as _PILImage
+
+                            bb = zone_field.bounding_box
+                            img_w, img_h = page_image.size
+
+                            # Crop the same bounding-box region from the document page
+                            x = int(bb.get("x", 0) / 100 * img_w)
+                            y = int(bb.get("y", 0) / 100 * img_h)
+                            w = int(bb.get("width", 100) / 100 * img_w)
+                            h = int(bb.get("height", 100) / 100 * img_h)
+                            doc_zone_crop = page_image.crop((x, y, x + w, y + h))
+
+                            # Crop the same region from the template sample image
+                            ref_img = _PILImage.open(template.sample_page_image.path)
+                            ref_w, ref_h = ref_img.size
+                            rx = int(bb.get("x", 0) / 100 * ref_w)
+                            ry = int(bb.get("y", 0) / 100 * ref_h)
+                            rw = int(bb.get("width", 100) / 100 * ref_w)
+                            rh = int(bb.get("height", 100) / 100 * ref_h)
+                            ref_zone_crop = ref_img.crop((rx, ry, rx + rw, ry + rh))
+
+                            similarity = compare_zone_similarity(doc_zone_crop, ref_zone_crop)
+                            if similarity is not None:
+                                logger.debug(
+                                    "Zone similarity for field '%s': %.3f",
+                                    zone_field.name,
+                                    similarity,
+                                )
+                                # If the zone looks very different from the template
+                                # reference, apply a confidence penalty to signal
+                                # that the template may not be a good match here.
+                                from django.conf import settings as _settings
+                                ssim_threshold = getattr(
+                                    _settings, "ZONE_OCR_SSIM_THRESHOLD", 0.5,
+                                )
+                                if similarity < ssim_threshold:
+                                    logger.warning(
+                                        "Low perceptual similarity (%.3f < %.3f) for "
+                                        "field '%s' — template may not match this "
+                                        "document layout; confidence penalised.",
+                                        similarity,
+                                        ssim_threshold,
+                                        zone_field.name,
+                                    )
+                                    confidence *= similarity  # scale down by mismatch
+
+                        except ImportError:
+                            logger.warning(
+                                "Pillow not available; perceptual zone similarity "
+                                "check skipped for field '%s'.",
+                                zone_field.name,
+                            )
+                        except Exception as _ssim_exc:
+                            logger.debug(
+                                "Perceptual similarity check failed for field '%s': %s",
+                                zone_field.name,
+                                _ssim_exc,
+                            )
 
                 # Fall back to content-based extraction
                 if not extracted_value and context.content:

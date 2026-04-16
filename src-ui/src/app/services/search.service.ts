@@ -10,6 +10,7 @@ import {
   SavedViewListItem,
   SearchResponse,
 } from '../models/search.model';
+import { SemanticSearchResponse } from '../models/ai.model';
 import { AnalyticsService } from './analytics.service';
 
 @Injectable({ providedIn: 'root' })
@@ -76,9 +77,15 @@ export class SearchService {
     );
   }
 
-  similarDocuments(id: number): Observable<AutocompleteResult[]> {
-    return this.http.get<AutocompleteResult[]>(
-      `${this.baseUrl}/search/similar/${id}/`,
+  /**
+   * Fetch AI-powered similar documents via the vector search endpoint.
+   * Calls GET /api/v1/ai/similar/?document_id=<documentId>
+   */
+  similarDocuments(documentId: number): Observable<SemanticSearchResponse> {
+    const params = new HttpParams().set('document_id', documentId.toString());
+    return this.http.get<SemanticSearchResponse>(
+      `${this.baseUrl}/ai/similar/`,
+      { params },
     );
   }
 

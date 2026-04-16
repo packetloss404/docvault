@@ -460,7 +460,24 @@
       <div class="card">
         <div class="card-body">
           @if (doc.content) {
-            <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;">{{ doc.content }}</pre>
+            <div class="mb-3">
+              <div class="input-group input-group-sm" style="max-width: 360px;">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input
+                  type="text"
+                  class="form-control"
+                  placeholder="Search in content..."
+                  [ngModel]="contentSearchQuery()"
+                  (ngModelChange)="contentSearchQuery.set($event)"
+                />
+                @if (contentSearchQuery()) {
+                  <button class="btn btn-outline-secondary" type="button" (click)="contentSearchQuery.set('')">
+                    <i class="bi bi-x"></i>
+                  </button>
+                }
+              </div>
+            </div>
+            <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;" [innerHTML]="highlightedContent()"></pre>
           } @else {
             <p class="text-muted mb-0">No extracted content available.</p>
           }
@@ -741,6 +758,88 @@
       @if (!aiHealthy()) {
         <div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-1"></i> AI features are currently unavailable.</div>
       } @else {
+        <!-- AI Stretch Actions -->
+        <div class="card mb-3">
+          <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-stars me-1"></i> AI Actions</h6>
+          </div>
+          <div class="card-body">
+            <div class="d-flex gap-2 mb-3">
+              <button class="btn btn-outline-primary btn-sm" (click)="summarizeDocument()" [disabled]="aiSummaryLoading()">
+                @if (aiSummaryLoading()) {
+                  <span class="spinner-border spinner-border-sm me-1"></span>
+                } @else {
+                  <i class="bi bi-card-text me-1"></i>
+                }
+                Summarize
+              </button>
+              <button class="btn btn-outline-primary btn-sm" (click)="extractEntities()" [disabled]="aiEntitiesLoading()">
+                @if (aiEntitiesLoading()) {
+                  <span class="spinner-border spinner-border-sm me-1"></span>
+                } @else {
+                  <i class="bi bi-tags me-1"></i>
+                }
+                Extract Entities
+              </button>
+              <button class="btn btn-outline-primary btn-sm" (click)="suggestTitle()" [disabled]="aiSuggestedTitleLoading()">
+                @if (aiSuggestedTitleLoading()) {
+                  <span class="spinner-border spinner-border-sm me-1"></span>
+                } @else {
+                  <i class="bi bi-pencil-square me-1"></i>
+                }
+                Suggest Title
+              </button>
+            </div>
+
+            @if (aiSummary()) {
+              <div class="mb-3">
+                <h6 class="text-muted small text-uppercase mb-1">Summary</h6>
+                @if (aiSummary()!.error) {
+                  <div class="alert alert-danger py-2 mb-0">{{ aiSummary()!.error }}</div>
+                } @else {
+                  <div class="border rounded p-2 bg-light">{{ aiSummary()!.summary }}</div>
+                }
+              </div>
+            }
+
+            @if (aiEntities()) {
+              <div class="mb-3">
+                <h6 class="text-muted small text-uppercase mb-1">Extracted Entities</h6>
+                @if (aiEntities()!.error) {
+                  <div class="alert alert-danger py-2 mb-0">{{ aiEntities()!.error }}</div>
+                } @else if (aiEntities()!.entities) {
+                  <div class="border rounded p-2 bg-light">
+                    @for (key of aiEntitiesKeys(); track key) {
+                      <div class="mb-1">
+                        <strong class="text-capitalize">{{ key }}:</strong>
+                        @for (val of aiEntities()!.entities![key]; track val) {
+                          <span class="badge bg-secondary ms-1">{{ val }}</span>
+                        }
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <p class="text-muted mb-0 small">No entities found.</p>
+                }
+              </div>
+            }
+
+            @if (aiSuggestedTitle()) {
+              <div>
+                <h6 class="text-muted small text-uppercase mb-1">Suggested Title</h6>
+                @if (aiSuggestedTitle()!.error) {
+                  <div class="alert alert-danger py-2 mb-0">{{ aiSuggestedTitle()!.error }}</div>
+                } @else {
+                  <div class="border rounded p-2 bg-light d-flex align-items-center gap-2">
+                    <span class="fst-italic">{{ aiSuggestedTitle()!.suggested_title }}</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Chat & Similar Docs -->
         <div class="row">
           <div class="col-md-6"><app-document-chat [documentId]="doc.id" /></div>
           <div class="col-md-6"><app-similar-documents [documentId]="doc.id" /></div>

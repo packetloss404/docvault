@@ -2,6 +2,14 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import {
+  CdkDragDrop,
+  CdkDrag,
+  CdkDragHandle,
+  CdkDragPlaceholder,
+  CdkDropList,
+  moveItemInArray,
+} from '@angular/cdk/drag-drop';
 import { DocumentService } from '../../services/document.service';
 import { SearchService } from '../../services/search.service';
 import { OrganizationService } from '../../services/organization.service';
@@ -11,6 +19,8 @@ import {
 } from '../../services/preferences.service';
 import { Document } from '../../models/document.model';
 import { SavedViewListItem } from '../../models/search.model';
+
+const DASHBOARD_ORDER_KEY = 'dv_dashboard_order';
 
 export type WidgetType =
   | 'welcome'
@@ -30,7 +40,7 @@ const DEFAULT_LAYOUT: WidgetType[] = [
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, CdkDropList, CdkDrag, CdkDragHandle, CdkDragPlaceholder],
   template: `
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h2 class="mb-0">Dashboard</h2>
@@ -43,22 +53,23 @@ const DEFAULT_LAYOUT: WidgetType[] = [
       </button>
     </div>
 
-    <div class="row g-4">
+    <div
+      class="row g-4"
+      cdkDropList
+      cdkDropListOrientation="mixed"
+      (cdkDropListDropped)="onCdkDrop($event)"
+    >
       @for (widget of widgets(); track widget; let i = $index) {
         <div
           class="col-md-6"
-          [attr.draggable]="true"
-          (dragstart)="onDragStart($event, i)"
-          (dragover)="onDragOver($event, i)"
-          (dragenter)="onDragEnter($event, i)"
-          (dragleave)="onDragLeave($event)"
-          (drop)="onDrop($event, i)"
-          (dragend)="onDragEnd($event)"
-          [class.dv-drag-over]="dragOverIndex() === i && dragSourceIndex() !== i"
+          cdkDrag
         >
+          <!-- CDK drag placeholder -->
+          <div *cdkDragPlaceholder class="dv-drag-placeholder col-md-6"></div>
+
           <!-- Widget Card -->
           <div class="card h-100 dv-widget-card">
-            <div class="card-header d-flex align-items-center">
+            <div class="card-header d-flex align-items-center" cdkDragHandle>
               <i
                 class="bi bi-grip-vertical me-2 text-muted dv-drag-handle"
                 style="cursor: grab;"
@@ -349,6 +360,21 @@ const DEFAULT_LAYOUT: WidgetType[] = [
         outline-offset: -2px;
         border-radius: 0.375rem;
       }
+      .dv-drag-placeholder {
+        background: var(--bs-gray-200);
+        border: 2px dashed var(--bs-primary);
+        border-radius: 0.375rem;
+        min-height: 120px;
+        transition: transform 0.2s;
+      }
+      .cdk-drag-preview {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        border-radius: 0.375rem;
+        opacity: 0.9;
+      }
+      .cdk-drag-animating {
+        transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+      }
       .border-dashed {
         border-style: dashed !important;
       }
@@ -405,6 +431,20 @@ export class DashboardComponent implements OnInit {
   // --- Layout persistence ---
 
   loadLayout(): void {
+    // Try localStorage first (fast, offline-capable)
+    try {
+      const stored = localStorage.getItem(DASHBOARD_ORDER_KEY);
+      if (stored) {
+        const parsed: WidgetType[] = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          this.widgets.set(parsed);
+          return;
+        }
+      }
+    } catch {
+      // Fall through to preferences service
+    }
+
     this.preferencesService.getPreferences().subscribe({
       next: (prefs: UserPreferences) => {
         if (prefs.dashboard_layout && Array.isArray(prefs.dashboard_layout) && prefs.dashboard_layout.length > 0) {
@@ -418,8 +458,16 @@ export class DashboardComponent implements OnInit {
   }
 
   saveLayout(): void {
+    const layout = this.widgets();
+    // Persist to localStorage
+    try {
+      localStorage.setItem(DASHBOARD_ORDER_KEY, JSON.stringify(layout));
+    } catch {
+      // Ignore storage errors
+    }
+    // Also sync to server preferences
     this.preferencesService
-      .updatePreferences({ dashboard_layout: this.widgets() })
+      .updatePreferences({ dashboard_layout: layout })
       .subscribe();
   }
 
@@ -428,21 +476,25 @@ export class DashboardComponent implements OnInit {
     this.saveLayout();
   }
 
-  // --- Drag & drop reordering ---
+  // --- CDK Drag & drop reordering ---
+
+  onCdkDrop(event: CdkDragDrop<WidgetType[]>): void {
+    if (event.previousIndex !== event.currentIndex) {
+      const layout = [...this.widgets()];
+      moveItemInArray(layout, event.previousIndex, event.currentIndex);
+      this.widgets.set(layout);
+      this.saveLayout();
+    }
+  }
+
+  // --- Legacy native drag signals (kept for template compatibility) ---
 
   onDragStart(event: DragEvent, index: number): void {
     this.dragSourceIndex.set(index);
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = 'move';
-      event.dataTransfer.setData('text/plain', String(index));
-    }
   }
 
   onDragOver(event: DragEvent, index: number): void {
     event.preventDefault();
-    if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = 'move';
-    }
   }
 
   onDragEnter(event: DragEvent, index: number): void {
@@ -451,7 +503,6 @@ export class DashboardComponent implements OnInit {
   }
 
   onDragLeave(event: DragEvent): void {
-    // Only clear if leaving the container area
     const relatedTarget = event.relatedTarget as HTMLElement;
     if (!relatedTarget || !(event.currentTarget as HTMLElement).contains(relatedTarget)) {
       this.dragOverIndex.set(null);

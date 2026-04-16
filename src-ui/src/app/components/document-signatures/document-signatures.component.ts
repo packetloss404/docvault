@@ -126,7 +126,7 @@ export class DocumentSignaturesComponent implements OnInit {
         this.loadSignatures();
       },
       error: () => {
-        this.errorMessage.set('Failed to sign document. Ensure you have a GPG key configured.');
+        this.errorMessage.set('Failed to sign document. Check that you have a valid GPG key configured and that you have permission to sign this document.');
         this.signing.set(false);
       },
     });
@@ -151,7 +151,7 @@ export class DocumentSignaturesComponent implements OnInit {
         this.verifying.set(false);
       },
       error: () => {
-        this.errorMessage.set('Verification failed.');
+        this.errorMessage.set('Signature verification failed. The GPG public key may be missing or the document may have been modified after signing.');
         this.verifying.set(false);
       },
     });

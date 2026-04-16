@@ -92,7 +92,17 @@ class Signer(models.Model):
         choices=VERIFICATION_METHOD_CHOICES,
         default=VERIFY_EMAIL,
     )
-    verification_code = models.CharField(max_length=16, blank=True, default="")
+    verification_code = models.CharField(max_length=6, blank=True, default="")
+    verified = models.BooleanField(
+        default=False,
+        help_text="True once the signer has verified their identity via the verification code.",
+    )
+    phone_number = models.CharField(
+        max_length=20,
+        blank=True,
+        default="",
+        help_text="Phone number for future SMS verification. Currently unused.",
+    )
     viewed_pages = models.JSONField(default=list, blank=True)
 
     class Meta:

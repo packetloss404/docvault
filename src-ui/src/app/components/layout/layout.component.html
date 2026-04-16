@@ -231,47 +231,63 @@
         </a>
       }
 
-      <!-- Compliance -->
-      <a class="nav-link sidebar-section-header" role="button" (click)="toggleSection('compliance')">
-        <i class="bi me-1 small" [class.bi-chevron-down]="isSectionOpen('compliance')" [class.bi-chevron-right]="!isSectionOpen('compliance')"></i>
-        <i class="bi bi-shield-lock me-1"></i> Compliance
-      </a>
-      @if (isSectionOpen('compliance')) {
-        <a class="nav-link ps-4" routerLink="/legal-holds" routerLinkActive="active">
-          <i class="bi bi-shield-lock"></i> Legal Holds
+      <!-- Compliance (staff/superuser only) -->
+      @if (isAdmin()) {
+        <a class="nav-link sidebar-section-header" role="button" (click)="toggleSection('compliance')">
+          <i class="bi me-1 small" [class.bi-chevron-down]="isSectionOpen('compliance')" [class.bi-chevron-right]="!isSectionOpen('compliance')"></i>
+          <i class="bi bi-shield-lock me-1"></i> Compliance
         </a>
-        <a class="nav-link ps-4" routerLink="/physical-locations" routerLinkActive="active">
-          <i class="bi bi-building"></i> Physical Locations
-        </a>
-        <a class="nav-link ps-4" routerLink="/charge-outs" routerLinkActive="active">
-          <i class="bi bi-box-arrow-up-right"></i> Charge-Outs
-        </a>
+        @if (isSectionOpen('compliance')) {
+          <a class="nav-link ps-4" routerLink="/legal-holds" routerLinkActive="active">
+            <i class="bi bi-shield-lock"></i> Legal Holds
+          </a>
+          <a class="nav-link ps-4" routerLink="/physical-locations" routerLinkActive="active">
+            <i class="bi bi-building"></i> Physical Locations
+          </a>
+          <a class="nav-link ps-4" routerLink="/charge-outs" routerLinkActive="active">
+            <i class="bi bi-box-arrow-up-right"></i> Charge-Outs
+          </a>
+        }
       }
 
-      <!-- Admin -->
-      <a class="nav-link sidebar-section-header" role="button" (click)="toggleSection('admin')">
-        <i class="bi me-1 small" [class.bi-chevron-down]="isSectionOpen('admin')" [class.bi-chevron-right]="!isSectionOpen('admin')"></i>
-        <i class="bi bi-gear me-1"></i> Admin
-      </a>
-      @if (isSectionOpen('admin')) {
-        <a class="nav-link ps-4" routerLink="/portals" routerLinkActive="active">
-          <i class="bi bi-door-open"></i> Portals
+      <!-- Admin (staff/superuser only) -->
+      @if (isAdmin()) {
+        <a class="nav-link sidebar-section-header" role="button" (click)="toggleSection('admin')">
+          <i class="bi me-1 small" [class.bi-chevron-down]="isSectionOpen('admin')" [class.bi-chevron-right]="!isSectionOpen('admin')"></i>
+          <i class="bi bi-gear me-1"></i> Admin
         </a>
-        <a class="nav-link ps-4" routerLink="/document-requests" routerLinkActive="active">
-          <i class="bi bi-send"></i> Doc Requests
-        </a>
-        <a class="nav-link ps-4" routerLink="/submission-review" routerLinkActive="active">
-          <i class="bi bi-check2-square"></i> Review Queue
-        </a>
-        <a class="nav-link ps-4" routerLink="/activity" routerLinkActive="active">
-          <i class="bi bi-activity"></i> Activity Feed
-        </a>
-        <a class="nav-link ps-4" routerLink="/audit-log" routerLinkActive="active">
-          <i class="bi bi-journal-check"></i> Audit Log
-        </a>
-        <a class="nav-link ps-4" routerLink="/admin/storage" routerLinkActive="active">
-          <i class="bi bi-hdd-stack"></i> Storage
-        </a>
+        @if (isSectionOpen('admin')) {
+          <a class="nav-link ps-4" routerLink="/portals" routerLinkActive="active">
+            <i class="bi bi-door-open"></i> Portals
+          </a>
+          <a class="nav-link ps-4" routerLink="/document-requests" routerLinkActive="active">
+            <i class="bi bi-send"></i> Doc Requests
+          </a>
+          <a class="nav-link ps-4" routerLink="/submission-review" routerLinkActive="active">
+            <i class="bi bi-check2-square"></i> Review Queue
+          </a>
+          <a class="nav-link ps-4" routerLink="/activity" routerLinkActive="active">
+            <i class="bi bi-activity"></i> Activity Feed
+          </a>
+          <a class="nav-link ps-4" routerLink="/audit-log" routerLinkActive="active">
+            <i class="bi bi-journal-check"></i> Audit Log
+          </a>
+          <a class="nav-link ps-4" routerLink="/admin/users" routerLinkActive="active">
+            <i class="bi bi-people"></i> Users
+          </a>
+          <a class="nav-link ps-4" routerLink="/admin/groups" routerLinkActive="active">
+            <i class="bi bi-collection"></i> Groups
+          </a>
+          <a class="nav-link ps-4" routerLink="/admin/roles" routerLinkActive="active">
+            <i class="bi bi-person-badge"></i> Roles
+          </a>
+          <a class="nav-link ps-4" routerLink="/admin/permissions" routerLinkActive="active">
+            <i class="bi bi-key"></i> Permissions
+          </a>
+          <a class="nav-link ps-4" routerLink="/admin/storage" routerLinkActive="active">
+            <i class="bi bi-hdd-stack"></i> Storage
+          </a>
+        }
       }
     </nav>
   </div>

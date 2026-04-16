@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './guards/auth.guard';
+import { adminGuard } from './guards/admin.guard';
 
 export const routes: Routes = [
   {
@@ -44,6 +45,13 @@ export const routes: Routes = [
           import(
             './components/relationship-panel/relationship-panel.component'
           ).then((m) => m.RelationshipPanelComponent),
+      },
+      {
+        path: 'documents/:id/compare',
+        loadComponent: () =>
+          import(
+            './components/version-compare/version-compare.component'
+          ).then((m) => m.VersionCompareComponent),
       },
       {
         path: 'documents/:id',
@@ -320,6 +328,7 @@ export const routes: Routes = [
       },
       {
         path: 'admin/users',
+        canActivate: [adminGuard],
         loadComponent: () =>
           import('./components/admin-users/admin-users.component').then(
             (m) => m.AdminUsersComponent,
@@ -327,6 +336,7 @@ export const routes: Routes = [
       },
       {
         path: 'admin/groups',
+        canActivate: [adminGuard],
         loadComponent: () =>
           import('./components/admin-groups/admin-groups.component').then(
             (m) => m.AdminGroupsComponent,
@@ -334,6 +344,7 @@ export const routes: Routes = [
       },
       {
         path: 'admin/roles',
+        canActivate: [adminGuard],
         loadComponent: () =>
           import('./components/admin-roles/admin-roles.component').then(
             (m) => m.AdminRolesComponent,
@@ -341,9 +352,25 @@ export const routes: Routes = [
       },
       {
         path: 'admin/storage',
+        canActivate: [adminGuard],
         loadComponent: () =>
           import('./components/storage-admin/storage-admin.component').then(
             (m) => m.StorageAdminComponent,
+          ),
+      },
+      {
+        path: 'admin/permissions',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import(
+            './components/permissions-browser/permissions-browser.component'
+          ).then((m) => m.PermissionsBrowserComponent),
+      },
+      {
+        path: '403',
+        loadComponent: () =>
+          import('./components/forbidden/forbidden.component').then(
+            (m) => m.ForbiddenComponent,
           ),
       },
       {

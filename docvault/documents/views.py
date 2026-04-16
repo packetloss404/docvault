@@ -1,5 +1,6 @@
 """Views for the documents module."""
 
+import difflib
 import hashlib
 import io
 import logging
@@ -223,6 +224,74 @@ class DocumentViewSet(viewsets.ModelViewSet):
         version.save(update_fields=["is_active"])
 
         return Response(DocumentVersionSerializer(version).data)
+
+    @action(detail=True, methods=["get"], url_path="versions/compare")
+    def compare_versions(self, request, pk=None):
+        """Compare two document versions and return an HTML diff.
+
+        Query params:
+          v1 -- ID of the first version
+          v2 -- ID of the second version
+
+        Returns:
+          { "v1": <version_data>, "v2": <version_data>, "diff_html": "<html>" }
+        """
+        doc = self.get_object()
+
+        v1_id = request.query_params.get("v1")
+        v2_id = request.query_params.get("v2")
+
+        if not v1_id or not v2_id:
+            return Response(
+                {"error": "Both 'v1' and 'v2' query parameters are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            version1 = doc.version_history.get(pk=v1_id)
+        except DocumentVersion.DoesNotExist:
+            return Response(
+                {"error": f"Version {v1_id} not found for this document."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            version2 = doc.version_history.get(pk=v2_id)
+        except DocumentVersion.DoesNotExist:
+            return Response(
+                {"error": f"Version {v2_id} not found for this document."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        def _get_version_content(ver):
+            """Return the text content for a version (comment + file comment fallback)."""
+            parts = []
+            if ver.comment:
+                parts.append(ver.comment)
+            if ver.file and ver.file.comment:
+                parts.append(ver.file.comment)
+            return "\n".join(parts) if parts else ""
+
+        content1 = _get_version_content(version1)
+        content2 = _get_version_content(version2)
+
+        # Generate side-by-side HTML diff
+        html_diff = difflib.HtmlDiff(wrapcolumn=80).make_table(
+            content1.splitlines(keepends=True),
+            content2.splitlines(keepends=True),
+            fromdesc=f"Version {version1.version_number}",
+            todesc=f"Version {version2.version_number}",
+            context=True,
+            numlines=3,
+        )
+
+        return Response(
+            {
+                "v1": DocumentVersionSerializer(version1).data,
+                "v2": DocumentVersionSerializer(version2).data,
+                "diff_html": html_diff,
+            }
+        )
 
     @action(detail=True, methods=["post"], url_path="files", parser_classes=[MultiPartParser])
     def upload_new_version(self, request, pk=None):

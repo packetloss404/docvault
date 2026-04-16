@@ -96,6 +96,17 @@ export class DocumentService {
     );
   }
 
+  compareVersions(
+    documentId: number,
+    v1: number,
+    v2: number,
+  ): Observable<{ v1: DocumentVersion; v2: DocumentVersion; diff_html: string }> {
+    return this.http.get<{ v1: DocumentVersion; v2: DocumentVersion; diff_html: string }>(
+      `${this.apiUrl}/${documentId}/versions/compare/`,
+      { params: { v1: String(v1), v2: String(v2) } },
+    );
+  }
+
   uploadNewVersion(
     documentId: number,
     file: File,

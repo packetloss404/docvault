@@ -161,3 +161,14 @@
 - After Sprint 1: 6 tabs (+Signatures)
 - After Sprint 2: 9 tabs (+AI, Zone OCR, Physical)
 - Sections added to Details tab: Comments, Checkout, Share, ML Suggestions, Relationships
+
+---
+
+## Sprint 3 — Deferred/WONTFIX Dispositions
+
+| Item | Decision | Rationale |
+|------|----------|-----------|
+| Mail OAuth refresh (E) | DEFERRED | Requires registered OAuth app credentials |
+| Visual workflow designer (I) | DEFERRED | Large frontend effort, separate epic |
+| User-facing docs tree (I) | DEFERRED | Content work, not code |
+| @angular/localize + locales (I) | DEFERRED | i18n groundwork documented in src/locale/README.md |
