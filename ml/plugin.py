@@ -66,7 +66,46 @@ class ClassificationPlugin(ProcessingPlugin):
             context.suggested_storage_path,
         )
 
+        # Persist suggestions to the Document record so they survive beyond the
+        # in-memory ProcessingContext and can be surfaced in the UI for review.
+        if context.document_id:
+            self._persist_suggestions(context)
+
         return PluginResult(
             success=True,
             message="Classification complete",
         )
+
+    def _persist_suggestions(self, context: ProcessingContext) -> None:
+        """Save suggested_* fields on the Document record."""
+        from documents.models import Document
+
+        update_fields = []
+        try:
+            doc = Document.objects.get(pk=context.document_id)
+        except Document.DoesNotExist:
+            logger.warning(
+                "ClassificationPlugin: document %s not found, cannot persist suggestions",
+                context.document_id,
+            )
+            return
+
+        if context.suggested_correspondent is not None:
+            doc.suggested_correspondent_id = context.suggested_correspondent
+            update_fields.append("suggested_correspondent")
+
+        if context.suggested_document_type is not None:
+            doc.suggested_document_type_id = context.suggested_document_type
+            update_fields.append("suggested_document_type")
+
+        if context.suggested_tags:
+            doc.suggested_tags = list(context.suggested_tags)
+            update_fields.append("suggested_tags")
+
+        if update_fields:
+            doc.save(update_fields=update_fields)
+            logger.debug(
+                "Persisted suggestions to document %s: fields=%s",
+                context.document_id,
+                update_fields,
+            )

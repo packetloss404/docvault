@@ -459,3 +459,13 @@ class DeclineSerializer(serializers.Serializer):
     reason = serializers.CharField(
         required=False, default="", allow_blank=True, max_length=1024,
     )
+
+
+class ExternalSignerVerifySerializer(serializers.Serializer):
+    """Serializer for POST /api/v1/esignatures/verify/
+
+    Accepts a signer token and a 6-digit verification code.
+    """
+
+    token = serializers.UUIDField()
+    code = serializers.CharField(min_length=1, max_length=6)

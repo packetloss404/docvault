@@ -113,6 +113,13 @@ class Document(SoftDeleteModel, AuditableModel, OwnedModel):
     # Legal hold
     is_held = models.BooleanField(default=False, db_index=True)
 
+    # Supersession
+    is_obsolete = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Set automatically when another document supersedes this one.",
+    )
+
     class Meta:
         ordering = ["-created"]
         indexes = [
@@ -146,6 +153,16 @@ class DocumentFile(AuditableModel):
     checksum = models.CharField(max_length=64, help_text="SHA-256 checksum.")
     size = models.PositiveBigIntegerField(default=0, help_text="File size in bytes.")
     comment = models.TextField(blank=True, default="")
+
+    # Link to content-addressed storage blob (Section M).
+    # Migration needed: add nullable FK column `blob_id` referencing storage_contentblob.
+    blob = models.ForeignKey(
+        "storage.ContentBlob",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        help_text="Link to content-addressed storage blob.",
+    )
 
     class Meta:
         ordering = ["-created_at"]

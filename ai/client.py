@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 
 from django.conf import settings
 
-from .constants import PROVIDER_OLLAMA, PROVIDER_OPENAI
+from .constants import PROVIDER_AZURE, PROVIDER_OLLAMA, PROVIDER_OPENAI
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +86,10 @@ def get_llm_client() -> LLMClient | None:
         from .providers.ollama_client import OllamaClient
 
         _client = OllamaClient()
+    elif provider == PROVIDER_AZURE:
+        from .providers.azure_client import AzureOpenAIClient
+
+        _client = AzureOpenAIClient()
     else:
         logger.warning("Unknown LLM provider: %s", provider)
         return None

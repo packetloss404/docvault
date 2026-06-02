@@ -25,6 +25,7 @@ from .engine import (
 from .models import SignatureAuditEvent, SignatureRequest, Signer
 from .serializers import (
     DeclineSerializer,
+    ExternalSignerVerifySerializer,
     PublicSigningSerializer,
     SignatureAuditEventSerializer,
     SignatureRequestCreateSerializer,
@@ -382,5 +383,74 @@ class PublicSigningDeclineView(APIView):
 
         return Response(
             {"status": "declined"},
+            status=status.HTTP_200_OK,
+        )
+
+
+class ExternalSignerVerifyView(APIView):
+    """POST /api/v1/esignatures/verify/
+
+    Verify an external signer's identity using a one-time 6-digit code.
+
+    Accepts { "token": "<signer-uuid>", "code": "<6-digit-code>" } and marks
+    the signer as verified=True when the code matches.
+
+    TODO: SMS provider integration needed — once a phone_number is present on
+    the Signer record, send the verification_code via SMS before this endpoint
+    is called (e.g. via Twilio or AWS SNS). For now, the code must be delivered
+    out-of-band (e.g. by email or manually shared).
+    """
+
+    permission_classes = []
+    authentication_classes = []
+    throttle_classes = [SigningRateThrottle]
+
+    def post(self, request):
+        serializer = ExternalSignerVerifySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        token = serializer.validated_data["token"]
+        code = serializer.validated_data["code"]
+
+        try:
+            signer = Signer.objects.select_related(
+                "request",
+            ).get(token=token)
+        except Signer.DoesNotExist:
+            # Return 400 (not 404) to avoid leaking token existence
+            return Response(
+                {"error": "Invalid token or code."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Check the request is still active
+        error_response = _check_request_active(signer)
+        if error_response:
+            return error_response
+
+        if signer.verified:
+            return Response(
+                {"status": "already_verified"},
+                status=status.HTTP_200_OK,
+            )
+
+        if not signer.verification_code or signer.verification_code != code:
+            logger.warning(
+                "Failed verification attempt for signer %d (token=%s)",
+                signer.pk,
+                str(token)[:8] + "...",
+            )
+            return Response(
+                {"error": "Invalid token or code."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        signer.verified = True
+        signer.save(update_fields=["verified"])
+
+        logger.info("Signer %d successfully verified (token=%s...)", signer.pk, str(token)[:8])
+
+        return Response(
+            {"status": "verified"},
             status=status.HTTP_200_OK,
         )
