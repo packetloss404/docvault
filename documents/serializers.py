@@ -22,7 +22,7 @@ class DocumentTypeSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "slug", "created_at", "updated_at"]
 
-    def get_document_count(self, obj):
+    def get_document_count(self, obj) -> int:
         return obj.documents.count()
 
 

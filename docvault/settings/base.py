@@ -198,7 +198,7 @@ REST_FRAMEWORK = {
         "anon": "20/minute",
         "user": "120/minute",
     },
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_SCHEMA_CLASS": "docvault.schema.DocVaultAutoSchema",
 }
 
 # drf-spectacular
@@ -207,6 +207,23 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "The Ultimate Open-Source Document Management System API",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
+    "ENUM_NAME_OVERRIDES": {
+        "TimeUnitEnum": "documents.constants.TIME_UNITS",
+        "DocumentMatchingAlgorithmEnum": "documents.constants.MATCHING_ALGORITHMS",
+        "WorkflowMatchingAlgorithmEnum": "workflows.constants.MATCHING_ALGORITHM_CHOICES",
+        "ProcessingTaskStatusEnum": [
+            ("pending", "Pending"),
+            ("started", "Started"),
+            ("success", "Success"),
+            ("failure", "Failure"),
+        ],
+        "SignatureRequestStatusEnum": "esignatures.constants.REQUEST_STATUS_CHOICES",
+        "SignerStatusEnum": "esignatures.constants.SIGNER_STATUS_CHOICES",
+        "PortalRequestStatusEnum": "portal.constants.REQUEST_STATUS_CHOICES",
+        "PortalSubmissionStatusEnum": "portal.constants.SUBMISSION_STATUS_CHOICES",
+        "LegalHoldStatusEnum": "legal_hold.constants.HOLD_STATUS_CHOICES",
+        "ChargeOutStatusEnum": "physical_records.constants.CHARGEOUT_STATUS_CHOICES",
+    },
 }
 
 # django-allauth

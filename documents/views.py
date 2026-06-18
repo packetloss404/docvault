@@ -54,6 +54,8 @@ class DocumentViewSet(viewsets.ModelViewSet):
     ordering = ["-created"]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Document.objects.none()
         user = self.request.user
         if user.is_superuser:
             return Document.objects.all()

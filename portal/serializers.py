@@ -107,7 +107,7 @@ class DocumentRequestSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-    def get_submission_count(self, obj):
+    def get_submission_count(self, obj) -> int:
         return obj.submissions.count()
 
 

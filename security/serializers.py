@@ -81,7 +81,7 @@ class GroupSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "user_count"]
         read_only_fields = ["id"]
 
-    def get_user_count(self, obj):
+    def get_user_count(self, obj) -> int:
         return obj.user_set.count()
 
 

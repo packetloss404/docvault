@@ -165,6 +165,8 @@ class SavedViewViewSet(viewsets.ModelViewSet):
     ordering = ["name"]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return SavedView.objects.none()
         return SavedView.objects.filter(owner=self.request.user)
 
     def get_serializer_class(self):

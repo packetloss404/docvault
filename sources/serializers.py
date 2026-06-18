@@ -58,7 +58,7 @@ class MailAccountSerializer(serializers.ModelSerializer):
             "password": {"write_only": True},
         }
 
-    def get_rule_count(self, obj):
+    def get_rule_count(self, obj) -> int:
         return obj.rules.count()
 
 

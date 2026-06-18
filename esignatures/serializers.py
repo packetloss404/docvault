@@ -150,10 +150,10 @@ class SignatureRequestSerializer(serializers.ModelSerializer):
             "created_by",
         ]
 
-    def get_signer_count(self, obj):
+    def get_signer_count(self, obj) -> int:
         return obj.signers.count()
 
-    def get_field_count(self, obj):
+    def get_field_count(self, obj) -> int:
         return obj.fields.count()
 
 
@@ -181,7 +181,7 @@ class SignatureRequestListSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = fields
 
-    def get_signer_count(self, obj):
+    def get_signer_count(self, obj) -> int:
         return obj.signers.count()
 
 

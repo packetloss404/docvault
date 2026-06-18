@@ -66,6 +66,8 @@ class ZoneOCRFieldListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return ZoneOCRField.objects.none()
         return ZoneOCRField.objects.filter(
             template_id=self.kwargs["template_id"],
         ).select_related("template", "custom_field")
@@ -106,6 +108,8 @@ class ZoneOCRResultListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return ZoneOCRResult.objects.none()
         qs = ZoneOCRResult.objects.select_related(
             "template", "field", "document", "reviewed_by",
         ).all()

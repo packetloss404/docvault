@@ -60,6 +60,8 @@ class EntityListView(ListAPIView):
         return EntitySerializer
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Entity.objects.none()
         permitted_documents = get_objects_for_user_with_ownership(
             self.request.user,
             "documents.view_document",
@@ -111,6 +113,8 @@ class DocumentEntityListView(ListAPIView):
     serializer_class = EntitySerializer
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Entity.objects.none()
         document = get_document_for_user(
             self.request.user,
             self.kwargs["document_id"],

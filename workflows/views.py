@@ -65,6 +65,8 @@ class WorkflowStateViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return WorkflowState.objects.none()
         return WorkflowState.objects.filter(
             workflow_id=self.kwargs["template_pk"]
         )
@@ -81,6 +83,8 @@ class WorkflowTransitionViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return WorkflowTransition.objects.none()
         return WorkflowTransition.objects.filter(
             workflow_id=self.kwargs["template_pk"]
         ).select_related("origin_state", "destination_state")
@@ -97,6 +101,8 @@ class WorkflowTransitionFieldViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return WorkflowTransitionField.objects.none()
         return WorkflowTransitionField.objects.filter(
             transition_id=self.kwargs["transition_pk"],
             transition__workflow_id=self.kwargs["template_pk"],
@@ -114,6 +120,8 @@ class WorkflowStateActionViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return WorkflowStateAction.objects.none()
         return WorkflowStateAction.objects.filter(
             state_id=self.kwargs["state_pk"],
             state__workflow_id=self.kwargs["template_pk"],
@@ -131,6 +139,8 @@ class WorkflowStateEscalationViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return WorkflowStateEscalation.objects.none()
         return WorkflowStateEscalation.objects.filter(
             state_id=self.kwargs["state_pk"],
             state__workflow_id=self.kwargs["template_pk"],
@@ -295,6 +305,8 @@ class WorkflowRuleTriggerViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return WorkflowTrigger.objects.none()
         return WorkflowTrigger.objects.filter(
             rules=self.kwargs["rule_pk"],
         )
@@ -313,6 +325,8 @@ class WorkflowRuleActionViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return WorkflowAction.objects.none()
         return WorkflowAction.objects.filter(
             rules=self.kwargs["rule_pk"],
         )

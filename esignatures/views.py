@@ -77,6 +77,8 @@ class SignatureRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return SignatureRequest.objects.none()
         return (
             SignatureRequest.objects
             .filter(created_by=self.request.user)

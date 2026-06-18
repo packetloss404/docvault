@@ -26,7 +26,7 @@ class PhysicalLocationSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "current_count"]
 
-    def get_children_count(self, obj):
+    def get_children_count(self, obj) -> int:
         return obj.get_children().count()
 
 
@@ -57,7 +57,7 @@ class PhysicalLocationTreeSerializer(serializers.ModelSerializer):
         children = obj.get_children()
         return PhysicalLocationTreeSerializer(children, many=True).data
 
-    def get_children_count(self, obj):
+    def get_children_count(self, obj) -> int:
         return obj.get_children().count()
 
 
@@ -90,12 +90,12 @@ class PhysicalRecordSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-    def get_location_name(self, obj):
+    def get_location_name(self, obj) -> str:
         if obj.location:
             return str(obj.location)
         return ""
 
-    def get_document_title(self, obj):
+    def get_document_title(self, obj) -> str:
         return obj.document.title
 
 

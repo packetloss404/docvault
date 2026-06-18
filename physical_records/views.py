@@ -75,6 +75,8 @@ class PhysicalRecordViewSet(viewsets.ModelViewSet):
     ordering = ["-created_at"]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return PhysicalRecord.objects.none()
         action = "change" if self.action in {"update", "partial_update", "destroy"} else "view"
         return _permitted_physical_records(self.request.user, action=action)
 

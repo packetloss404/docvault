@@ -73,7 +73,7 @@ class ZoneOCRTemplateSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at", "updated_at", "created_by", "updated_by"]
 
-    def get_field_count(self, obj):
+    def get_field_count(self, obj) -> int:
         return obj.fields.count()
 
 
@@ -96,7 +96,7 @@ class ZoneOCRTemplateListSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
-    def get_field_count(self, obj):
+    def get_field_count(self, obj) -> int:
         return obj.fields.count()
 
 

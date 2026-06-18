@@ -110,13 +110,13 @@ class LegalHoldSerializer(serializers.ModelSerializer):
             "updated_by",
         ]
 
-    def get_criteria_count(self, obj):
+    def get_criteria_count(self, obj) -> int:
         return obj.criteria.count()
 
-    def get_custodian_count(self, obj):
+    def get_custodian_count(self, obj) -> int:
         return obj.custodians.count()
 
-    def get_document_count(self, obj):
+    def get_document_count(self, obj) -> int:
         return obj.held_documents.count()
 
 
@@ -141,10 +141,10 @@ class LegalHoldListSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = fields
 
-    def get_document_count(self, obj):
+    def get_document_count(self, obj) -> int:
         return obj.held_documents.count()
 
-    def get_custodian_count(self, obj):
+    def get_custodian_count(self, obj) -> int:
         return obj.custodians.count()
 
 

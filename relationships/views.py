@@ -5,6 +5,7 @@ from collections import deque
 
 from django.db.models import Q
 from django.http import Http404
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -31,6 +32,10 @@ class RelationshipTypeListCreateView(APIView):
 
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(
+        operation_id="api_v1_relationship_types_list",
+        responses=RelationshipTypeSerializer(many=True),
+    )
     def get(self, request):
         types = RelationshipType.objects.all()
         serializer = RelationshipTypeSerializer(types, many=True)
@@ -69,6 +74,10 @@ class RelationshipTypeDetailView(APIView):
         except RelationshipType.DoesNotExist:
             raise Http404("Relationship type not found.")
 
+    @extend_schema(
+        operation_id="api_v1_relationship_types_retrieve",
+        responses=RelationshipTypeSerializer,
+    )
     def get(self, request, pk):
         rel_type = self._get_object(pk)
         return Response(RelationshipTypeSerializer(rel_type).data)

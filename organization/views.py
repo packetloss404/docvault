@@ -202,6 +202,8 @@ class CustomFieldInstanceViewSet(viewsets.ModelViewSet):
     ordering = ["field__name"]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return CustomFieldInstance.objects.none()
         action = _document_action_for_viewset_action(self.action)
         qs = CustomFieldInstance.objects.select_related("field", "document")
         doc_id = self.kwargs.get("document_pk")
@@ -260,6 +262,8 @@ class DocumentMetadataViewSet(viewsets.ModelViewSet):
     ordering = ["metadata_type__name"]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return DocumentMetadata.objects.none()
         action = _document_action_for_viewset_action(self.action)
         qs = DocumentMetadata.objects.select_related("metadata_type", "document")
         doc_id = self.kwargs.get("document_pk")
