@@ -14,7 +14,6 @@ from sources.constants import (
     MAIL_PROCESSED_FLAG,
     MAIL_PROCESSED_MOVE,
     MAIL_PROCESSED_READ,
-    MAIL_SECURITY_NONE,
     MAIL_SECURITY_SSL,
     MAIL_SECURITY_STARTTLS,
 )
@@ -207,8 +206,9 @@ def _submit_to_pipeline(filename, content, rule):
     # Create processing task
     ProcessingTask.objects.create(
         task_id=task_id,
-        filename=filename,
-        user_id=rule.owner_id,
+        task_name="document_consumption",
+        owner_id=rule.owner_id,
+        status_message="Queued mail attachment for processing",
     )
 
     overrides = {}
@@ -223,6 +223,7 @@ def _submit_to_pipeline(filename, content, rule):
         task_id,
         rule.owner_id,
         **overrides,
+        cleanup_source_path=True,
     )
 
 

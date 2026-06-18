@@ -4,9 +4,8 @@ from unittest.mock import MagicMock
 
 from django.contrib.auth.models import User
 from django.test import TestCase
-from rest_framework.test import APIRequestFactory
-
 from guardian.shortcuts import assign_perm
+from rest_framework.test import APIRequestFactory
 
 from documents.models import Document
 from security.permissions import (

@@ -5,7 +5,7 @@ from django.db import models
 
 from core.models import AuditableModel
 
-from .constants import FIELD_TYPE_CHOICES, PREPROCESSING_CHOICES, PREPROCESS_NONE
+from .constants import FIELD_TYPE_CHOICES, PREPROCESS_NONE, PREPROCESSING_CHOICES
 
 
 class ZoneOCRTemplate(AuditableModel):

@@ -15,6 +15,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class CollaborationService {
   private baseUrl = environment.apiUrl;
+  readonly apiBaseUrl = environment.apiUrl;
 
   constructor(private http: HttpClient) {}
 

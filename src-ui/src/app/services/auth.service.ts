@@ -32,7 +32,11 @@ export class AuthService {
   login(credentials: LoginRequest): Observable<LoginResponse> {
     return this.http
       .post<LoginResponse>(`${this.apiUrl}/auth/login/`, credentials)
-      .pipe(tap((res) => this.setToken(res.token)));
+      .pipe(tap((res) => {
+        if (res.token) {
+          this.setToken(res.token);
+        }
+      }));
   }
 
   register(data: RegisterRequest): Observable<RegisterResponse> {

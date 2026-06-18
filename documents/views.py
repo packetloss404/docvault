@@ -9,7 +9,7 @@ import zipfile
 from pathlib import Path
 
 from django.http import FileResponse, Http404, HttpResponse, StreamingHttpResponse
-from rest_framework import permissions, serializers, status, viewsets
+from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
@@ -18,9 +18,11 @@ from rest_framework.views import APIView
 from security.permissions import (
     DocVaultObjectPermissions,
     IsAdminOrReadOnly,
+    get_document_for_user,
     get_objects_for_user_with_ownership,
 )
 
+from .downloads import build_document_file_response
 from .filters import DocumentFilterSet
 from .models import Document, DocumentFile, DocumentType, DocumentVersion
 from .serializers import (
@@ -99,7 +101,12 @@ class DocumentViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def restore(self, request, pk=None):
         """Restore a soft-deleted document."""
-        doc = Document.all_objects.get(pk=pk)
+        doc = get_document_for_user(
+            request.user,
+            pk,
+            action="change",
+            queryset=Document.all_objects.all(),
+        )
         doc.restore()
         return Response(DocumentSerializer(doc).data)
 
@@ -148,54 +155,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
         """Download the document file (original or archive version)."""
         doc = self.get_object()
         version = request.query_params.get("version", "original")
-
-        from storage.utils import get_storage_backend
-        backend = get_storage_backend()
-
-        if version == "archive" and doc.archive_filename:
-            storage_name = doc.archive_filename
-            content_type = "application/pdf"
-            download_name = Path(doc.original_filename).stem + ".pdf"
-        elif doc.filename:
-            storage_name = doc.filename
-            content_type = doc.mime_type or "application/octet-stream"
-            download_name = doc.original_filename
-        else:
-            raise Http404("No file available for this document.")
-
-        if not backend.exists(storage_name):
-            raise Http404("File not found in storage.")
-
-        # Checksum verification
-        expected_checksum = (
-            doc.archive_checksum if version == "archive" else doc.checksum
-        )
-        if expected_checksum:
-            file_handle = backend.open(storage_name)
-            sha256 = hashlib.sha256()
-            for chunk in iter(lambda: file_handle.read(65536), b""):
-                sha256.update(chunk)
-            actual_checksum = sha256.hexdigest()
-            file_handle.close()
-
-            if actual_checksum != expected_checksum:
-                logger.error(
-                    "Checksum mismatch for document %s (%s): expected %s, got %s",
-                    doc.pk, version, expected_checksum, actual_checksum,
-                )
-                return Response(
-                    {"error": "File integrity check failed."},
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                )
-
-        file_handle = backend.open(storage_name)
-        response = FileResponse(
-            file_handle,
-            content_type=content_type,
-            as_attachment=True,
-            filename=download_name,
-        )
-        return response
+        return build_document_file_response(doc, version)
 
     @action(detail=True, methods=["get"], url_path="versions")
     def versions(self, request, pk=None):
@@ -443,9 +403,9 @@ class DocumentViewSet(viewsets.ModelViewSet):
             )
 
         asn_value = str(doc.archive_serial_number)
-        Code128 = barcode.get_barcode_class("code128")
+        code128 = barcode.get_barcode_class("code128")
         buffer = io.BytesIO()
-        Code128(asn_value, writer=ImageWriter()).write(buffer)
+        code128(asn_value, writer=ImageWriter()).write(buffer)
         buffer.seek(0)
 
         return HttpResponse(buffer.read(), content_type="image/png")
@@ -476,7 +436,8 @@ class DocumentUploadView(APIView):
 
         # Save to a temp file
         temp_dir = Path(tempfile.mkdtemp(prefix="docvault_"))
-        temp_path = temp_dir / file.name
+        original_filename = Path(file.name).name
+        temp_path = temp_dir / original_filename
         with open(temp_path, "wb") as f:
             for chunk in file.chunks():
                 f.write(chunk)
@@ -493,12 +454,15 @@ class DocumentUploadView(APIView):
         from processing.tasks import consume_document
         consume_document.delay(
             source_path=str(temp_path),
-            original_filename=file.name,
+            original_filename=original_filename,
             task_id=str(task.task_id),
             user_id=request.user.id,
             override_title=request.data.get("title"),
             override_document_type=request.data.get("document_type"),
+            override_correspondent=request.data.get("correspondent"),
             override_tags=request.data.get("tags"),
+            override_storage_path=request.data.get("storage_path"),
+            cleanup_source_path=True,
         )
 
         return Response(

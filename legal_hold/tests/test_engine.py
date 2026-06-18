@@ -11,7 +11,6 @@ from legal_hold.constants import (
     CUSTODIAN,
     DATE_RANGE,
     DOCUMENT_TYPE,
-    DRAFT,
     RELEASED,
     SEARCH_QUERY,
     SPECIFIC_DOCUMENTS,

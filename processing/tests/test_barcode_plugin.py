@@ -135,6 +135,7 @@ class BarcodePluginTest(TestCase):
     def test_process_skips_duplicate_asn(self, mock_scan):
         """Should not set override_asn when the ASN already exists in the DB."""
         from django.contrib.auth.models import User
+
         from documents.models import Document
 
         user = User.objects.create_user(

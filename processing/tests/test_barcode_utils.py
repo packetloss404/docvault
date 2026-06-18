@@ -1,7 +1,7 @@
 """Tests for barcode scanning and processing utilities."""
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings

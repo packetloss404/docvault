@@ -14,6 +14,11 @@ def user(db):
 
 
 @pytest.fixture
+def other_user(db):
+    return User.objects.create_user("otheruser", "other@example.com", "pass123")
+
+
+@pytest.fixture
 def auth_client(user):
     client = APIClient()
     client.force_authenticate(user=user)
@@ -138,6 +143,22 @@ class TestBulkDelete:
         assert response.data["affected"] == 2
         # Third document should still exist
         assert Document.objects.filter(pk=documents[2].pk).exists()
+
+    @pytest.mark.django_db
+    def test_bulk_delete_rejects_unowned_documents(self, auth_client, other_user):
+        other_doc = Document.objects.create(
+            title="Other Doc",
+            filename="other.pdf",
+            mime_type="application/pdf",
+            owner=other_user,
+        )
+        response = auth_client.post(
+            "/api/v1/bulk/",
+            {"action": "delete", "document_ids": [other_doc.pk]},
+            format="json",
+        )
+        assert response.status_code == 404
+        assert Document.objects.filter(pk=other_doc.pk).exists()
 
 
 class TestBulkAddTags:

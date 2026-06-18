@@ -3,17 +3,18 @@
 import logging
 from datetime import timedelta
 
+from django.core import signing
 from django.http import Http404
 from django.utils import timezone
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from documents.models import Document
+from documents.downloads import build_document_file_response
+from security.permissions import get_document_for_user
 
 from .models import Checkout, Comment, ShareLink
 from .serializers import (
-    ActivityEntrySerializer,
     CheckoutRequestSerializer,
     CheckoutSerializer,
     CommentCreateSerializer,
@@ -34,15 +35,13 @@ class DocumentCommentListView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, pk):
-        comments = Comment.objects.filter(document_id=pk).select_related("user")
+        document = get_document_for_user(request.user, pk, action="view")
+        comments = Comment.objects.filter(document=document).select_related("user")
         serializer = CommentSerializer(comments, many=True)
         return Response(serializer.data)
 
     def post(self, request, pk):
-        try:
-            document = Document.objects.get(pk=pk)
-        except Document.DoesNotExist:
-            raise Http404("Document not found.")
+        document = get_document_for_user(request.user, pk, action="view")
 
         serializer = CommentCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -66,6 +65,7 @@ class DocumentCommentDetailView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def patch(self, request, pk, cid):
+        get_document_for_user(request.user, pk, action="view")
         try:
             comment = Comment.objects.get(pk=cid, document_id=pk)
         except Comment.DoesNotExist:
@@ -85,6 +85,7 @@ class DocumentCommentDetailView(APIView):
         return Response(CommentSerializer(comment).data)
 
     def delete(self, request, pk, cid):
+        get_document_for_user(request.user, pk, action="view")
         try:
             comment = Comment.objects.get(pk=cid, document_id=pk)
         except Comment.DoesNotExist:
@@ -109,10 +110,7 @@ class DocumentCheckoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk):
-        try:
-            document = Document.objects.get(pk=pk)
-        except Document.DoesNotExist:
-            raise Http404("Document not found.")
+        document = get_document_for_user(request.user, pk, action="change")
 
         if hasattr(document, "checkout"):
             existing = document.checkout
@@ -152,10 +150,7 @@ class DocumentCheckinView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk):
-        try:
-            document = Document.objects.get(pk=pk)
-        except Document.DoesNotExist:
-            raise Http404("Document not found.")
+        document = get_document_for_user(request.user, pk, action="view")
 
         try:
             checkout = document.checkout
@@ -186,10 +181,7 @@ class DocumentCheckoutStatusView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, pk):
-        try:
-            document = Document.objects.get(pk=pk)
-        except Document.DoesNotExist:
-            raise Http404("Document not found.")
+        document = get_document_for_user(request.user, pk, action="view")
 
         try:
             checkout = document.checkout
@@ -215,10 +207,7 @@ class DocumentShareCreateView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk):
-        try:
-            document = Document.objects.get(pk=pk)
-        except Document.DoesNotExist:
-            raise Http404("Document not found.")
+        document = get_document_for_user(request.user, pk, action="change")
 
         serializer = ShareLinkCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -294,14 +283,12 @@ class PublicShareAccessView(APIView):
                 "document_title": link.document.title,
             })
 
-        link.download_count += 1
-        link.save(update_fields=["download_count"])
-
         return Response({
             "document_id": link.document.pk,
             "document_title": link.document.title,
             "file_version": link.file_version,
             "download_count": link.download_count,
+            "download_url": f"/api/v1/share/{link.slug}/download/",
         })
 
     def post(self, request, slug):
@@ -320,16 +307,61 @@ class PublicShareAccessView(APIView):
                 {"error": "Invalid password."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-
-        link.download_count += 1
-        link.save(update_fields=["download_count"])
+        token = signing.dumps(
+            {"share_link_id": link.pk},
+            salt="docvault.public-share",
+        )
 
         return Response({
             "document_id": link.document.pk,
             "document_title": link.document.title,
             "file_version": link.file_version,
             "download_count": link.download_count,
+            "download_url": f"/api/v1/share/{link.slug}/download/",
+            "download_token": token,
         })
+
+
+class PublicShareDownloadView(APIView):
+    """GET /api/v1/share/{slug}/download/ — Download a public share file."""
+
+    permission_classes = []
+    authentication_classes = []
+
+    def get(self, request, slug):
+        try:
+            link = ShareLink.objects.select_related("document").get(slug=slug)
+        except ShareLink.DoesNotExist:
+            raise Http404("Share link not found.")
+
+        if link.is_expired:
+            raise Http404("This share link has expired.")
+
+        if link.has_password:
+            token = request.query_params.get("token", "")
+            try:
+                payload = signing.loads(
+                    token,
+                    salt="docvault.public-share",
+                    max_age=3600,
+                )
+            except signing.BadSignature:
+                return Response(
+                    {"error": "Password verification required."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            if payload.get("share_link_id") != link.pk:
+                return Response(
+                    {"error": "Invalid share token."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+        response = build_document_file_response(link.document, link.file_version)
+        if getattr(response, "status_code", 200) < 400:
+            link.download_count += 1
+            link.save(update_fields=["download_count"])
+        return response
 
 
 # --- Activity Feed ---
@@ -341,10 +373,7 @@ class DocumentActivityView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, pk):
-        try:
-            document = Document.objects.get(pk=pk)
-        except Document.DoesNotExist:
-            raise Http404("Document not found.")
+        document = get_document_for_user(request.user, pk, action="view")
 
         from notifications.models import Notification
 

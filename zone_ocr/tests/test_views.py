@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
 from documents.models import Document
-from zone_ocr.constants import FIELD_DATE, FIELD_INTEGER, FIELD_STRING, PREPROCESS_NONE
+from zone_ocr.constants import FIELD_INTEGER, FIELD_STRING
 from zone_ocr.models import ZoneOCRField, ZoneOCRResult, ZoneOCRTemplate
 
 

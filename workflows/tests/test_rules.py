@@ -1,6 +1,6 @@
 """Tests for workflow trigger-action rules."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -13,10 +13,7 @@ from workflows.constants import (
     ACTION_REMOVE_TAG,
     ACTION_SEND_EMAIL,
     ACTION_SET_CORRESPONDENT,
-    ACTION_SET_CUSTOM_FIELD,
-    ACTION_SET_STORAGE_PATH,
     ACTION_SET_TYPE,
-    ACTION_WEBHOOK,
     MATCH_ALL,
     MATCH_ANY,
     MATCH_FUZZY,

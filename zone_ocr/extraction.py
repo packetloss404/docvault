@@ -18,7 +18,6 @@ from .constants import (
     FIELD_FLOAT,
     FIELD_INTEGER,
     FIELD_MONETARY,
-    FIELD_STRING,
     PREPROCESS_ALPHA_ONLY,
     PREPROCESS_CURRENCY_PARSE,
     PREPROCESS_DATE_PARSE,
@@ -179,8 +178,6 @@ def extract_field_value(image, bounding_box, field_type, preprocessing):
         return "", 0.0
 
     try:
-        from PIL import Image  # noqa: F811
-
         # Crop the bounding box region
         img_width, img_height = image.size
         x = int(bounding_box.get("x", 0) / 100 * img_width)

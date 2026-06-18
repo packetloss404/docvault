@@ -7,13 +7,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from django.contrib.auth.models import User
-from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APIClient
 
 from documents.models import Document, DocumentType
-from security.models import AuditLogEntry, OTPDevice, Signature, log_audit_event
-
+from security.models import OTPDevice, Signature, log_audit_event
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -30,6 +28,15 @@ def user(db):
     return User.objects.create_user(
         username="testuser",
         email="test@example.com",
+        password="testpass123!",
+    )
+
+
+@pytest.fixture
+def other_user(db):
+    return User.objects.create_user(
+        username="otheruser",
+        email="other@example.com",
         password="testpass123!",
     )
 
@@ -368,6 +375,23 @@ class TestDocumentSignView:
         resp = authed_client.post("/api/v1/documents/99999/sign/")
         assert resp.status_code == status.HTTP_404_NOT_FOUND
 
+    @patch("security.signing.sign_data")
+    @patch("storage.utils.get_storage_backend")
+    def test_sign_unowned_document_returns_404(
+        self, mock_get_backend, mock_sign, authed_client, other_user
+    ):
+        document = Document.objects.create(
+            title="Private Doc",
+            filename="private.pdf",
+            owner=other_user,
+        )
+
+        resp = authed_client.post(f"/api/v1/documents/{document.pk}/sign/")
+
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+        mock_get_backend.assert_not_called()
+        mock_sign.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # Document Signatures List
@@ -409,7 +433,7 @@ class TestDocumentVerifyView:
     @patch("security.signing.verify_signature")
     @patch("storage.utils.get_storage_backend")
     def test_verify_success(self, mock_get_backend, mock_verify, authed_client, document, user):
-        sig = Signature.objects.create(
+        Signature.objects.create(
             document=document,
             signer=user,
             signature_data="sig-data",

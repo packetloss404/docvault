@@ -5,11 +5,9 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from documents.models import Document, DocumentType
+from documents.models import Document
 from workflows.engine import launch
 from workflows.models import (
-    WorkflowInstance,
-    WorkflowInstanceLogEntry,
     WorkflowState,
     WorkflowStateAction,
     WorkflowStateEscalation,

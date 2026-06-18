@@ -47,6 +47,7 @@ class ProcessingContext:
     override_title: str | None = None
     override_correspondent: int | None = None
     override_document_type: int | None = None
+    override_storage_path: int | None = None
     override_tags: list | None = None
     override_owner: int | None = None
     override_asn: int | None = None

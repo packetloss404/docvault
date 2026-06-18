@@ -2,9 +2,7 @@
 
 import io
 import os
-import struct
-import tempfile
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from django.test import override_settings
@@ -12,15 +10,17 @@ from django.test import override_settings
 from storage.backends.base import StorageBackend
 from storage.backends.encrypted import (
     CHUNK_SIZE,
-    IV_SIZE,
+    MAGIC,
+    NONCE_SIZE,
     SALT_SIZE,
+    TAG_SIZE,
     EncryptedStorageBackend,
+    _encrypt_legacy_cbc_stream,
     _pad,
     _unpad,
     decrypt_stream,
     encrypt_stream,
 )
-
 
 # ---------------------------------------------------------------------------
 # PKCS7 padding tests
@@ -106,12 +106,12 @@ class TestEncryptDecryptStream:
         assert decrypted.read() == plaintext
 
     @override_settings(STORAGE_ENCRYPTION_KDF_ITERATIONS=1000)
-    def test_encrypted_output_starts_with_salt_and_iv(self):
+    def test_encrypted_output_starts_with_versioned_header(self):
         stream = io.BytesIO(b"test data")
         encrypted = encrypt_stream(stream, "key")
         raw = encrypted.read()
-        # Must have at least salt + iv + one encrypted block
-        assert len(raw) >= SALT_SIZE + IV_SIZE + 16
+        assert raw.startswith(MAGIC)
+        assert len(raw) >= len(MAGIC) + SALT_SIZE + NONCE_SIZE + TAG_SIZE
 
     @override_settings(STORAGE_ENCRYPTION_KDF_ITERATIONS=1000)
     def test_different_encryptions_produce_different_output(self):
@@ -125,12 +125,22 @@ class TestEncryptDecryptStream:
     def test_wrong_passphrase_fails(self):
         plaintext = b"secret data that should not be recoverable with wrong key"
         encrypted = encrypt_stream(io.BytesIO(plaintext), "correct-key")
-        try:
-            result = decrypt_stream(encrypted, "wrong-key").read()
-            # If decryption didn't raise, the output must differ from plaintext
-            assert result != plaintext, "Wrong key must not produce correct plaintext"
-        except (ValueError, Exception):
-            pass  # Expected: decryption error with wrong key
+        with pytest.raises(ValueError, match="authentication failed"):
+            decrypt_stream(encrypted, "wrong-key").read()
+
+    @override_settings(STORAGE_ENCRYPTION_KDF_ITERATIONS=1000)
+    def test_tampered_ciphertext_raises(self):
+        encrypted = bytearray(encrypt_stream(io.BytesIO(b"do not tamper"), "key").read())
+        encrypted[-1] ^= 0x01
+        with pytest.raises(ValueError, match="authentication failed"):
+            decrypt_stream(io.BytesIO(encrypted), "key").read()
+
+    @override_settings(STORAGE_ENCRYPTION_KDF_ITERATIONS=1000)
+    def test_legacy_cbc_ciphertext_still_decrypts(self):
+        plaintext = b"legacy encrypted content"
+        encrypted = _encrypt_legacy_cbc_stream(io.BytesIO(plaintext), "legacy-key")
+        decrypted = decrypt_stream(encrypted, "legacy-key")
+        assert decrypted.read() == plaintext
 
     @override_settings(STORAGE_ENCRYPTION_KDF_ITERATIONS=1000)
     def test_truncated_ciphertext_raises(self):

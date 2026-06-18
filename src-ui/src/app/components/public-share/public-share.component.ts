@@ -4,7 +4,6 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { CollaborationService } from '../../services/collaboration.service';
 import { PublicShareAccess } from '../../models/collaboration.model';
-import { environment } from '../../../environments/environment';
 
 @Component({
   selector: 'app-public-share',
@@ -155,10 +154,14 @@ export class PublicShareComponent implements OnInit {
   }
 
   getDownloadUrl(): string {
-    const docId = this.shareData()?.document_id;
-    if (docId) {
-      return `${environment.apiUrl}/documents/${docId}/download/`;
+    const data = this.shareData();
+    if (!data?.download_url) {
+      return '#';
     }
-    return '#';
+
+    const token = data.download_token
+      ? `?token=${encodeURIComponent(data.download_token)}`
+      : '';
+    return `${this.collaborationService.apiBaseUrl}${data.download_url.replace(/^\/api\/v1/, '')}${token}`;
   }
 }

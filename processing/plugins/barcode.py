@@ -48,14 +48,12 @@ class BarcodePlugin(ProcessingPlugin):
             extract_asn,
             extract_tags,
             find_separator_pages,
-            get_barcode_settings,
             scan_page_for_barcodes,
             scan_pdf_for_barcodes,
             split_pdf_at_separators,
         )
 
         self.update_progress(context, 0.03, "Scanning for barcodes...")
-        conf = get_barcode_settings()
 
         # Scan for barcodes
         if context.mime_type == "application/pdf":

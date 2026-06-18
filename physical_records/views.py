@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from documents.models import Document
+from security.permissions import get_document_for_user, get_objects_for_user_with_ownership
 
 from .constants import CHECKED_OUT, RETURNED
 from .models import ChargeOut, DestructionCertificate, PhysicalLocation, PhysicalRecord
@@ -27,6 +28,20 @@ from .serializers import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _permitted_documents(user, action="view"):
+    return get_objects_for_user_with_ownership(
+        user,
+        f"documents.{action}_document",
+        Document.objects.all(),
+    )
+
+
+def _permitted_physical_records(user, action="view"):
+    return PhysicalRecord.objects.select_related("document", "location").filter(
+        document__in=_permitted_documents(user, action=action)
+    )
 
 
 class PhysicalLocationViewSet(viewsets.ModelViewSet):
@@ -54,11 +69,14 @@ class PhysicalLocationViewSet(viewsets.ModelViewSet):
 class PhysicalRecordViewSet(viewsets.ModelViewSet):
     """CRUD operations for PhysicalRecord."""
 
-    queryset = PhysicalRecord.objects.select_related("document", "location").all()
     permission_classes = [permissions.IsAuthenticated]
     search_fields = ["barcode", "document__title", "notes"]
     ordering_fields = ["created_at", "condition"]
     ordering = ["-created_at"]
+
+    def get_queryset(self):
+        action = "change" if self.action in {"update", "partial_update", "destroy"} else "view"
+        return _permitted_physical_records(self.request.user, action=action)
 
     def get_serializer_class(self):
         if self.action in ("create", "update", "partial_update"):
@@ -66,6 +84,11 @@ class PhysicalRecordViewSet(viewsets.ModelViewSet):
         return PhysicalRecordSerializer
 
     def perform_create(self, serializer):
+        get_document_for_user(
+            self.request.user,
+            serializer.validated_data["document"].pk,
+            action="change",
+        )
         instance = serializer.save(
             created_by=self.request.user,
             updated_by=self.request.user,
@@ -77,6 +100,12 @@ class PhysicalRecordViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         old_location = self.get_object().location
+        if "document" in serializer.validated_data:
+            get_document_for_user(
+                self.request.user,
+                serializer.validated_data["document"].pk,
+                action="change",
+            )
         instance = serializer.save(updated_by=self.request.user)
         # Update old location count
         if old_location and old_location != instance.location:
@@ -94,7 +123,7 @@ class ChargeOutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, document_id):
-        document = get_object_or_404(Document, pk=document_id)
+        document = get_document_for_user(request.user, document_id, action="change")
         physical_record = get_object_or_404(PhysicalRecord, document=document)
 
         # Check if already checked out
@@ -136,7 +165,7 @@ class ChargeInView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, document_id):
-        document = get_object_or_404(Document, pk=document_id)
+        document = get_document_for_user(request.user, document_id, action="change")
         physical_record = get_object_or_404(PhysicalRecord, document=document)
 
         active_checkout = physical_record.charge_outs.filter(
@@ -174,7 +203,10 @@ class BarcodeCheckoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk):
-        physical_record = get_object_or_404(PhysicalRecord, pk=pk)
+        physical_record = get_object_or_404(
+            _permitted_physical_records(request.user, action="change"),
+            pk=pk,
+        )
 
         serializer = BarcodeCheckoutSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -225,8 +257,8 @@ class ChargeOutListView(APIView):
 
     def get(self, request):
         queryset = ChargeOut.objects.select_related(
-            "physical_record", "user"
-        ).all()
+            "physical_record", "physical_record__document", "user"
+        ).filter(physical_record__document__in=_permitted_documents(request.user))
 
         # Filter by status
         charge_status = request.query_params.get("status")
@@ -250,8 +282,9 @@ class OverdueChargeOutView(APIView):
     def get(self, request):
         now = timezone.now()
         queryset = ChargeOut.objects.select_related(
-            "physical_record", "user"
+            "physical_record", "physical_record__document", "user"
         ).filter(
+            physical_record__document__in=_permitted_documents(request.user),
             status=CHECKED_OUT,
             expected_return__lt=now,
         )
@@ -266,7 +299,10 @@ class DestructionCertificateView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk):
-        physical_record = get_object_or_404(PhysicalRecord, pk=pk)
+        physical_record = get_object_or_404(
+            _permitted_physical_records(request.user, action="change"),
+            pk=pk,
+        )
 
         serializer = DestructionCertificateCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

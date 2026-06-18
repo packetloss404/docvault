@@ -38,16 +38,33 @@
           />
         </div>
 
+        @if (otpRequired) {
+          <div class="mb-3">
+            <label for="otpCode" class="form-label">Authenticator code</label>
+            <input
+              type="text"
+              class="form-control"
+              id="otpCode"
+              [(ngModel)]="otpCode"
+              name="otpCode"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              required
+              autofocus
+            />
+          </div>
+        }
+
         <button
           type="submit"
           class="btn btn-primary w-100"
-          [disabled]="loading || !username || !password"
+          [disabled]="loading || !username || !password || (otpRequired && !otpCode)"
         >
           @if (loading) {
             <span class="spinner-border spinner-border-sm me-1" role="status"></span>
             Signing in...
           } @else {
-            Sign in
+            {{ otpRequired ? 'Verify code' : 'Sign in' }}
           }
         </button>
       </form>

@@ -1,12 +1,17 @@
 """Views for the entities app."""
 
 from django.db.models import Count, F
-from rest_framework import permissions, status, viewsets
+from rest_framework import permissions, viewsets
 from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from documents.models import Document
 from documents.serializers import DocumentListSerializer
+from security.permissions import (
+    get_document_for_user,
+    get_objects_for_user_with_ownership,
+)
 
 from .models import Entity, EntityType
 from .serializers import (
@@ -55,7 +60,14 @@ class EntityListView(ListAPIView):
         return EntitySerializer
 
     def get_queryset(self):
-        qs = Entity.objects.select_related("entity_type")
+        permitted_documents = get_objects_for_user_with_ownership(
+            self.request.user,
+            "documents.view_document",
+            Document.objects.all(),
+        )
+        qs = Entity.objects.select_related("entity_type").filter(
+            document__in=permitted_documents,
+        )
 
         document_id = self.request.query_params.get("document_id")
         if document_id:
@@ -99,9 +111,14 @@ class DocumentEntityListView(ListAPIView):
     serializer_class = EntitySerializer
 
     def get_queryset(self):
+        document = get_document_for_user(
+            self.request.user,
+            self.kwargs["document_id"],
+            "view",
+        )
         return (
             Entity.objects
-            .filter(document_id=self.kwargs["document_id"])
+            .filter(document=document)
             .select_related("entity_type")
         )
 
@@ -116,19 +133,17 @@ class EntityDocumentsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, entity_type, value):
-        from documents.models import Document
-
         document_ids = (
             Entity.objects
             .filter(entity_type__name=entity_type, value=value)
             .values_list("document_id", flat=True)
             .distinct()
         )
-        documents = Document.objects.filter(pk__in=document_ids)
-
-        # Permission: non-superusers only see their own documents.
-        if not request.user.is_superuser:
-            documents = documents.filter(owner=request.user)
+        documents = get_objects_for_user_with_ownership(
+            request.user,
+            "documents.view_document",
+            Document.objects.filter(pk__in=document_ids),
+        )
 
         serializer = DocumentListSerializer(documents, many=True)
         return Response(serializer.data)

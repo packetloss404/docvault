@@ -74,7 +74,7 @@ class DocumentClassifier:
 
         from documents.constants import MATCH_AUTO
         from documents.models import Document
-        from organization.models import Correspondent, StoragePath, Tag
+        from organization.models import Tag
 
         metrics = {
             "tags": None,
@@ -109,7 +109,7 @@ class DocumentClassifier:
                     vectorizer = CountVectorizer(
                         ngram_range=(1, 2), min_df=0.01, max_df=0.95,
                     )
-                    X = vectorizer.fit_transform(contents)
+                    features = vectorizer.fit_transform(contents)
 
                     binarizer = MultiLabelBinarizer()
                     y = binarizer.fit_transform(labels)
@@ -120,7 +120,7 @@ class DocumentClassifier:
                         random_state=42,
                         early_stopping=True,
                     )
-                    clf.fit(X, y)
+                    clf.fit(features, y)
 
                     self.tags_classifier = clf
                     self.tags_vectorizer = vectorizer
@@ -129,12 +129,12 @@ class DocumentClassifier:
 
                     metrics["tags"] = {
                         "documents": len(contents),
-                        "features": X.shape[1],
+                        "features": features.shape[1],
                         "labels": len(binarizer.classes_),
                     }
                     logger.info(
                         "Tags classifier trained: %d docs, %d features, %d labels",
-                        len(contents), X.shape[1], len(binarizer.classes_),
+                        len(contents), features.shape[1], len(binarizer.classes_),
                     )
 
         # --- Correspondent classifier (single-label) ---
@@ -198,7 +198,7 @@ class DocumentClassifier:
         vectorizer = CountVectorizer(
             ngram_range=(1, 2), min_df=0.01, max_df=0.95,
         )
-        X = vectorizer.fit_transform(contents)
+        features = vectorizer.fit_transform(contents)
         unique_labels = set(labels)
         if len(unique_labels) < 2:
             return None  # Need at least 2 classes
@@ -209,7 +209,7 @@ class DocumentClassifier:
             random_state=42,
             early_stopping=True,
         )
-        clf.fit(X, labels)
+        clf.fit(features, labels)
 
         setattr(self, f"{name}_classifier", clf)
         setattr(self, f"{name}_vectorizer", vectorizer)
@@ -217,12 +217,12 @@ class DocumentClassifier:
 
         metrics = {
             "documents": len(contents),
-            "features": X.shape[1],
+            "features": features.shape[1],
             "labels": len(unique_labels),
         }
         logger.info(
             "%s classifier trained: %d docs, %d features, %d labels",
-            name, len(contents), X.shape[1], len(unique_labels),
+            name, len(contents), features.shape[1], len(unique_labels),
         )
         return metrics
 
@@ -238,8 +238,8 @@ class DocumentClassifier:
         if not preprocessed.strip():
             return []
 
-        X = self.tags_vectorizer.transform([preprocessed])
-        probas = self.tags_classifier.predict_proba(X)
+        features = self.tags_vectorizer.transform([preprocessed])
+        probas = self.tags_classifier.predict_proba(features)
 
         results = []
         for i, tag_id in enumerate(self.tags_binarizer.classes_):
@@ -247,7 +247,11 @@ class DocumentClassifier:
             if isinstance(probas, list):
                 confidence = float(probas[i][0][1]) if probas[i].shape[1] > 1 else float(probas[i][0][0])
             else:
-                confidence = float(probas[0][i]) if probas.shape[1] > len(self.tags_binarizer.classes_) else threshold + 0.01
+                confidence = (
+                    float(probas[0][i])
+                    if probas.shape[1] > len(self.tags_binarizer.classes_)
+                    else threshold + 0.01
+                )
             if confidence >= threshold:
                 results.append((int(tag_id), confidence))
 
@@ -276,8 +280,8 @@ class DocumentClassifier:
         if not preprocessed.strip():
             return []
 
-        X = vectorizer.transform([preprocessed])
-        probas = clf.predict_proba(X)[0]
+        features = vectorizer.transform([preprocessed])
+        probas = clf.predict_proba(features)[0]
         classes = clf.classes_
 
         results = [

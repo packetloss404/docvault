@@ -221,9 +221,7 @@ class TestDocumentEntityListView:
 
     def test_empty_for_nonexistent_document(self, admin_client):
         response = admin_client.get("/api/v1/documents/99999/entities/")
-        assert response.status_code == 200
-        results = response.data.get("results", response.data)
-        assert len(results) == 0
+        assert response.status_code == 404
 
 
 # ---- Entity documents list ----
@@ -262,3 +260,17 @@ class TestEntityDocumentsView:
         doc_ids = [d["id"] for d in response.data]
         assert own_doc.pk in doc_ids
         assert document.pk not in doc_ids
+
+    def test_entity_list_hides_inaccessible_documents(
+        self, regular_client, entity_type, document,
+    ):
+        Entity.objects.create(
+            document=document,
+            entity_type=entity_type,
+            value="Hidden",
+            raw_value="Hidden",
+        )
+        response = regular_client.get("/api/v1/entities/")
+        assert response.status_code == 200
+        results = response.data.get("results", response.data)
+        assert all(item["value"] != "Hidden" for item in results)

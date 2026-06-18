@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, UrlTree } from '@angular/router';
+import { firstValueFrom, of, type Observable } from 'rxjs';
 import { adminGuard } from './admin.guard';
 import { AuthService } from '../services/auth.service';
 import type { User } from '../models/user.model';
@@ -20,6 +21,7 @@ describe('adminGuard', () => {
   let authServiceMock: {
     isAuthenticated: ReturnType<typeof vi.fn>;
     currentUser: ReturnType<typeof vi.fn>;
+    getProfile: ReturnType<typeof vi.fn>;
   };
   let routerMock: { createUrlTree: ReturnType<typeof vi.fn> };
   let loginUrlTree: UrlTree;
@@ -35,6 +37,7 @@ describe('adminGuard', () => {
     authServiceMock = {
       isAuthenticated: vi.fn(),
       currentUser: vi.fn(),
+      getProfile: vi.fn(),
     };
 
     routerMock = {
@@ -80,11 +83,14 @@ describe('adminGuard', () => {
     expect(result).toBe(loginUrlTree);
   });
 
-  it('redirects to /403 when current user is null but authenticated', () => {
+  it('redirects to /403 when current user is null but authenticated', async () => {
     authServiceMock.isAuthenticated.mockReturnValue(true);
     authServiceMock.currentUser.mockReturnValue(null);
+    authServiceMock.getProfile.mockReturnValue(
+      of(makeUser({ is_staff: false, is_superuser: false })),
+    );
 
-    const result = runGuard();
+    const result = await firstValueFrom(runGuard() as Observable<boolean | UrlTree>);
 
     expect(routerMock.createUrlTree).toHaveBeenCalledWith(['/403']);
     expect(result).toBe(forbiddenUrlTree);

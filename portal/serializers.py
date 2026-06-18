@@ -5,7 +5,6 @@ from rest_framework import serializers
 from .constants import SUBMISSION_APPROVED, SUBMISSION_REJECTED
 from .models import DocumentRequest, PortalConfig, PortalSubmission
 
-
 # ---------------------------------------------------------------------------
 # Portal Configuration
 # ---------------------------------------------------------------------------

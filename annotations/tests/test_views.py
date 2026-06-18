@@ -172,11 +172,7 @@ class TestAnnotationList:
     ):
         client.force_authenticate(user=other_user)
         response = client.get(_annotation_url(document.pk))
-        assert response.status_code == 200
-        # other_user should see the public annotation but not the private one
-        ids = {a["id"] for a in response.data}
-        assert annotation.pk in ids
-        assert private_annotation.pk not in ids
+        assert response.status_code == 404
 
     @pytest.mark.django_db
     def test_private_annotations_visible_to_author(
@@ -353,7 +349,7 @@ class TestAnnotationUpdate:
         response = client.patch(
             _annotation_url(document.pk, annotation.pk), data, format="json",
         )
-        assert response.status_code == 403
+        assert response.status_code == 404
 
     @pytest.mark.django_db
     def test_document_owner_can_update(
@@ -388,7 +384,7 @@ class TestAnnotationDelete:
     ):
         client.force_authenticate(user=other_user)
         response = client.delete(_annotation_url(document.pk, annotation.pk))
-        assert response.status_code == 403
+        assert response.status_code == 404
 
     @pytest.mark.django_db
     def test_document_owner_can_delete_any_annotation(
@@ -505,10 +501,7 @@ class TestAnnotationExport:
     ):
         client.force_authenticate(user=other_user)
         response = client.post(_export_url(document.pk), format="json")
-        assert response.status_code == 200
-        ids = {a["id"] for a in response.data["annotations"]}
-        assert annotation.pk in ids
-        assert private_annotation.pk not in ids
+        assert response.status_code == 404
 
     @pytest.mark.django_db
     def test_export_nonexistent_document_returns_404(self, client, user):

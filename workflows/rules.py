@@ -245,12 +245,19 @@ def _send_webhook_action(config, document):
     """Send webhook with rendered payload."""
     import urllib.request
 
+    from core.url_safety import UnsafeOutboundUrlError, validate_outbound_http_url
+
     url = config.get("url", "")
     method = config.get("method", "POST").upper()
     headers = config.get("headers", {})
     body_template = config.get("body", "")
 
     if not url:
+        return
+    try:
+        url = validate_outbound_http_url(url)
+    except UnsafeOutboundUrlError as e:
+        logger.warning("Blocked unsafe workflow webhook URL %s: %s", url, e)
         return
 
     body = _render_placeholder(body_template, document)

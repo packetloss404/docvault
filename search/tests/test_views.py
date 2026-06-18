@@ -1,17 +1,16 @@
 """Tests for search API views."""
 
-from datetime import date
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase
+from guardian.shortcuts import assign_perm
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
 from documents.models import Document
-from organization.models import Correspondent, Tag
-
+from organization.models import Tag
 from search.models import (
     RULE_HAS_TAGS,
     RULE_TAG_IS,
@@ -29,6 +28,7 @@ class SearchViewTest(TestCase):
         self.user = User.objects.create_user(username="searcher", password="pass!")
         self.token = Token.objects.create(user=self.user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
+        self.document = Document.objects.create(title="Owned", owner=self.user)
 
     @patch("search.views.execute_search")
     def test_search_endpoint(self, mock_search):
@@ -101,8 +101,25 @@ class SearchViewTest(TestCase):
             "results": [], "facets": {},
         }
         resp = self.client.get("/api/v1/search/", {"query": "test"})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         call_kwargs = mock_search.call_args[1]
-        self.assertEqual(call_kwargs["user_id"], self.user.id)
+        self.assertEqual(call_kwargs["document_ids"], [self.document.id])
+
+    @patch("search.views.execute_search")
+    def test_search_includes_guardian_shared_documents(self, mock_search):
+        other = User.objects.create_user(username="shareowner", password="pass!")
+        shared = Document.objects.create(title="Shared", owner=other)
+        assign_perm("documents.view_document", self.user, shared)
+        mock_search.return_value = {
+            "count": 0, "page": 1, "page_size": 25,
+            "results": [], "facets": {},
+        }
+        self.client.get("/api/v1/search/", {"query": "test"})
+        call_kwargs = mock_search.call_args[1]
+        self.assertEqual(
+            set(call_kwargs["document_ids"]),
+            {self.document.id, shared.id},
+        )
 
     @patch("search.views.execute_search")
     def test_superuser_no_permission_filter(self, mock_search):
@@ -114,8 +131,9 @@ class SearchViewTest(TestCase):
             "results": [], "facets": {},
         }
         resp = self.client.get("/api/v1/search/", {"query": "test"})
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
         call_kwargs = mock_search.call_args[1]
-        self.assertIsNone(call_kwargs["user_id"])
+        self.assertIsNone(call_kwargs["document_ids"])
 
     def test_search_unauthenticated(self):
         client = APIClient()
@@ -151,16 +169,25 @@ class SimilarDocumentsViewTest(TestCase):
         self.user = User.objects.create_user(username="simuser", password="pass!")
         self.token = Token.objects.create(user=self.user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
+        self.document = Document.objects.create(title="Seed", owner=self.user)
 
     @patch("search.views.execute_more_like_this")
     def test_similar_documents(self, mock_mlt):
         mock_mlt.return_value = [
             {"id": 2, "title": "Similar Doc", "score": 2.1},
         ]
-        resp = self.client.get("/api/v1/search/similar/1/")
+        resp = self.client.get(f"/api/v1/search/similar/{self.document.pk}/")
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(len(resp.data), 1)
         mock_mlt.assert_called_once()
+
+    @patch("search.views.execute_more_like_this")
+    def test_similar_rejects_inaccessible_seed(self, mock_mlt):
+        other = User.objects.create_user(username="simother", password="pass!")
+        other_doc = Document.objects.create(title="Other Seed", owner=other)
+        resp = self.client.get(f"/api/v1/search/similar/{other_doc.pk}/")
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        mock_mlt.assert_not_called()
 
 
 class SavedViewViewSetTest(TestCase):

@@ -2,6 +2,7 @@
 
 import logging
 import shutil
+import tempfile
 import uuid
 from pathlib import Path
 
@@ -58,11 +59,13 @@ def _submit_file(filepath, watch_folder_source):
 
     source = watch_folder_source.source
     task_id = str(uuid.uuid4())
+    staged_path = _stage_file(filepath, prefix="docvault_source_")
 
     ProcessingTask.objects.create(
         task_id=task_id,
-        filename=filepath.name,
-        user_id=source.owner_id,
+        task_name="document_consumption",
+        owner=source.owner,
+        status_message="Queued watch-folder file for processing",
     )
 
     overrides = {}
@@ -77,10 +80,11 @@ def _submit_file(filepath, watch_folder_source):
         overrides["override_tags"] = tag_ids
 
     consume_document.delay(
-        str(filepath),
+        str(staged_path),
         filepath.name,
         task_id,
         source.owner_id,
+        cleanup_source_path=True,
         **overrides,
     )
 
@@ -98,3 +102,11 @@ def _handle_consumed_file(filepath, watch_folder_source):
             dest.mkdir(parents=True, exist_ok=True)
             shutil.move(str(filepath), str(dest / filepath.name))
     # NOTHING: leave the file in place
+
+
+def _stage_file(filepath: Path, prefix: str = "docvault_source_") -> Path:
+    """Copy a source file to a stable temp path for async processing."""
+    staging_dir = Path(tempfile.mkdtemp(prefix=prefix))
+    staged_path = staging_dir / filepath.name
+    shutil.copy2(filepath, staged_path)
+    return staged_path

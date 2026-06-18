@@ -232,3 +232,19 @@ class BulkAssignTest(TestCase):
             "document_ids": [99999],
         }, format="json")
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_bulk_rejects_mixed_inaccessible_documents(self):
+        other_user = User.objects.create_user(username="bulkother", password="pass!")
+        other_doc = Document.objects.create(
+            title="Other Doc", owner=other_user, filename="o/other.txt",
+        )
+        tag = Tag.objects.create(name="Mixed", owner=self.user)
+
+        resp = self.client.post("/api/v1/bulk-assign/", {
+            "document_ids": [self.doc1.pk, other_doc.pk],
+            "tag_ids": [tag.pk],
+        }, format="json")
+
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertFalse(self.doc1.tags.filter(pk=tag.pk).exists())
+        self.assertFalse(other_doc.tags.filter(pk=tag.pk).exists())

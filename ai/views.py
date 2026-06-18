@@ -5,11 +5,27 @@ from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from documents.models import Document
+from security.permissions import get_document_for_user, get_objects_for_user_with_ownership
+
 from .serializers import (
     DocumentChatSerializer,
     GlobalChatSerializer,
     SemanticSearchSerializer,
 )
+
+
+def _permitted_document_ids(user):
+    """Return document IDs the user may search, or None for all-access users."""
+    if user.is_superuser or user.is_staff:
+        return None
+    return list(
+        get_objects_for_user_with_ownership(
+            user,
+            "documents.view_document",
+            Document.objects.all(),
+        ).values_list("id", flat=True)
+    )
 
 
 class SemanticSearchView(APIView):
@@ -21,16 +37,14 @@ class SemanticSearchView(APIView):
         serializer = SemanticSearchSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
 
-        user_id = None
-        if not request.user.is_superuser:
-            user_id = request.user.id
+        document_ids = _permitted_document_ids(request.user)
 
         from .search import semantic_search
 
         results = semantic_search(
             query=serializer.validated_data["query"],
             k=serializer.validated_data["k"],
-            user_id=user_id,
+            document_ids=document_ids,
         )
 
         return Response({"results": results, "count": len(results)})
@@ -45,16 +59,14 @@ class HybridSearchView(APIView):
         serializer = SemanticSearchSerializer(data=request.query_params)
         serializer.is_valid(raise_exception=True)
 
-        user_id = None
-        if not request.user.is_superuser:
-            user_id = request.user.id
+        document_ids = _permitted_document_ids(request.user)
 
         from .search import hybrid_search
 
         results = hybrid_search(
             query=serializer.validated_data["query"],
             k=serializer.validated_data["k"],
-            user_id=user_id,
+            document_ids=document_ids,
         )
 
         return Response({"results": results, "count": len(results)})
@@ -66,19 +78,18 @@ class SimilarDocumentsAIView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, pk):
+        get_document_for_user(request.user, pk, action="view")
         k = int(request.query_params.get("k", 10))
         k = min(k, 50)
 
-        user_id = None
-        if not request.user.is_superuser:
-            user_id = request.user.id
+        document_ids = _permitted_document_ids(request.user)
 
         from .search import find_similar_documents
 
         results = find_similar_documents(
             document_id=pk,
             k=k,
-            user_id=user_id,
+            document_ids=document_ids,
         )
 
         return Response({"results": results, "count": len(results)})
@@ -90,6 +101,7 @@ class DocumentChatView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk):
+        get_document_for_user(request.user, pk, action="view")
         serializer = DocumentChatSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -113,15 +125,11 @@ class GlobalChatView(APIView):
         serializer = GlobalChatSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        user_id = None
-        if not request.user.is_superuser:
-            user_id = request.user.id
-
         from .chat import chat_across_documents
 
         result = chat_across_documents(
             question=serializer.validated_data["question"],
-            user_id=user_id,
+            document_ids=_permitted_document_ids(request.user),
             history=serializer.validated_data.get("history", []),
         )
 
@@ -134,6 +142,7 @@ class SummarizeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, pk):
+        get_document_for_user(request.user, pk, action="view")
         from .features import summarize_document
 
         result = summarize_document(document_id=pk)
@@ -148,6 +157,7 @@ class EntityExtractView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, pk):
+        get_document_for_user(request.user, pk, action="view")
         from .features import extract_entities
 
         result = extract_entities(document_id=pk)
@@ -162,6 +172,7 @@ class SmartTitleView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, pk):
+        get_document_for_user(request.user, pk, action="view")
         from .features import suggest_title
 
         result = suggest_title(document_id=pk)

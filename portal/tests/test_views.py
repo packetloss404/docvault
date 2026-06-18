@@ -101,8 +101,8 @@ class TestPortalConfigViewSet:
     LIST_URL = "/api/v1/portals/"
 
     @pytest.mark.django_db
-    def test_list_portals(self, client, user, portal):
-        client.force_authenticate(user=user)
+    def test_list_portals(self, client, admin_user, portal):
+        client.force_authenticate(user=admin_user)
         response = client.get(self.LIST_URL)
         assert response.status_code == 200
         # The response could be paginated or a list
@@ -111,8 +111,8 @@ class TestPortalConfigViewSet:
         assert "test-portal" in slugs
 
     @pytest.mark.django_db
-    def test_create_portal(self, client, user):
-        client.force_authenticate(user=user)
+    def test_create_portal(self, client, admin_user):
+        client.force_authenticate(user=admin_user)
         data = {
             "name": "New Portal",
             "slug": "new-portal",
@@ -128,23 +128,23 @@ class TestPortalConfigViewSet:
         assert response.data["name"] == "New Portal"
 
     @pytest.mark.django_db
-    def test_retrieve_portal(self, client, user, portal):
-        client.force_authenticate(user=user)
+    def test_retrieve_portal(self, client, admin_user, portal):
+        client.force_authenticate(user=admin_user)
         response = client.get(f"{self.LIST_URL}{portal.pk}/")
         assert response.status_code == 200
         assert response.data["slug"] == "test-portal"
 
     @pytest.mark.django_db
-    def test_update_portal(self, client, user, portal):
-        client.force_authenticate(user=user)
+    def test_update_portal(self, client, admin_user, portal):
+        client.force_authenticate(user=admin_user)
         data = {"name": "Updated Portal"}
         response = client.patch(f"{self.LIST_URL}{portal.pk}/", data, format="json")
         assert response.status_code == 200
         assert response.data["name"] == "Updated Portal"
 
     @pytest.mark.django_db
-    def test_delete_portal(self, client, user, portal):
-        client.force_authenticate(user=user)
+    def test_delete_portal(self, client, admin_user, portal):
+        client.force_authenticate(user=admin_user)
         response = client.delete(f"{self.LIST_URL}{portal.pk}/")
         assert response.status_code == 204
         assert not PortalConfig.objects.filter(pk=portal.pk).exists()
@@ -153,6 +153,12 @@ class TestPortalConfigViewSet:
     def test_unauthenticated_access_denied(self, client):
         response = client.get(self.LIST_URL)
         assert response.status_code in (401, 403)
+
+    @pytest.mark.django_db
+    def test_regular_user_access_denied(self, client, user):
+        client.force_authenticate(user=user)
+        response = client.get(self.LIST_URL)
+        assert response.status_code == 403
 
 
 # ===========================================================================
@@ -166,16 +172,16 @@ class TestDocumentRequestViewSet:
     LIST_URL = "/api/v1/document-requests/"
 
     @pytest.mark.django_db
-    def test_list_requests(self, client, user, doc_request):
-        client.force_authenticate(user=user)
+    def test_list_requests(self, client, admin_user, doc_request):
+        client.force_authenticate(user=admin_user)
         response = client.get(self.LIST_URL)
         assert response.status_code == 200
         data = response.data.get("results", response.data)
         assert len(data) >= 1
 
     @pytest.mark.django_db
-    def test_create_request(self, client, user, portal):
-        client.force_authenticate(user=user)
+    def test_create_request(self, client, admin_user, portal):
+        client.force_authenticate(user=admin_user)
         data = {
             "portal": portal.pk,
             "title": "New Request",
@@ -188,15 +194,15 @@ class TestDocumentRequestViewSet:
         assert response.data["token"]  # token auto-generated
 
     @pytest.mark.django_db
-    def test_retrieve_request(self, client, user, doc_request):
-        client.force_authenticate(user=user)
+    def test_retrieve_request(self, client, admin_user, doc_request):
+        client.force_authenticate(user=admin_user)
         response = client.get(f"{self.LIST_URL}{doc_request.pk}/")
         assert response.status_code == 200
         assert response.data["title"] == "Submit Tax Docs"
 
     @pytest.mark.django_db
-    def test_update_request(self, client, user, doc_request):
-        client.force_authenticate(user=user)
+    def test_update_request(self, client, admin_user, doc_request):
+        client.force_authenticate(user=admin_user)
         data = {"title": "Updated Request"}
         response = client.patch(
             f"{self.LIST_URL}{doc_request.pk}/", data, format="json"
@@ -205,14 +211,14 @@ class TestDocumentRequestViewSet:
         assert response.data["title"] == "Updated Request"
 
     @pytest.mark.django_db
-    def test_delete_request(self, client, user, doc_request):
-        client.force_authenticate(user=user)
+    def test_delete_request(self, client, admin_user, doc_request):
+        client.force_authenticate(user=admin_user)
         response = client.delete(f"{self.LIST_URL}{doc_request.pk}/")
         assert response.status_code == 204
 
     @pytest.mark.django_db
-    def test_send_action(self, client, user, doc_request):
-        client.force_authenticate(user=user)
+    def test_send_action(self, client, admin_user, doc_request):
+        client.force_authenticate(user=admin_user)
         response = client.post(
             f"{self.LIST_URL}{doc_request.pk}/send/", format="json"
         )
@@ -221,8 +227,8 @@ class TestDocumentRequestViewSet:
         assert response.data["sent_at"] is not None
 
     @pytest.mark.django_db
-    def test_remind_action(self, client, user, doc_request):
-        client.force_authenticate(user=user)
+    def test_remind_action(self, client, admin_user, doc_request):
+        client.force_authenticate(user=admin_user)
         response = client.post(
             f"{self.LIST_URL}{doc_request.pk}/remind/", format="json"
         )
@@ -234,6 +240,12 @@ class TestDocumentRequestViewSet:
     def test_unauthenticated_access_denied(self, client):
         response = client.get(self.LIST_URL)
         assert response.status_code in (401, 403)
+
+    @pytest.mark.django_db
+    def test_regular_user_access_denied(self, client, user):
+        client.force_authenticate(user=user)
+        response = client.get(self.LIST_URL)
+        assert response.status_code == 403
 
 
 # ===========================================================================
@@ -247,43 +259,43 @@ class TestPortalSubmissionAdminViews:
     LIST_URL = "/api/v1/portal-submissions/"
 
     @pytest.mark.django_db
-    def test_list_submissions(self, client, user, submission):
-        client.force_authenticate(user=user)
+    def test_list_submissions(self, client, admin_user, submission):
+        client.force_authenticate(user=admin_user)
         response = client.get(self.LIST_URL)
         assert response.status_code == 200
         assert len(response.data) >= 1
 
     @pytest.mark.django_db
-    def test_list_filter_by_portal(self, client, user, portal, submission):
-        client.force_authenticate(user=user)
+    def test_list_filter_by_portal(self, client, admin_user, portal, submission):
+        client.force_authenticate(user=admin_user)
         response = client.get(f"{self.LIST_URL}?portal={portal.pk}")
         assert response.status_code == 200
         assert len(response.data) >= 1
 
     @pytest.mark.django_db
-    def test_list_filter_by_status(self, client, user, submission):
-        client.force_authenticate(user=user)
+    def test_list_filter_by_status(self, client, admin_user, submission):
+        client.force_authenticate(user=admin_user)
         response = client.get(f"{self.LIST_URL}?status={SUBMISSION_PENDING}")
         assert response.status_code == 200
         assert len(response.data) >= 1
 
     @pytest.mark.django_db
-    def test_list_filter_by_request(self, client, user, doc_request, submission):
-        client.force_authenticate(user=user)
+    def test_list_filter_by_request(self, client, admin_user, doc_request, submission):
+        client.force_authenticate(user=admin_user)
         response = client.get(f"{self.LIST_URL}?request={doc_request.pk}")
         assert response.status_code == 200
         assert len(response.data) >= 1
 
     @pytest.mark.django_db
-    def test_list_filter_returns_empty_for_nonexistent(self, client, user, submission):
-        client.force_authenticate(user=user)
+    def test_list_filter_returns_empty_for_nonexistent(self, client, admin_user, submission):
+        client.force_authenticate(user=admin_user)
         response = client.get(f"{self.LIST_URL}?portal=99999")
         assert response.status_code == 200
         assert len(response.data) == 0
 
     @pytest.mark.django_db
-    def test_approve_submission_creates_document(self, client, user, submission):
-        client.force_authenticate(user=user)
+    def test_approve_submission_creates_document(self, client, admin_user, submission):
+        client.force_authenticate(user=admin_user)
         data = {"status": SUBMISSION_APPROVED, "review_notes": "Looks good"}
         response = client.patch(
             f"{self.LIST_URL}{submission.pk}/review/",
@@ -293,11 +305,11 @@ class TestPortalSubmissionAdminViews:
         assert response.status_code == 200
         assert response.data["status"] == SUBMISSION_APPROVED
         assert response.data["ingested_document"] is not None
-        assert response.data["reviewed_by"] == user.pk
+        assert response.data["reviewed_by"] == admin_user.pk
 
     @pytest.mark.django_db
-    def test_reject_submission(self, client, user, submission):
-        client.force_authenticate(user=user)
+    def test_reject_submission(self, client, admin_user, submission):
+        client.force_authenticate(user=admin_user)
         data = {"status": SUBMISSION_REJECTED, "review_notes": "Incorrect format"}
         response = client.patch(
             f"{self.LIST_URL}{submission.pk}/review/",
@@ -310,12 +322,12 @@ class TestPortalSubmissionAdminViews:
         assert response.data["review_notes"] == "Incorrect format"
 
     @pytest.mark.django_db
-    def test_review_already_reviewed_returns_400(self, client, user, submission):
+    def test_review_already_reviewed_returns_400(self, client, admin_user, submission):
         """Cannot review a submission that has already been reviewed."""
         submission.status = SUBMISSION_APPROVED
         submission.save()
 
-        client.force_authenticate(user=user)
+        client.force_authenticate(user=admin_user)
         data = {"status": SUBMISSION_REJECTED}
         response = client.patch(
             f"{self.LIST_URL}{submission.pk}/review/",
@@ -326,8 +338,8 @@ class TestPortalSubmissionAdminViews:
         assert "already been reviewed" in response.data["error"]
 
     @pytest.mark.django_db
-    def test_review_nonexistent_returns_404(self, client, user):
-        client.force_authenticate(user=user)
+    def test_review_nonexistent_returns_404(self, client, admin_user):
+        client.force_authenticate(user=admin_user)
         data = {"status": SUBMISSION_APPROVED}
         response = client.patch(
             f"{self.LIST_URL}99999/review/",
@@ -350,6 +362,12 @@ class TestPortalSubmissionAdminViews:
     def test_list_unauthenticated(self, client):
         response = client.get(self.LIST_URL)
         assert response.status_code in (401, 403)
+
+    @pytest.mark.django_db
+    def test_regular_user_access_denied(self, client, user):
+        client.force_authenticate(user=user)
+        response = client.get(self.LIST_URL)
+        assert response.status_code == 403
 
 
 # ===========================================================================

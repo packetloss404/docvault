@@ -5,7 +5,6 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
 from documents.models import Document
-from relationships.constants import BUILTIN_TYPES
 from relationships.models import DocumentRelationship, RelationshipType
 
 User = get_user_model()

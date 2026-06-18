@@ -12,7 +12,7 @@ describe('LoginComponent', () => {
 
   beforeEach(async () => {
     mockAuthService = {
-      login: vi.fn().mockReturnValue(of({ token: 'fake-token' })),
+      login: vi.fn().mockReturnValue(of({ token: 'fake-token', username: 'user' })),
     };
 
     await TestBed.configureTestingModule({
@@ -35,6 +35,8 @@ describe('LoginComponent', () => {
   it('should have empty initial state', () => {
     expect(component.username).toBe('');
     expect(component.password).toBe('');
+    expect(component.otpCode).toBe('');
+    expect(component.otpRequired).toBe(false);
     expect(component.errorMessage).toBe('');
     expect(component.loading).toBe(false);
   });
@@ -48,6 +50,35 @@ describe('LoginComponent', () => {
     expect(mockAuthService.login).toHaveBeenCalledWith({
       username: 'testuser',
       password: 'secret123',
+    });
+  });
+
+  it('should request OTP code when the API requires it', () => {
+    mockAuthService.login.mockReturnValue(
+      of({ otp_required: true, username: 'testuser' }),
+    );
+    component.username = 'testuser';
+    component.password = 'secret123';
+
+    component.onSubmit();
+
+    expect(component.otpRequired).toBe(true);
+    expect(component.otpCode).toBe('');
+    expect(component.loading).toBe(false);
+  });
+
+  it('should include OTP code after OTP is required', () => {
+    component.username = 'testuser';
+    component.password = 'secret123';
+    component.otpRequired = true;
+    component.otpCode = '123456';
+
+    component.onSubmit();
+
+    expect(mockAuthService.login).toHaveBeenCalledWith({
+      username: 'testuser',
+      password: 'secret123',
+      otp_code: '123456',
     });
   });
 
@@ -98,6 +129,19 @@ describe('LoginComponent', () => {
     component.onSubmit();
 
     expect(component.errorMessage).toBe('Invalid credentials.');
+  });
+
+  it('should show OTP error messages', () => {
+    const errorResponse = { error: { otp_code: ['Invalid OTP code.'] } };
+    mockAuthService.login.mockReturnValue(throwError(() => errorResponse));
+
+    component.username = 'bad';
+    component.password = 'wrong';
+    component.otpRequired = true;
+    component.otpCode = '000000';
+    component.onSubmit();
+
+    expect(component.errorMessage).toBe('Invalid OTP code.');
   });
 
   it('should show fallback error message when error has no known fields', () => {

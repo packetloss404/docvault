@@ -6,7 +6,7 @@ from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from documents.models import Document
+from security.permissions import get_document_for_user
 
 from .classifier import get_classifier
 from .serializers import ClassifierStatusSerializer, SuggestionsSerializer
@@ -22,13 +22,7 @@ class DocumentSuggestionsView(APIView):
     """
 
     def get(self, request, document_pk):
-        try:
-            document = Document.objects.get(pk=document_pk)
-        except Document.DoesNotExist:
-            return Response(
-                {"error": "Document not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        document = get_document_for_user(request.user, document_pk, action="view")
 
         suggestions = get_suggestions_for_document(document)
 

@@ -5,7 +5,6 @@ from django.db import models
 
 from core.models import AuditableModel, OwnedModel
 
-
 # Display modes
 DISPLAY_TABLE = "table"
 DISPLAY_SMALL_CARDS = "small_cards"

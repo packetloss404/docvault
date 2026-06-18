@@ -5,7 +5,7 @@ from unittest.mock import patch
 import pytest
 from django.contrib.auth import get_user_model
 
-from legal_hold.constants import ACTIVE, SEARCH_QUERY, SPECIFIC_DOCUMENTS
+from legal_hold.constants import ACTIVE, SEARCH_QUERY
 from legal_hold.models import (
     LegalHold,
     LegalHoldCriteria,
@@ -130,6 +130,5 @@ def test_reevaluate_holds_refreshes_search_query_holds(hold, user, document):
     reevaluate_holds()
 
     # refresh_hold should have captured the matching document
-    from legal_hold.models import LegalHoldDocument
 
     assert LegalHoldDocument.objects.filter(hold=hold, document=document).exists()

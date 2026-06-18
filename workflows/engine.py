@@ -85,7 +85,6 @@ def do_transition(instance, transition, user=None, field_values=None, comment=""
     _run_state_actions(instance, instance.current_state, ON_EXIT)
 
     # Move to destination state
-    old_state = instance.current_state
     instance.current_state = transition.destination_state
     instance.state_changed_at = timezone.now()
 

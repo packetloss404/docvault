@@ -2,7 +2,6 @@
 
 import pytest
 from django.contrib.auth.models import User
-from django.utils import timezone
 from rest_framework.test import APIClient
 
 from documents.models import Document
@@ -105,8 +104,8 @@ class TestSearchQueryModel:
         assert "invoice" in s
 
     def test_ordering_by_timestamp_desc(self, admin_user):
-        sq1 = SearchQuery.objects.create(query_text="first", user=admin_user)
-        sq2 = SearchQuery.objects.create(query_text="second", user=admin_user)
+        SearchQuery.objects.create(query_text="first", user=admin_user)
+        SearchQuery.objects.create(query_text="second", user=admin_user)
         queries = list(SearchQuery.objects.values_list("query_text", flat=True)[:2])
         # Most recent first
         assert queries[0] == "second"

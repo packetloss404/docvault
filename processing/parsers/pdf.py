@@ -37,6 +37,7 @@ class PDFParser(DocumentParser):
         """Run OCRmyPDF to create a searchable PDF."""
         try:
             import ocrmypdf
+
             from processing.config import get_ocr_config
         except ImportError:
             logger.warning("ocrmypdf not available, skipping OCR")

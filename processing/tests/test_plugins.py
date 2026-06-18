@@ -7,7 +7,7 @@ from pathlib import Path
 from django.test import TestCase
 
 from processing.context import ProcessingContext
-from processing.parsers.base import clear_registry, register_parser
+from processing.parsers.base import register_parser
 from processing.parsers.text import TextParser
 from processing.plugins.date_extraction import DateExtractionPlugin
 from processing.plugins.language import LanguageDetectionPlugin

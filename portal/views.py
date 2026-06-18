@@ -1,7 +1,10 @@
 """API views for the contributor portal."""
 
 import logging
+import shutil
+import tempfile
 from datetime import timedelta
+from pathlib import Path
 
 from django.conf import settings
 from django.http import Http404
@@ -11,14 +14,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from documents.models import Document
-
 from .constants import (
     REQUEST_PARTIALLY_FULFILLED,
     REQUEST_PENDING,
     SUBMISSION_APPROVED,
     SUBMISSION_PENDING,
-    SUBMISSION_REJECTED,
 )
 from .models import DocumentRequest, PortalConfig, PortalSubmission
 from .serializers import (
@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 class PortalConfigViewSet(viewsets.ModelViewSet):
     """CRUD viewset for portal configurations."""
 
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
     queryset = PortalConfig.objects.all()
 
     def get_serializer_class(self):
@@ -63,7 +63,7 @@ class PortalConfigViewSet(viewsets.ModelViewSet):
 class DocumentRequestViewSet(viewsets.ModelViewSet):
     """CRUD viewset for document requests, with send/remind actions."""
 
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
     queryset = DocumentRequest.objects.select_related("portal").all()
 
     def get_serializer_class(self):
@@ -115,7 +115,7 @@ class DocumentRequestViewSet(viewsets.ModelViewSet):
 class PortalSubmissionListView(APIView):
     """GET /api/v1/portal-submissions/ — Admin review queue."""
 
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
 
     def get(self, request):
         qs = PortalSubmission.objects.select_related(
@@ -142,7 +142,7 @@ class PortalSubmissionListView(APIView):
 class PortalSubmissionReviewView(APIView):
     """PATCH /api/v1/portal-submissions/{id}/review/ — Approve or reject."""
 
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
 
     def patch(self, request, pk):
         try:
@@ -170,28 +170,48 @@ class PortalSubmissionReviewView(APIView):
         submission.reviewed_at = timezone.now()
 
         if new_status == SUBMISSION_APPROVED:
-            # Create a Document from the submission file
-            document = Document.objects.create(
-                title=submission.original_filename,
-                original_filename=submission.original_filename,
-                document_type=submission.portal.default_document_type,
-                owner=request.user,
-                created_by=request.user,
-            )
-            # Apply default tags from the portal
-            default_tags = submission.portal.default_tags.all()
-            if default_tags.exists():
-                document.tags.set(default_tags)
-
-            submission.ingested_document = document
+            task = _queue_submission_ingestion(submission, request.user)
+            task.refresh_from_db()
+            if task.document_id:
+                submission.ingested_document_id = task.document_id
             logger.info(
-                "Approved submission %s -> created document %s",
-                submission.pk, document.pk,
+                "Approved submission %s -> queued ingestion task %s",
+                submission.pk, task.task_id,
             )
 
         submission.save()
 
         return Response(PortalSubmissionSerializer(submission).data)
+
+
+def _queue_submission_ingestion(submission, user):
+    """Stage a portal submission file and queue normal document ingestion."""
+    from processing.models import ProcessingTask
+    from processing.tasks import consume_document
+
+    staging_dir = Path(tempfile.mkdtemp(prefix="docvault_portal_"))
+    staged_path = staging_dir / Path(submission.original_filename).name
+    with submission.file.open("rb") as source, staged_path.open("wb") as target:
+        shutil.copyfileobj(source, target)
+
+    task = ProcessingTask.objects.create(
+        task_name="portal_submission_consumption",
+        owner=user,
+        status_message="Queued portal submission for processing",
+    )
+
+    default_tag_ids = list(submission.portal.default_tags.values_list("pk", flat=True))
+    consume_document.delay(
+        source_path=str(staged_path),
+        original_filename=submission.original_filename,
+        task_id=str(task.task_id),
+        user_id=user.id,
+        override_document_type=submission.portal.default_document_type_id,
+        override_tags=default_tag_ids,
+        override_owner=user.id,
+        cleanup_source_path=True,
+    )
+    return task
 
 
 # ---------------------------------------------------------------------------

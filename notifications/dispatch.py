@@ -2,11 +2,13 @@
 
 import json
 import logging
-import urllib.request
 import urllib.error
+import urllib.request
 
-from django.core.mail import send_mail
 from django.conf import settings
+from django.core.mail import send_mail
+
+from core.url_safety import UnsafeOutboundUrlError, validate_outbound_http_url
 
 from .constants import (
     ALL_CHANNELS,
@@ -26,7 +28,7 @@ def send_notification(user, event_type, title, body, document=None):
     preference exists for a channel, defaults to enabled for in_app
     and disabled for email/webhook.
     """
-    from .models import Notification, NotificationPreference
+    from .models import Notification
 
     channels = _get_enabled_channels(user, event_type)
 
@@ -90,8 +92,8 @@ def _get_webhook_url(user, event_type):
 def _push_websocket(user, notification):
     """Push notification to user via Django Channels WebSocket."""
     try:
-        from channels.layers import get_channel_layer
         from asgiref.sync import async_to_sync
+        from channels.layers import get_channel_layer
 
         channel_layer = get_channel_layer()
         group_name = f"user_{user.id}_notifications"
@@ -133,6 +135,12 @@ def _send_email(user, title, body):
 
 def _send_webhook(url, event_type, title, body, document=None):
     """Send notification via webhook POST."""
+    try:
+        url = validate_outbound_http_url(url)
+    except UnsafeOutboundUrlError:
+        logger.warning("Blocked unsafe notification webhook URL: %s", url)
+        return
+
     payload = {
         "event_type": event_type,
         "title": title,

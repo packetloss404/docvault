@@ -68,7 +68,6 @@ class ThumbnailPlugin(ProcessingPlugin):
         self, source: Path, mime_type: str, width: int, height: int,
     ) -> Path | None:
         """Generate a WebP thumbnail and return the path."""
-        from PIL import Image
 
         if mime_type == "application/pdf" or str(source).endswith(".pdf"):
             return self._thumbnail_from_pdf(source, width, height)

@@ -1,11 +1,10 @@
 """Tests for security middleware."""
 
 import pytest
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpResponse
 from django.test import RequestFactory, override_settings
 
 from security.middleware import IPAccessControlMiddleware, SecurityHeadersMiddleware
-
 
 # ---------------------------------------------------------------------------
 # Fixtures

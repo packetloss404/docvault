@@ -1,8 +1,5 @@
 """Tests for Pre/Post-Consume Hook Plugins."""
 
-import os
-import stat
-import tempfile
 from pathlib import Path
 
 from django.test import TestCase, override_settings

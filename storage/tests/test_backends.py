@@ -54,6 +54,10 @@ class LocalStorageBackendTest(TestCase):
         url = self.backend.url("originals/test.txt")
         self.assertIn("documents/originals/test.txt", url)
 
+    def test_rejects_path_traversal(self):
+        with self.assertRaises(ValueError):
+            self.backend.save("../escape.txt", io.BytesIO(b"nope"))
+
     def test_list_files(self):
         self.backend.save("originals/a.txt", io.BytesIO(b"a"))
         self.backend.save("originals/b.txt", io.BytesIO(b"b"))

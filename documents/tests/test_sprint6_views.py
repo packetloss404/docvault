@@ -9,8 +9,7 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
-from documents.models import Document, DocumentFile, DocumentType, DocumentVersion
-from storage.backends.local import LocalStorageBackend
+from documents.models import Document, DocumentFile, DocumentVersion
 
 
 class DocumentPreviewTests(TestCase):
@@ -42,7 +41,6 @@ class DocumentPreviewTests(TestCase):
         """Thumbnail endpoint serves a WebP image when it exists."""
         from PIL import Image
 
-        backend = LocalStorageBackend(base_dir=self.temp_dir)
         # Create a small thumbnail
         thumb_name = "thumbnails/test-thumb.webp"
         thumb_path = self.temp_dir / thumb_name
@@ -68,6 +66,7 @@ class DocumentPreviewTests(TestCase):
     def test_preview_etag_returns_304(self):
         """If ETag matches, return 304 Not Modified."""
         import hashlib
+
         from PIL import Image
 
         thumb_name = "thumbnails/etag-test.webp"

@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from django.contrib.auth.models import User
 from django.test import override_settings
+from guardian.shortcuts import assign_perm
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -69,7 +70,7 @@ class TestSemanticSearchView:
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     @patch("ai.search.semantic_search")
-    def test_returns_results(self, mock_search, api_client, user):
+    def test_returns_results(self, mock_search, api_client, user, sample_doc):
         """Authenticated request with valid query returns results."""
         mock_search.return_value = [
             {"id": 1, "title": "Invoice", "score": 0.9, "correspondent": None,
@@ -80,6 +81,20 @@ class TestSemanticSearchView:
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data["count"] == 1
         assert len(resp.data["results"]) == 1
+        assert mock_search.call_args.kwargs["document_ids"] == [sample_doc.pk]
+
+    @patch("ai.search.semantic_search")
+    def test_includes_shared_document_ids(self, mock_search, api_client, user, sample_doc):
+        other = User.objects.create_user("aiowner", password="pass123!")
+        shared = Document.objects.create(title="Shared AI", owner=other)
+        assign_perm("documents.view_document", user, shared)
+        mock_search.return_value = []
+        api_client.force_authenticate(user=user)
+        api_client.get("/api/v1/ai/search/semantic/", {"query": "invoice"})
+        assert set(mock_search.call_args.kwargs["document_ids"]) == {
+            sample_doc.pk,
+            shared.pk,
+        }
 
 
 # --- HybridSearchView ---
@@ -90,7 +105,7 @@ class TestHybridSearchView:
     """Tests for the HybridSearchView."""
 
     @patch("ai.search.hybrid_search")
-    def test_returns_results(self, mock_search, api_client, user):
+    def test_returns_results(self, mock_search, api_client, user, sample_doc):
         """Returns combined keyword + semantic results."""
         mock_search.return_value = [
             {"id": 1, "title": "Invoice", "hybrid_score": 0.85},
@@ -99,6 +114,7 @@ class TestHybridSearchView:
         resp = api_client.get("/api/v1/ai/search/hybrid/", {"query": "invoice"})
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data["count"] == 1
+        assert mock_search.call_args.kwargs["document_ids"] == [sample_doc.pk]
 
 
 # --- SimilarDocumentsAIView ---
@@ -162,7 +178,7 @@ class TestGlobalChatView:
     """Tests for the GlobalChatView."""
 
     @patch("ai.chat.chat_across_documents")
-    def test_returns_response(self, mock_chat, api_client, user):
+    def test_returns_response(self, mock_chat, api_client, user, sample_doc):
         """POST with valid question returns global chat answer."""
         mock_chat.return_value = {
             "answer": "You have several invoices.",
@@ -176,6 +192,25 @@ class TestGlobalChatView:
         )
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data["answer"] == "You have several invoices."
+        assert mock_chat.call_args.kwargs["document_ids"] == [sample_doc.pk]
+
+    @patch("ai.chat.chat_across_documents")
+    def test_includes_shared_document_ids(self, mock_chat, api_client, user, sample_doc):
+        other = User.objects.create_user("globalaiowner", password="pass123!")
+        shared = Document.objects.create(title="Shared Global AI", owner=other)
+        assign_perm("documents.view_document", user, shared)
+        mock_chat.return_value = {"answer": "ok", "sources": []}
+        api_client.force_authenticate(user=user)
+        resp = api_client.post(
+            "/api/v1/ai/chat/",
+            {"question": "What can I see?"},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_200_OK
+        assert set(mock_chat.call_args.kwargs["document_ids"]) == {
+            sample_doc.pk,
+            shared.pk,
+        }
 
 
 # --- SummarizeView ---

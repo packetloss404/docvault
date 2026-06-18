@@ -1,6 +1,7 @@
 import { Injectable, OnDestroy, signal } from '@angular/core';
 import { environment } from '../../environments/environment';
 import { TaskProgress } from '../models/websocket.model';
+import { AuthService } from './auth.service';
 
 @Injectable({ providedIn: 'root' })
 export class WebSocketService implements OnDestroy {
@@ -13,13 +14,17 @@ export class WebSocketService implements OnDestroy {
   readonly taskProgress = signal<TaskProgress | null>(null);
   readonly connected = signal(false);
 
+  constructor(private auth: AuthService) {}
+
   private get wsUrl(): string {
     // Derive WebSocket base URL from the HTTP API URL.
     // e.g. http://localhost:5000/api/v1 → ws://localhost:5000
     const base = environment.apiUrl
       .replace(/\/api\/v1\/?$/, '')
       .replace(/^http/, 'ws');
-    return `${base}/ws/status/`;
+    const token = this.auth.token();
+    const query = token ? `?token=${encodeURIComponent(token)}` : '';
+    return `${base}/ws/status/${query}`;
   }
 
   connect(): void {

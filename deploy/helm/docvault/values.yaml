@@ -153,12 +153,13 @@ affinity: {}
 # Environment variables passed to all pods
 # ---------------------------------------------------------------------------
 env:
-  DJANGO_SECRET_KEY: change-me-in-production
   DJANGO_SETTINGS_MODULE: docvault.settings.production
   STORAGE_BACKEND: local
-  DJANGO_ALLOWED_HOSTS: "*"
+  DJANGO_ALLOWED_HOSTS: "docvault.local,127.0.0.1,localhost"
   DJANGO_SECURE_SSL_REDIRECT: "false"
 
-# -- Additional sensitive values stored in the Secret
+# -- Sensitive values stored in the Secret and exposed to all pods.
+# DATABASE_URL and REDIS_URL are generated from the database/cache settings
+# unless explicitly supplied here.
 secretEnv:
   DJANGO_SECRET_KEY: change-me-in-production

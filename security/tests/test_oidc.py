@@ -1,6 +1,6 @@
 """Tests for OIDC authentication backend and utilities."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from django.contrib.auth.models import Group, User

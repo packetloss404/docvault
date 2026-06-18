@@ -1,6 +1,7 @@
 """Celery tasks for document processing."""
 
 import logging
+import shutil
 from pathlib import Path
 
 from celery import shared_task
@@ -26,6 +27,7 @@ def consume_document(self, source_path, original_filename, task_id,
         override_title=overrides.get("override_title"),
         override_correspondent=overrides.get("override_correspondent"),
         override_document_type=overrides.get("override_document_type"),
+        override_storage_path=overrides.get("override_storage_path"),
         override_tags=overrides.get("override_tags"),
         override_owner=overrides.get("override_owner"),
         override_asn=overrides.get("override_asn"),
@@ -55,10 +57,23 @@ def consume_document(self, source_path, original_filename, task_id,
         logger.exception("Document consumption failed: %s", original_filename)
         raise
     finally:
+        if overrides.get("cleanup_source_path"):
+            _cleanup_source_path(Path(source_path))
         task.completed_at = timezone.now()
         task.save()
 
     return {"task_id": task_id, "status": task.status, "document_id": context.document_id}
+
+
+def _cleanup_source_path(path: Path) -> None:
+    """Remove staged source files created for asynchronous processing."""
+    try:
+        path.unlink(missing_ok=True)
+        parent = path.parent
+        if parent.name.startswith(("docvault_", "docvault_source_", "docvault_s3_")):
+            shutil.rmtree(parent, ignore_errors=True)
+    except Exception:
+        logger.warning("Failed to clean up staged source file: %s", path, exc_info=True)
 
 
 @shared_task

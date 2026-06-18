@@ -5,7 +5,6 @@ from rest_framework import serializers
 
 from .constants import (
     FIELD_TYPE_CHOICES,
-    SIGNER_STATUS_CHOICES,
     VERIFICATION_METHOD_CHOICES,
 )
 from .models import (
@@ -14,7 +13,6 @@ from .models import (
     SignatureRequest,
     Signer,
 )
-
 
 # ---------------------------------------------------------------------------
 # Core model serializers
@@ -254,11 +252,14 @@ class SignatureRequestCreateSerializer(serializers.Serializer):
     fields = FieldCreateSerializer(many=True)
 
     def validate_document(self, value):
-        from documents.models import Document
+        from django.http import Http404
 
+        from security.permissions import get_document_for_user
+
+        user = self.context.get("user")
         try:
-            return Document.objects.get(pk=value)
-        except Document.DoesNotExist:
+            return get_document_for_user(user, value, "change")
+        except Http404:
             raise serializers.ValidationError(
                 f"Document with id {value} does not exist."
             )

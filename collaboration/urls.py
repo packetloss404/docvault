@@ -49,6 +49,11 @@ urlpatterns = [
         views.PublicShareAccessView.as_view(),
         name="share-public-access",
     ),
+    path(
+        "share/<slug:slug>/download/",
+        views.PublicShareDownloadView.as_view(),
+        name="share-public-download",
+    ),
     # Activity Feed
     path(
         "documents/<int:pk>/activity/",

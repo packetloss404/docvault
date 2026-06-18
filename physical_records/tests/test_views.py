@@ -40,6 +40,11 @@ def user(db):
 
 
 @pytest.fixture
+def other_user(db):
+    return User.objects.create_user("other", "other@example.com", "password")
+
+
+@pytest.fixture
 def document(user):
     from documents.models import Document
 
@@ -51,6 +56,13 @@ def document2(user):
     from documents.models import Document
 
     return Document.objects.create(title="Test Doc 2", owner=user)
+
+
+@pytest.fixture
+def other_document(other_user):
+    from documents.models import Document
+
+    return Document.objects.create(title="Other Doc", owner=other_user)
 
 
 @pytest.fixture
@@ -93,6 +105,17 @@ def physical_record2(document2, shelf, user):
         barcode="REC-002",
         condition=GOOD,
         created_by=user,
+    )
+
+
+@pytest.fixture
+def other_physical_record(other_document, shelf, other_user):
+    return PhysicalRecord.objects.create(
+        document=other_document,
+        location=shelf,
+        barcode="REC-OTHER",
+        condition=GOOD,
+        created_by=other_user,
     )
 
 
@@ -193,6 +216,18 @@ class TestPhysicalRecordViewSet:
         assert len(data) >= 1
 
     @pytest.mark.django_db
+    def test_list_records_excludes_unpermitted_documents(
+        self, client, user, physical_record, other_physical_record
+    ):
+        client.force_authenticate(user=user)
+        response = client.get(RECORDS_URL)
+        assert response.status_code == 200
+        data = response.data.get("results", response.data)
+        record_ids = {item["id"] for item in data}
+        assert physical_record.pk in record_ids
+        assert other_physical_record.pk not in record_ids
+
+    @pytest.mark.django_db
     def test_create_record(self, client, user, document2, shelf):
         client.force_authenticate(user=user)
         data = {
@@ -205,6 +240,21 @@ class TestPhysicalRecordViewSet:
         response = client.post(RECORDS_URL, data, format="json")
         assert response.status_code == 201
         assert response.data["barcode"] == "REC-NEW"
+
+    @pytest.mark.django_db
+    def test_create_record_for_unpermitted_document_is_denied(
+        self, client, user, other_document, shelf
+    ):
+        client.force_authenticate(user=user)
+        data = {
+            "document": other_document.pk,
+            "location": shelf.pk,
+            "barcode": "REC-BLOCKED",
+            "condition": GOOD,
+        }
+        response = client.post(RECORDS_URL, data, format="json")
+        assert response.status_code == 404
+        assert not PhysicalRecord.objects.filter(barcode="REC-BLOCKED").exists()
 
     @pytest.mark.django_db
     def test_create_record_updates_location_count(self, client, user, document2, shelf):
@@ -329,6 +379,22 @@ class TestChargeOutView:
         assert response.status_code == 404
 
     @pytest.mark.django_db
+    def test_charge_out_unpermitted_document_is_denied(
+        self, client, user, other_document, other_physical_record
+    ):
+        client.force_authenticate(user=user)
+        data = {
+            "expected_return": (
+                timezone.now() + timezone.timedelta(days=7)
+            ).isoformat(),
+        }
+        response = client.post(
+            self._charge_out_url(other_document.pk), data, format="json"
+        )
+        assert response.status_code == 404
+        assert not ChargeOut.objects.filter(physical_record=other_physical_record).exists()
+
+    @pytest.mark.django_db
     def test_charge_out_unauthenticated(self, client, document):
         data = {
             "expected_return": (
@@ -394,6 +460,23 @@ class TestChargeInView:
         assert response.status_code == 400
         assert "not currently checked out" in response.data["error"]
 
+    @pytest.mark.django_db
+    def test_charge_in_unpermitted_document_is_denied(
+        self, client, user, other_user, other_document, other_physical_record
+    ):
+        ChargeOut.objects.create(
+            physical_record=other_physical_record,
+            user=other_user,
+            expected_return=timezone.now() + timezone.timedelta(days=7),
+            status=CHECKED_OUT,
+        )
+        client.force_authenticate(user=user)
+        response = client.post(
+            self._charge_in_url(other_document.pk), {}, format="json"
+        )
+        assert response.status_code == 404
+        assert other_physical_record.charge_outs.filter(status=CHECKED_OUT).exists()
+
 
 # ===========================================================================
 # Barcode Checkout
@@ -457,6 +540,23 @@ class TestBarcodeCheckoutView:
         assert response.status_code == 400
         assert "already checked out" in response.data["error"]
 
+    @pytest.mark.django_db
+    def test_barcode_checkout_unpermitted_record_is_denied(
+        self, client, user, other_physical_record
+    ):
+        client.force_authenticate(user=user)
+        data = {
+            "barcode": "REC-OTHER",
+            "expected_return": (
+                timezone.now() + timezone.timedelta(days=5)
+            ).isoformat(),
+        }
+        response = client.post(
+            self._barcode_url(other_physical_record.pk), data, format="json"
+        )
+        assert response.status_code == 404
+        assert not ChargeOut.objects.filter(physical_record=other_physical_record).exists()
+
 
 # ===========================================================================
 # Charge-Out List with Filters
@@ -476,6 +576,29 @@ class TestChargeOutListView:
         response = client.get(CHARGE_OUTS_URL)
         assert response.status_code == 200
         assert len(response.data) >= 1
+
+    @pytest.mark.django_db
+    def test_list_charge_outs_excludes_unpermitted_documents(
+        self, client, user, other_user, physical_record, other_physical_record
+    ):
+        own = ChargeOut.objects.create(
+            physical_record=physical_record,
+            user=user,
+            expected_return=timezone.now() + timezone.timedelta(days=7),
+            status=CHECKED_OUT,
+        )
+        other = ChargeOut.objects.create(
+            physical_record=other_physical_record,
+            user=other_user,
+            expected_return=timezone.now() + timezone.timedelta(days=7),
+            status=CHECKED_OUT,
+        )
+        client.force_authenticate(user=user)
+        response = client.get(CHARGE_OUTS_URL)
+        assert response.status_code == 200
+        charge_out_ids = {item["id"] for item in response.data}
+        assert own.pk in charge_out_ids
+        assert other.pk not in charge_out_ids
 
     @pytest.mark.django_db
     def test_list_charge_outs_filter_by_status(
@@ -535,6 +658,29 @@ class TestOverdueChargeOutView:
         response = client.get(OVERDUE_URL)
         assert response.status_code == 200
         assert len(response.data) >= 1
+
+    @pytest.mark.django_db
+    def test_overdue_list_excludes_unpermitted_documents(
+        self, client, user, other_user, physical_record, other_physical_record
+    ):
+        own = ChargeOut.objects.create(
+            physical_record=physical_record,
+            user=user,
+            expected_return=timezone.now() - timezone.timedelta(days=1),
+            status=CHECKED_OUT,
+        )
+        other = ChargeOut.objects.create(
+            physical_record=other_physical_record,
+            user=other_user,
+            expected_return=timezone.now() - timezone.timedelta(days=1),
+            status=CHECKED_OUT,
+        )
+        client.force_authenticate(user=user)
+        response = client.get(OVERDUE_URL)
+        assert response.status_code == 200
+        charge_out_ids = {item["id"] for item in response.data}
+        assert own.pk in charge_out_ids
+        assert other.pk not in charge_out_ids
 
     @pytest.mark.django_db
     def test_overdue_list_excludes_returned(self, client, user, physical_record):
@@ -602,6 +748,21 @@ class TestDestructionCertificateView:
             self._cert_url(99999), data, format="json"
         )
         assert response.status_code == 404
+
+    @pytest.mark.django_db
+    def test_create_destruction_certificate_unpermitted_record_is_denied(
+        self, client, user, other_physical_record
+    ):
+        client.force_authenticate(user=user)
+        response = client.post(
+            self._cert_url(other_physical_record.pk),
+            {"method": SHREDDING},
+            format="json",
+        )
+        assert response.status_code == 404
+        assert not DestructionCertificate.objects.filter(
+            physical_record=other_physical_record
+        ).exists()
 
     @pytest.mark.django_db
     def test_create_destruction_certificate_unauthenticated(

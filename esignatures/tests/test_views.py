@@ -135,6 +135,24 @@ class TestSignatureRequestViewSet:
         assert "fields_data" in response.data
 
     @pytest.mark.django_db
+    def test_create_request_rejects_unpermitted_document(
+        self, client, user, other_user
+    ):
+        other_doc = Document.objects.create(
+            title="Other User Doc",
+            filename="other-request.pdf",
+            owner=other_user,
+        )
+        client.force_authenticate(user=user)
+        response = client.post(
+            self.LIST_URL,
+            {"document": other_doc.pk, "title": "Blocked"},
+            format="json",
+        )
+        assert response.status_code == 404
+        assert not SignatureRequest.objects.filter(title="Blocked").exists()
+
+    @pytest.mark.django_db
     def test_update_request(self, client, user, signature_request):
         client.force_authenticate(user=user)
         response = client.patch(
@@ -144,6 +162,25 @@ class TestSignatureRequestViewSet:
         )
         assert response.status_code == 200
         assert response.data["title"] == "Updated Title"
+
+    @pytest.mark.django_db
+    def test_update_request_rejects_unpermitted_document(
+        self, client, user, other_user, signature_request
+    ):
+        other_doc = Document.objects.create(
+            title="Other User Doc",
+            filename="other-update.pdf",
+            owner=other_user,
+        )
+        client.force_authenticate(user=user)
+        response = client.patch(
+            f"{self.LIST_URL}{signature_request.pk}/",
+            {"document": other_doc.pk},
+            format="json",
+        )
+        assert response.status_code == 404
+        signature_request.refresh_from_db()
+        assert signature_request.document_id != other_doc.pk
 
     @pytest.mark.django_db
     def test_delete_request(self, client, user, signature_request):
@@ -335,6 +372,43 @@ class TestDocumentSignatureRequestCreate:
             request_id=req_id, event_type=EVENT_CREATED,
         )
         assert events.count() == 1
+
+    @pytest.mark.django_db
+    def test_create_request_rejects_unowned_document(
+        self, client, user, other_user
+    ):
+        other_doc = Document.objects.create(
+            title="Other User Doc",
+            filename="other.pdf",
+            owner=other_user,
+        )
+        client.force_authenticate(user=user)
+        data = {
+            "title": "Not Mine",
+            "signers": [
+                {"name": "Alice", "email": "alice@example.com", "order": 0},
+            ],
+            "fields": [
+                {
+                    "signer_index": 0,
+                    "page": 1,
+                    "x": 0.1,
+                    "y": 0.5,
+                    "width": 0.3,
+                    "height": 0.05,
+                    "field_type": "signature",
+                },
+            ],
+        }
+
+        response = client.post(
+            f"/api/v1/documents/{other_doc.pk}/signature-request/",
+            data,
+            format="json",
+        )
+
+        assert response.status_code == 400
+        assert not SignatureRequest.objects.filter(title="Not Mine").exists()
 
     @pytest.mark.django_db
     def test_create_request_unauthenticated(self, client, document):

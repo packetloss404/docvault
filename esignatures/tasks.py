@@ -181,12 +181,10 @@ def generate_completion_certificate(request_id):
     - SHA-256 hash of the original document
     """
     import io
-    import os
 
     from django.core.files.base import ContentFile
     from django.utils import timezone
 
-    from .constants import SIGNER_SIGNED
     from .models import SignatureRequest
 
     sig_request = SignatureRequest.objects.select_related("document").get(

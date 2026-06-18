@@ -1,7 +1,6 @@
 """Tests for the workflow engine."""
 
 from datetime import timedelta
-from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -15,7 +14,6 @@ from workflows.engine import (
     launch,
 )
 from workflows.models import (
-    WorkflowInstance,
     WorkflowInstanceLogEntry,
     WorkflowState,
     WorkflowStateAction,

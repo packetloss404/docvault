@@ -51,12 +51,8 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ include "docvault.fullname" . }}
-          env:
-            - name: DJANGO_SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "docvault.fullname" . }}
-                  key: DJANGO_SECRET_KEY
+            - secretRef:
+                name: {{ include "docvault.fullname" . }}
           livenessProbe:
             exec:
               command:

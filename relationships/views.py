@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from documents.models import Document
+from security.permissions import get_document_for_user, get_objects_for_user_with_ownership
 
 from .models import DocumentRelationship, RelationshipType
 from .serializers import (
@@ -117,15 +118,21 @@ class DocumentRelationshipListCreateView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, document_id):
-        try:
-            Document.objects.get(pk=document_id)
-        except Document.DoesNotExist:
-            raise Http404("Document not found.")
+        get_document_for_user(request.user, document_id, action="view")
+        permitted_documents = get_objects_for_user_with_ownership(
+            request.user,
+            "documents.view_document",
+            Document.objects.all(),
+        )
 
         relationships = (
             DocumentRelationship.objects.filter(
                 Q(source_document_id=document_id)
                 | Q(target_document_id=document_id)
+            )
+            .filter(
+                source_document__in=permitted_documents,
+                target_document__in=permitted_documents,
             )
             .select_related(
                 "source_document",
@@ -138,18 +145,15 @@ class DocumentRelationshipListCreateView(APIView):
         return Response(serializer.data)
 
     def post(self, request, document_id):
-        try:
-            source = Document.objects.get(pk=document_id)
-        except Document.DoesNotExist:
-            raise Http404("Document not found.")
+        source = get_document_for_user(request.user, document_id, action="change")
 
         serializer = DocumentRelationshipCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         target_id = serializer.validated_data["target_document"]
         try:
-            target = Document.objects.get(pk=target_id)
-        except Document.DoesNotExist:
+            target = get_document_for_user(request.user, target_id, action="view")
+        except Http404:
             return Response(
                 {"error": "Target document not found."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -201,6 +205,7 @@ class DocumentRelationshipDeleteView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def delete(self, request, document_id, pk):
+        get_document_for_user(request.user, document_id, action="change")
         try:
             relationship = DocumentRelationship.objects.get(
                 pk=pk,
@@ -250,16 +255,21 @@ class DocumentRelationshipGraphView(APIView):
     DEFAULT_DEPTH = 2
 
     def get(self, request, document_id):
-        try:
-            root = Document.objects.select_related("document_type").get(
-                pk=document_id,
-            )
-        except Document.DoesNotExist:
-            raise Http404("Document not found.")
+        root = get_document_for_user(
+            request.user,
+            document_id,
+            action="view",
+            queryset=Document.objects.select_related("document_type"),
+        )
+        permitted_documents = get_objects_for_user_with_ownership(
+            request.user,
+            "documents.view_document",
+            Document.objects.all(),
+        )
 
         depth = self._parse_depth(request)
 
-        nodes, edges = self._bfs(root, depth)
+        nodes, edges = self._bfs(root, depth, permitted_documents)
 
         serializer = RelationshipGraphSerializer(
             {"nodes": nodes, "edges": edges},
@@ -273,7 +283,7 @@ class DocumentRelationshipGraphView(APIView):
             depth = self.DEFAULT_DEPTH
         return min(max(depth, 1), self.MAX_DEPTH)
 
-    def _bfs(self, root, max_depth):
+    def _bfs(self, root, max_depth, permitted_documents):
         """Breadth-first traversal collecting nodes and edges."""
         visited_ids = set()
         node_map = {}
@@ -294,6 +304,10 @@ class DocumentRelationshipGraphView(APIView):
                 DocumentRelationship.objects.filter(
                     Q(source_document_id=current_id)
                     | Q(target_document_id=current_id)
+                )
+                .filter(
+                    source_document__in=permitted_documents,
+                    target_document__in=permitted_documents,
                 )
                 .select_related(
                     "source_document",

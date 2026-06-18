@@ -1,8 +1,8 @@
 """DRF permission classes for DocVault."""
 
-from rest_framework.permissions import BasePermission, DjangoObjectPermissions
-
+from django.http import Http404
 from guardian.shortcuts import get_objects_for_user
+from rest_framework.permissions import BasePermission, DjangoObjectPermissions
 
 
 class DocVaultObjectPermissions(DjangoObjectPermissions):
@@ -37,7 +37,7 @@ class DocVaultObjectPermissions(DjangoObjectPermissions):
         return True
 
     def has_object_permission(self, request, view, obj):
-        if request.user.is_superuser:
+        if request.user.is_superuser or request.user.is_staff:
             return True
 
         # Owner shortcut: owners always have full access
@@ -74,7 +74,7 @@ def get_objects_for_user_with_ownership(user, perm, queryset):
 
     Combines guardian object permissions with ownership shortcut.
     """
-    if user.is_superuser:
+    if user.is_superuser or user.is_staff:
         return queryset
 
     # Objects the user owns
@@ -95,6 +95,45 @@ def get_objects_for_user_with_ownership(user, perm, queryset):
     return (owned | permitted).distinct()
 
 
+def user_has_object_permission_with_ownership(user, obj, perm):
+    """Return whether *user* can access *obj* via ownership or guardian."""
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser or user.is_staff:
+        return True
+    if hasattr(obj, "owner") and obj.owner == user:
+        return True
+    return user.has_perm(perm, obj)
+
+
+def get_object_for_user_with_ownership(user, perm, queryset, **lookup):
+    """
+    Return one permitted object or raise Http404.
+
+    This mirrors viewset queryset filtering for APIViews that need an explicit
+    object lookup and should not reveal whether an inaccessible object exists.
+    """
+    model = queryset.model
+    try:
+        return get_objects_for_user_with_ownership(user, perm, queryset).get(**lookup)
+    except model.DoesNotExist:
+        raise Http404(f"{model._meta.verbose_name.title()} not found.")
+
+
+def get_document_for_user(user, pk, action="view", queryset=None):
+    """Return a document the user may access for the requested action."""
+    from documents.models import Document
+
+    if queryset is None:
+        queryset = Document.objects.all()
+    return get_object_for_user_with_ownership(
+        user,
+        f"documents.{action}_document",
+        queryset,
+        pk=pk,
+    )
+
+
 def set_object_permissions(obj, permissions_dict):
     """
     Set object-level permissions for a given object.
@@ -105,9 +144,8 @@ def set_object_permissions(obj, permissions_dict):
         'change': {'users': [user1], 'groups': []},
     }
     """
-    from django.contrib.auth.models import User, Group
-
-    from guardian.shortcuts import assign_perm, remove_perm
+    from django.contrib.auth.models import Group, User
+    from guardian.shortcuts import assign_perm
 
     app_label = obj._meta.app_label
     model_name = obj._meta.model_name

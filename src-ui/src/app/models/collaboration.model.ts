@@ -51,6 +51,8 @@ export interface PublicShareAccess {
   file_version?: string;
   download_count?: number;
   requires_password?: boolean;
+  download_url?: string;
+  download_token?: string;
 }
 
 export interface ActivityEntry {

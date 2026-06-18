@@ -1,7 +1,8 @@
 """Tests for entity extraction helpers."""
 
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from entities.extraction import (
     extract_entities_regex,

@@ -4,11 +4,10 @@ import importlib
 import re
 from datetime import datetime
 
+import jinja2
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.text import slugify
-
-import jinja2
 
 from core.models import AuditableModel, OwnedModel
 
