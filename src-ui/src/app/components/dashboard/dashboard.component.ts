@@ -217,14 +217,23 @@ export class DashboardComponent implements OnInit {
     this.saveLayout();
   }
 
-  /** Recent documents get the wide column; the rest stack beside them. */
+  /** The greeting and the stat row span the full grid width. */
   isWideWidget(widget: WidgetType): boolean {
-    return (
-      widget === 'welcome' ||
-      widget === 'statistics' ||
-      widget === 'recent_documents'
-    );
+    return widget === 'welcome' || widget === 'statistics';
   }
+
+  /**
+   * How many rows the recent-documents card should span so the side cards stack
+   * beside it in the narrow column, as the design's 1.6fr/1fr split shows.
+   */
+  readonly sideWidgetCount = computed(() =>
+    Math.max(
+      1,
+      this.widgets().filter(
+        (w) => !this.isWideWidget(w) && w !== 'recent_documents',
+      ).length,
+    ),
+  );
 
   // --- CDK Drag & drop reordering ---
 
@@ -332,6 +341,11 @@ export class DashboardComponent implements OnInit {
 
   getPreviewUrl(doc: Document): string {
     return this.documentService.getPreviewUrl(doc.id);
+  }
+
+  /** `--dv-thumb-src` value; the stripe placeholder shows through on a 404. */
+  thumbSrc(doc: Document): string {
+    return `url("${this.getPreviewUrl(doc)}")`;
   }
 
   // --- Upload handling ---

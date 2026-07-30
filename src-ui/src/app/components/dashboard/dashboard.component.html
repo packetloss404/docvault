@@ -6,7 +6,13 @@
     (cdkDropListDropped)="onCdkDrop($event)"
   >
     @for (widget of widgets(); track widget) {
-      <div class="db-cell" [class.db-cell--wide]="isWideWidget(widget)" cdkDrag>
+      <div
+        class="db-cell"
+        [class.db-cell--wide]="isWideWidget(widget)"
+        [class.db-cell--tall]="widget === 'recent_documents'"
+        [style.grid-row]="widget === 'recent_documents' ? 'span ' + sideWidgetCount() : null"
+        cdkDrag
+      >
         <div class="db-placeholder" *cdkDragPlaceholder></div>
 
         <!-- Greeting -->
@@ -85,12 +91,10 @@
             } @else {
               @for (doc of recentDocuments(); track doc.id) {
                 <a class="dv-listrow" [routerLink]="['/documents', doc.id]">
-                  <img
+                  <div
                     class="dv-thumb"
-                    [src]="getPreviewUrl(doc)"
-                    alt=""
-                    onerror="this.removeAttribute('src')"
-                  />
+                    [style.--dv-thumb-src]="thumbSrc(doc)"
+                  ></div>
                   <div class="db-recent__main">
                     <div class="db-recent__title dv-clip">{{ doc.title }}</div>
                     <div class="db-recent__from">{{ doc.correspondent_name }}</div>

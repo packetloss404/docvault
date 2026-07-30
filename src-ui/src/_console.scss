@@ -870,14 +870,19 @@ $sans: "Space Grotesk", system-ui, -apple-system, sans-serif;
     cursor: pointer;
   }
 
+  // Borderless field whose container carries the focus context (the ⌘K
+  // palette). The text caret indicates focus, so the global ring is redundant
+  // here and the design shows none.
   &--bare {
     background: transparent;
     border: none;
     font-size: 15px;
     padding: 0;
 
-    &:focus {
+    &:focus,
+    &:focus-visible {
       border-color: transparent;
+      outline: none;
     }
   }
 }
@@ -1247,20 +1252,26 @@ $sans: "Space Grotesk", system-ui, -apple-system, sans-serif;
   position: relative;
 }
 
+// Set `--dv-thumb-src: url(…)` to show a real thumbnail. It is layered *over*
+// the stripes rather than replacing them, so a 404 degrades to the placeholder
+// instead of a broken-image glyph — which is why this is a div, not an <img>.
 .dv-thumb {
   width: 26px;
   height: 34px;
   flex-shrink: 0;
-  background: repeating-linear-gradient(
-    45deg,
-    var(--panel2),
-    var(--panel2) 4px,
-    var(--bg) 4px,
-    var(--bg) 8px
-  );
+  background-image: var(--dv-thumb-src, none),
+    repeating-linear-gradient(
+      45deg,
+      var(--panel2),
+      var(--panel2) 4px,
+      var(--bg) 4px,
+      var(--bg) 8px
+    );
+  background-size: cover, auto;
+  background-position: center, 0 0;
+  background-repeat: no-repeat, repeat;
   border: 1px solid var(--border2);
   border-radius: 3px;
-  object-fit: cover;
 }
 
 .dv-highlight {

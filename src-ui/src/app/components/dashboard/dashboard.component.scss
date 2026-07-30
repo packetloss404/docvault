@@ -15,11 +15,16 @@
   &--wide {
     grid-column: 1 / -1;
   }
+
+  // Recent documents holds the 1.6fr column and spans the side cards' rows.
+  &--tall {
+    grid-column: 1;
+    align-self: stretch;
+  }
 }
 
-// Recent documents sits in the wide column but should not stretch the row.
-.db-cell--wide .db-fill {
-  max-width: 100%;
+.db-cell--tall .db-fill {
+  height: 100%;
 }
 
 .db-placeholder {

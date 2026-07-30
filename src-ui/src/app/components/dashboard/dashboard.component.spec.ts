@@ -247,16 +247,31 @@ describe('DashboardComponent', () => {
   });
 
   describe('layout regions', () => {
-    it('spans the greeting, stats and recent documents across the grid', () => {
+    it('spans the greeting and the stat row across the grid', () => {
       expect(component.isWideWidget('welcome')).toBe(true);
       expect(component.isWideWidget('statistics')).toBe(true);
-      expect(component.isWideWidget('recent_documents')).toBe(true);
     });
 
-    it('keeps the side cards in the narrow column', () => {
+    it('keeps recent documents and the side cards in a column', () => {
+      expect(component.isWideWidget('recent_documents')).toBe(false);
       expect(component.isWideWidget('attention')).toBe(false);
       expect(component.isWideWidget('saved_views')).toBe(false);
       expect(component.isWideWidget('upload')).toBe(false);
+    });
+
+    it('spans recent documents over the side cards beside it', () => {
+      // attention + saved_views + upload
+      expect(component.sideWidgetCount()).toBe(3);
+    });
+
+    it('never spans fewer than one row', () => {
+      component.widgets.set(['welcome', 'statistics', 'recent_documents']);
+      expect(component.sideWidgetCount()).toBe(1);
+    });
+
+    it('tracks the side-card count as the layout changes', () => {
+      component.widgets.set(['recent_documents', 'upload']);
+      expect(component.sideWidgetCount()).toBe(1);
     });
   });
 
