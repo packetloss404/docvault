@@ -4,198 +4,191 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { PortalService } from '../../services/portal.service';
 import { PortalConfig, DocumentRequest } from '../../models/portal.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-request-manager',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, SubnavComponent],
+  styleUrl: './request-manager.component.scss',
   template: `
-    <div class="container-fluid">
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="mb-0"><i class="bi bi-send me-2"></i>Document Requests</h4>
-        <button class="btn btn-primary btn-sm" (click)="showForm.set(!showForm())">
-          <i class="bi" [ngClass]="showForm() ? 'bi-x' : 'bi-plus'"></i>
-          {{ showForm() ? 'Cancel' : 'New Request' }}
-        </button>
-      </div>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner dv-inner--wide">
+        <dv-subnav />
 
-      <!-- Create Form -->
-      @if (showForm()) {
-        <div class="card mb-4">
-          <div class="card-header">Create Document Request</div>
-          <div class="card-body">
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label">Portal</label>
+        <div class="dv-section rm-section">
+          <span class="dv-eyebrow">document requests</span>
+          <button
+            type="button"
+            class="dv-btn dv-btn--accent dv-btn--md dv-push"
+            (click)="showForm.set(!showForm())"
+          >
+            {{ showForm() ? 'Cancel' : '+ New request' }}
+          </button>
+        </div>
+
+        <!-- Create form -->
+        @if (showForm()) {
+          <div class="dv-card dv-card--pad rm-form">
+            <div class="dv-card__title rm-form__title">Create document request</div>
+
+            <div class="rm-grid">
+              <label class="rm-field">
+                <span class="dv-field__label">portal</span>
                 <select
-                  class="form-select form-select-sm"
+                  class="dv-select dv-input--r7"
                   [ngModel]="formPortal()"
                   (ngModelChange)="formPortal.set($event)"
                 >
-                  <option [ngValue]="0" disabled>Select portal...</option>
+                  <option [ngValue]="0" disabled>select portal…</option>
                   @for (p of portals(); track p.id) {
                     <option [ngValue]="p.id">{{ p.name }}</option>
                   }
                 </select>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Title</label>
+              </label>
+
+              <label class="rm-field">
+                <span class="dv-field__label">title</span>
                 <input
                   type="text"
-                  class="form-control form-control-sm"
+                  class="dv-input dv-input--r7"
                   [ngModel]="formTitle()"
                   (ngModelChange)="formTitle.set($event)"
                 />
-              </div>
-              <div class="col-12">
-                <label class="form-label">Description</label>
+              </label>
+
+              <label class="rm-field rm-field--full">
+                <span class="dv-field__label">description</span>
                 <textarea
-                  class="form-control form-control-sm"
+                  class="dv-input dv-input--r7"
                   rows="2"
                   [ngModel]="formDescription()"
                   (ngModelChange)="formDescription.set($event)"
                 ></textarea>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Assignee Email</label>
+              </label>
+
+              <label class="rm-field">
+                <span class="dv-field__label">assignee email</span>
                 <input
                   type="email"
-                  class="form-control form-control-sm"
+                  class="dv-input dv-input--r7 dv-mono"
                   [ngModel]="formAssigneeEmail()"
                   (ngModelChange)="formAssigneeEmail.set($event)"
                 />
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Assignee Name</label>
+              </label>
+
+              <label class="rm-field">
+                <span class="dv-field__label">assignee name</span>
                 <input
                   type="text"
-                  class="form-control form-control-sm"
+                  class="dv-input dv-input--r7"
                   [ngModel]="formAssigneeName()"
                   (ngModelChange)="formAssigneeName.set($event)"
                 />
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Deadline</label>
+              </label>
+
+              <label class="rm-field">
+                <span class="dv-field__label">deadline</span>
                 <input
                   type="date"
-                  class="form-control form-control-sm"
+                  class="dv-input dv-input--r7 dv-mono"
                   [ngModel]="formDeadline()"
                   (ngModelChange)="formDeadline.set($event)"
                 />
-              </div>
+              </label>
             </div>
+
             @if (formError()) {
-              <div class="alert alert-danger mt-3 mb-0 py-2 small">{{ formError() }}</div>
+              <div class="dv-banner dv-banner--error rm-banner" role="alert">{{ formError() }}</div>
             }
-            <div class="mt-3">
+
+            <div class="rm-form__actions">
               <button
-                class="btn btn-primary btn-sm"
+                type="button"
+                class="dv-btn dv-btn--primary dv-btn--md"
                 (click)="createRequest()"
                 [disabled]="!formPortal() || !formTitle() || !formAssigneeEmail()"
               >
-                <i class="bi bi-check me-1"></i>Create
+                Create
               </button>
-              <button class="btn btn-outline-secondary btn-sm ms-2" (click)="showForm.set(false)">
+              <button
+                type="button"
+                class="dv-btn dv-btn--ghost dv-btn--md"
+                (click)="showForm.set(false)"
+              >
                 Cancel
               </button>
             </div>
           </div>
-        </div>
-      }
+        }
 
-      <!-- Request List -->
-      @if (loading()) {
-        <div class="text-center py-4">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
-        </div>
-      } @else if (requests().length === 0) {
-        <div class="text-center text-muted py-4">
-          <i class="bi bi-send fs-1"></i>
-          <p class="mt-2">No document requests yet.</p>
-        </div>
-      } @else {
-        <div class="table-responsive">
-          <table class="table table-hover align-middle">
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Portal</th>
-                <th>Assignee</th>
-                <th>Deadline</th>
-                <th>Status</th>
-                <th>Sent</th>
-                <th class="text-end">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (req of requests(); track req.id) {
-                <tr>
-                  <td>{{ req.title }}</td>
-                  <td>{{ req.portal_name }}</td>
-                  <td>
-                    {{ req.assignee_name || req.assignee_email }}
-                    <br *ngIf="req.assignee_name" />
-                    <small *ngIf="req.assignee_name" class="text-muted">{{
-                      req.assignee_email
-                    }}</small>
-                  </td>
-                  <td>
-                    @if (req.deadline) {
-                      {{ req.deadline | date: 'mediumDate' }}
-                    } @else {
-                      <span class="text-muted">None</span>
+        <!-- Request rows -->
+        @if (loading()) {
+          <div class="dv-empty"><span class="dv-spinner"></span> Loading…</div>
+        } @else if (requests().length === 0) {
+          <div class="dv-empty">No document requests yet.</div>
+        } @else {
+          <div class="rm-list">
+            @for (req of requests(); track req.id) {
+              <div class="dv-card dv-card--r10 rm-row">
+                <div class="rm-row__main">
+                  <div class="rm-row__title dv-clip">{{ req.title }}</div>
+                  <div class="dv-meta rm-row__meta">
+                    for @if (req.assignee_name) {
+                      {{ req.assignee_name }} ·
                     }
-                  </td>
-                  <td>
-                    <span
-                      class="badge"
-                      [ngClass]="getStatusBadgeClass(req.status)"
-                    >
-                      {{ req.status }}
-                    </span>
-                  </td>
-                  <td>
+                    {{ req.assignee_email }} · {{ req.portal_name }} · token /request/{{
+                      req.token
+                    }}
                     @if (req.sent_at) {
-                      {{ req.sent_at | date: 'short' }}
+                      · sent {{ req.sent_at | date: 'short' }}
                     } @else {
-                      <span class="text-muted">Not sent</span>
+                      · not sent
                     }
-                  </td>
-                  <td class="text-end">
-                    @if (!req.sent_at) {
-                      <button
-                        class="btn btn-outline-success btn-sm me-1"
-                        (click)="sendRequest(req)"
-                        title="Send request email"
-                      >
-                        <i class="bi bi-envelope me-1"></i>Send
-                      </button>
-                    } @else {
-                      <button
-                        class="btn btn-outline-warning btn-sm me-1"
-                        (click)="remindRequest(req)"
-                        title="Send reminder email"
-                      >
-                        <i class="bi bi-bell me-1"></i>Remind
-                      </button>
-                    }
-                    <a
-                      [href]="'/request/' + req.token"
-                      target="_blank"
-                      class="btn btn-outline-info btn-sm"
-                      title="Open public request page"
-                    >
-                      <i class="bi bi-box-arrow-up-right"></i>
-                    </a>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
+                  </div>
+                </div>
+
+                <span class="dv-chip dv-chip--upper" [ngClass]="getStatusBadgeClass(req.status)">{{
+                  req.status
+                }}</span>
+
+                <span class="dv-meta rm-row__when" [ngClass]="deadlineClass(req)">{{
+                  deadlineLabel(req)
+                }}</span>
+
+                @if (!req.sent_at) {
+                  <button
+                    type="button"
+                    class="dv-rowaction dv-rowaction--accent"
+                    (click)="sendRequest(req)"
+                    title="Send request email"
+                  >
+                    send
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="dv-rowaction dv-rowaction--accent"
+                    (click)="remindRequest(req)"
+                    title="Send reminder email"
+                  >
+                    remind
+                  </button>
+                }
+
+                <a
+                  class="dv-rowaction dv-rowaction--accent"
+                  [href]="'/request/' + req.token"
+                  target="_blank"
+                  rel="noopener"
+                  title="Open public request page"
+                  >⧉</a
+                >
+              </div>
+            }
+          </div>
+        }
+      </div>
     </div>
   `,
 })
@@ -237,21 +230,48 @@ export class RequestManagerComponent implements OnInit {
     });
   }
 
+  /** Console status chip modifier for a request status. */
   getStatusBadgeClass(status: string): string {
     switch (status) {
       case 'pending':
-        return 'bg-warning text-dark';
+        return 'dv-chip--warn';
       case 'sent':
-        return 'bg-info text-dark';
+        return 'dv-chip--accent';
       case 'submitted':
-        return 'bg-success';
+        return 'dv-chip--ok';
       case 'expired':
-        return 'bg-secondary';
-      case 'cancelled':
-        return 'bg-danger';
+        return 'dv-chip--danger';
       default:
-        return 'bg-secondary';
+        return '';
     }
+  }
+
+  /** Mono clock readout for the deadline column. */
+  deadlineLabel(req: DocumentRequest): string {
+    if (!req.deadline) return 'no deadline';
+    return this.isOverdue(req)
+      ? `overdue ${this.formatDay(req.deadline)}`
+      : `due ${this.formatDay(req.deadline)}`;
+  }
+
+  deadlineClass(req: DocumentRequest): string {
+    if (!req.deadline) return 'dv-faint';
+    return this.isOverdue(req) ? 'dv-danger' : '';
+  }
+
+  isOverdue(req: DocumentRequest): boolean {
+    if (!req.deadline || req.status === 'submitted' || req.status === 'cancelled') {
+      return false;
+    }
+    return new Date(req.deadline) < new Date();
+  }
+
+  formatDay(dateString: string): string {
+    return new Date(dateString).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
   }
 
   createRequest(): void {

@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -11,124 +11,174 @@ import { OTPStatus } from '../../models/security.model';
   selector: 'app-profile',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
+  styleUrl: './profile.component.scss',
   template: `
-    <h3 class="mb-3">Profile</h3>
-
-    @if (loading()) {
-      <div class="text-center py-5">
-        <div class="spinner-border"></div>
-      </div>
-    } @else if (user()) {
-      <div class="row">
-        <!-- Profile Info -->
-        <div class="col-md-6 mb-4">
-          <div class="card">
-            <div class="card-header">
-              <h6 class="mb-0"><i class="bi bi-person me-1"></i> Account Information</h6>
-            </div>
-            <div class="card-body">
-              <dl class="row mb-0">
-                <dt class="col-sm-4">Username</dt>
-                <dd class="col-sm-8">{{ user()!.username }}</dd>
-                <dt class="col-sm-4">Email</dt>
-                <dd class="col-sm-8">{{ user()!.email || '—' }}</dd>
-                <dt class="col-sm-4">First Name</dt>
-                <dd class="col-sm-8">{{ user()!.first_name || '—' }}</dd>
-                <dt class="col-sm-4">Last Name</dt>
-                <dd class="col-sm-8">{{ user()!.last_name || '—' }}</dd>
-                <dt class="col-sm-4">Joined</dt>
-                <dd class="col-sm-8">{{ formatDate(user()!.date_joined) }}</dd>
-                <dt class="col-sm-4">Status</dt>
-                <dd class="col-sm-8">
-                  @if (user()!.is_staff) {
-                    <span class="badge bg-primary me-1">Staff</span>
-                  }
-                  <span class="badge" [class.bg-success]="user()!.is_active" [class.bg-secondary]="!user()!.is_active">
-                    {{ user()!.is_active ? 'Active' : 'Inactive' }}
-                  </span>
-                </dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-
-        <!-- Security -->
-        <div class="col-md-6 mb-4">
-          <div class="card mb-3">
-            <div class="card-header">
-              <h6 class="mb-0"><i class="bi bi-shield-lock me-1"></i> Security</h6>
-            </div>
-            <div class="card-body">
-              <div class="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                  <strong>Two-Factor Authentication</strong>
-                  <br />
-                  <small class="text-muted">
-                    @if (otpStatus()?.enabled) {
-                      Enabled and active
-                    } @else {
-                      Not configured
-                    }
-                  </small>
-                </div>
-                <a routerLink="/otp-setup" class="btn btn-sm btn-outline-primary">
-                  {{ otpStatus()?.enabled ? 'Manage' : 'Set Up' }}
-                </a>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner dv-inner--wide">
+        @if (loading()) {
+          <div class="dv-empty"><span class="dv-spinner"></span> Loading profile…</div>
+        } @else if (user(); as u) {
+          <div class="pf-head">
+            <span class="dv-avatar dv-avatar--lg">{{ initials() }}</span>
+            <div>
+              <h1 class="dv-h1 dv-h1--sm pf-head__name">{{ u.username }}</h1>
+              <div class="dv-meta">
+                {{ u.email || 'no email' }} · {{ role() }} · joined
+                {{ formatDate(u.date_joined) }}
               </div>
             </div>
+            <button
+              type="button"
+              class="dv-btn dv-btn--danger dv-push"
+              (click)="signOut()"
+              [disabled]="signingOut()"
+            >
+              Sign out
+            </button>
           </div>
 
-          <!-- Change Password -->
-          <div class="card">
-            <div class="card-header">
-              <h6 class="mb-0"><i class="bi bi-key me-1"></i> Change Password</h6>
-            </div>
-            <div class="card-body">
-              @if (passwordSuccess()) {
-                <div class="alert alert-success py-2">
-                  Password changed successfully.
-                  <button type="button" class="btn-close btn-close-sm float-end" (click)="passwordSuccess.set(false)"></button>
+          <div class="pf-grid">
+            <div class="pf-col">
+              <!-- Security -->
+              <div class="dv-card dv-card--pad">
+                <div class="dv-card__title">Security</div>
+                <div class="pf-lines">
+                  <div class="dv-stat-line">
+                    <span class="dv-stat-line__k">two-factor</span>
+                    <span class="dv-stat-line__v" [class.dv-ok]="otpStatus()?.enabled">
+                      {{ otpStatus()?.enabled ? '✓ totp enabled' : 'not configured' }}
+                    </span>
+                  </div>
+                  <div class="dv-stat-line">
+                    <span class="dv-stat-line__k">account</span>
+                    <span class="dv-stat-line__v" [class.dv-ok]="u.is_active">
+                      {{ u.is_active ? '✓ active' : 'inactive' }}
+                    </span>
+                  </div>
                 </div>
-              }
-              @if (passwordError()) {
-                <div class="alert alert-danger py-2">
-                  {{ passwordError() }}
-                  <button type="button" class="btn-close btn-close-sm float-end" (click)="passwordError.set('')"></button>
+                <div class="pf-actions">
+                  <a class="dv-btn dv-btn--ghost dv-btn--md" routerLink="/otp-setup">
+                    {{ otpStatus()?.enabled ? 'Manage 2FA' : 'Set up 2FA' }}
+                  </a>
                 </div>
-              }
-              <div class="mb-3">
-                <label class="form-label">Current Password</label>
-                <input
-                  type="password"
-                  class="form-control"
-                  [ngModel]="oldPassword()"
-                  (ngModelChange)="oldPassword.set($event)"
-                />
               </div>
-              <div class="mb-3">
-                <label class="form-label">New Password</label>
-                <input
-                  type="password"
-                  class="form-control"
-                  [ngModel]="newPassword()"
-                  (ngModelChange)="newPassword.set($event)"
-                />
-              </div>
-              <button
-                class="btn btn-primary btn-sm"
-                (click)="changePassword()"
-                [disabled]="changingPassword() || !oldPassword() || !newPassword()"
-              >
-                @if (changingPassword()) {
-                  <span class="spinner-border spinner-border-sm me-1"></span>
+
+              <!-- Change password -->
+              <div class="dv-card dv-card--pad">
+                <div class="dv-card__title">Change password</div>
+
+                @if (passwordSuccess()) {
+                  <div class="pf-banner pf-banner--ok" role="status">
+                    <span>Password changed.</span>
+                    <button
+                      type="button"
+                      class="pf-banner__close"
+                      aria-label="Dismiss"
+                      (click)="passwordSuccess.set(false)"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 }
-                Change Password
-              </button>
+                @if (passwordError()) {
+                  <div class="pf-banner pf-banner--error" role="alert">
+                    <span>{{ passwordError() }}</span>
+                    <button
+                      type="button"
+                      class="pf-banner__close"
+                      aria-label="Dismiss"
+                      (click)="passwordError.set('')"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                }
+
+                <div class="pf-form">
+                  <div>
+                    <label class="dv-field__label" for="pf-old">current password</label>
+                    <input
+                      id="pf-old"
+                      type="password"
+                      class="dv-input dv-input--mono"
+                      autocomplete="current-password"
+                      [ngModel]="oldPassword()"
+                      (ngModelChange)="oldPassword.set($event)"
+                    />
+                  </div>
+                  <div>
+                    <label class="dv-field__label" for="pf-new">new password</label>
+                    <input
+                      id="pf-new"
+                      type="password"
+                      class="dv-input dv-input--mono"
+                      autocomplete="new-password"
+                      [ngModel]="newPassword()"
+                      (ngModelChange)="newPassword.set($event)"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    class="dv-btn dv-btn--primary dv-btn--md"
+                    (click)="changePassword()"
+                    [disabled]="changingPassword() || !oldPassword() || !newPassword()"
+                  >
+                    @if (changingPassword()) {
+                      <span class="dv-spinner"></span>
+                    }
+                    Change password
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="pf-col">
+              <!-- Account -->
+              <div class="dv-card dv-card--pad">
+                <div class="dv-card__title">Account</div>
+                <div class="dv-kv pf-kv">
+                  <span class="dv-kv__k">username</span>
+                  <span class="dv-mono">{{ u.username }}</span>
+                  <span class="dv-kv__k">email</span>
+                  <span class="dv-mono">{{ u.email || '—' }}</span>
+                  <span class="dv-kv__k">first name</span>
+                  <span>{{ u.first_name || '—' }}</span>
+                  <span class="dv-kv__k">last name</span>
+                  <span>{{ u.last_name || '—' }}</span>
+                  <span class="dv-kv__k">joined</span>
+                  <span class="dv-mono">{{ formatDate(u.date_joined) }}</span>
+                  <span class="dv-kv__k">status</span>
+                  <span class="pf-chips">
+                    @if (u.is_superuser) {
+                      <span class="dv-chip dv-chip--accent">superuser</span>
+                    } @else if (u.is_staff) {
+                      <span class="dv-chip dv-chip--accent">staff</span>
+                    }
+                    <span class="dv-chip" [class.dv-chip--ok]="u.is_active">
+                      {{ u.is_active ? 'active' : 'inactive' }}
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              <!-- Notifications -->
+              <div class="dv-card dv-card--pad">
+                <div class="dv-card__title">Notifications</div>
+                <div class="pf-lines">
+                  <span class="dv-muted pf-prose">
+                    Per-event delivery over in-app, email and webhook, plus your storage and
+                    document quotas.
+                  </span>
+                  <a class="pf-link" routerLink="/notification-preferences">
+                    notification preferences →
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        }
       </div>
-    }
+    </div>
   `,
 })
 export class ProfileComponent implements OnInit {
@@ -140,6 +190,26 @@ export class ProfileComponent implements OnInit {
   changingPassword = signal(false);
   passwordSuccess = signal(false);
   passwordError = signal('');
+  signingOut = signal(false);
+
+  /** Two-letter avatar label, matching the rail avatar chip. */
+  readonly initials = computed(() => {
+    const u = this.user();
+    if (!u) return '';
+    const first = u.first_name?.trim();
+    const last = u.last_name?.trim();
+    if (first && last) return (first[0] + last[0]).toLowerCase();
+    return u.username.slice(0, 2).toLowerCase();
+  });
+
+  /** Mono role readout under the username. */
+  readonly role = computed(() => {
+    const u = this.user();
+    if (!u) return '';
+    if (u.is_superuser) return 'superuser';
+    if (u.is_staff) return 'staff';
+    return 'user';
+  });
 
   constructor(
     private authService: AuthService,
@@ -181,6 +251,19 @@ export class ProfileComponent implements OnInit {
           this.changingPassword.set(false);
         },
       });
+  }
+
+  /** Ends the session; `clearAuth()` also redirects to the login screen. */
+  signOut(): void {
+    this.signingOut.set(true);
+    this.authService.logout().subscribe({
+      next: () => this.signingOut.set(false),
+      error: () => {
+        // The token is gone locally either way — drop it and bounce to login.
+        this.authService.clearAuth();
+        this.signingOut.set(false);
+      },
+    });
   }
 
   formatDate(dateString: string): string {

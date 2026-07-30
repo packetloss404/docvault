@@ -1,0 +1,101 @@
+// Sources screen: one-off geometry only. Colours come from tokens.
+
+.pagehead {
+  margin: 18px 0 20px;
+}
+
+.form-card {
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.form-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  align-self: end;
+  padding-bottom: 8px;
+
+  .dv-field__label {
+    margin-bottom: 0;
+  }
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.list {
+  margin-bottom: 6px;
+}
+
+.row-name {
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.row-state {
+  font: 400 11px "JetBrains Mono", ui-monospace, monospace;
+  color: var(--faint);
+
+  &--on {
+    color: var(--ok);
+  }
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.row-action {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: 400 11px "JetBrains Mono", ui-monospace, monospace;
+  color: var(--faint);
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &--danger:hover {
+    color: var(--danger);
+  }
+}
+
+// Result notice (no `.dv-alert` primitive exists yet).
+.notice {
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin-bottom: 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+
+  &--ok {
+    background: var(--ok-dim);
+    border-color: var(--ok);
+    color: var(--ok);
+  }
+
+  &--bad {
+    background: var(--danger-dim);
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+}

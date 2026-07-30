@@ -4,182 +4,183 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { AnalyticsService } from '../../services/analytics.service';
 import { SearchAnalytics } from '../../models/analytics.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-search-analytics',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, SubnavComponent],
   template: `
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2>Search Analytics</h2>
-      <div class="btn-group">
-        <button
-          class="btn btn-sm"
-          [class.btn-primary]="selectedDays() === 7"
-          [class.btn-outline-primary]="selectedDays() !== 7"
-          (click)="setDays(7)"
-        >
-          7 days
-        </button>
-        <button
-          class="btn btn-sm"
-          [class.btn-primary]="selectedDays() === 30"
-          [class.btn-outline-primary]="selectedDays() !== 30"
-          (click)="setDays(30)"
-        >
-          30 days
-        </button>
-        <button
-          class="btn btn-sm"
-          [class.btn-primary]="selectedDays() === 90"
-          [class.btn-outline-primary]="selectedDays() !== 90"
-          (click)="setDays(90)"
-        >
-          90 days
-        </button>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner dv-inner--wide">
+        <dv-subnav />
+
+        <div class="dv-section sa-head">
+          <span class="dv-eyebrow">range</span>
+          @for (d of ranges; track d) {
+            <button
+              type="button"
+              class="dv-token"
+              [class.is-active]="selectedDays() === d"
+              (click)="setDays(d)"
+            >
+              {{ d }}d
+            </button>
+          }
+        </div>
+
+        @if (loading()) {
+          <div class="dv-empty">
+            <span class="dv-spinner"></span>
+            <span class="dv-sr">Loading…</span>
+          </div>
+        } @else if (analytics()) {
+          <div class="sa-stats">
+            <div class="dv-stat dv-stat--sm">
+              <div class="dv-stat__label">queries / {{ selectedDays() }}d</div>
+              <div class="dv-stat__row">
+                <span class="dv-stat__value">{{ analytics()!.total_searches | number }}</span>
+              </div>
+            </div>
+            <div class="dv-stat dv-stat--sm">
+              <div class="dv-stat__label">click-through</div>
+              <div class="dv-stat__row">
+                <span
+                  class="dv-stat__value"
+                  [class.dv-ok]="analytics()!.click_through_rate >= 0.5"
+                  [class.dv-warn]="
+                    analytics()!.click_through_rate >= 0.2 &&
+                    analytics()!.click_through_rate < 0.5
+                  "
+                  [class.dv-danger]="analytics()!.click_through_rate < 0.2"
+                >
+                  {{ analytics()!.click_through_rate * 100 | number : '1.1-1' }}%
+                </span>
+                <span class="dv-stat__delta dv-faint">of searches with clicks</span>
+              </div>
+            </div>
+            <div class="dv-stat dv-stat--sm">
+              <div class="dv-stat__label">avg click position</div>
+              <div class="dv-stat__row">
+                <span class="dv-stat__value">{{
+                  analytics()!.avg_click_position | number : '1.1-1'
+                }}</span>
+                <span class="dv-stat__delta dv-faint">lower is better</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="dv-section sa-section">
+            <span class="dv-card__title">Top queries</span>
+          </div>
+
+          <div class="dv-thead dv-grid" style="--dv-cols: minmax(0,1fr) 90px 110px">
+            <span>top query</span>
+            <span class="dv-num">count</span>
+            <span class="dv-num">avg results</span>
+          </div>
+
+          @for (q of analytics()!.top_queries; track q.query) {
+            <div
+              class="dv-row dv-row--static dv-grid"
+              style="--dv-cols: minmax(0,1fr) 90px 110px"
+            >
+              <span class="dv-mono dv-clip sa-query">{{ q.query }}</span>
+              <span class="dv-mono dv-num dv-muted">{{ q.count }}</span>
+              <span class="dv-mono dv-num dv-faint">{{ q.avg_results | number : '1.0-0' }}</span>
+            </div>
+          } @empty {
+            <div class="dv-empty">No query data available.</div>
+          }
+
+          <div class="dv-section sa-section">
+            <span class="dv-card__title">Zero-result queries</span>
+            <span class="dv-chip dv-chip--danger dv-chip--upper">needs attention</span>
+          </div>
+
+          <div class="dv-thead dv-grid" style="--dv-cols: minmax(0,1fr) 90px 130px">
+            <span>query</span>
+            <span class="dv-num">count</span>
+            <span class="dv-num">action</span>
+          </div>
+
+          @for (q of analytics()!.zero_result_queries; track q.query) {
+            <div
+              class="dv-row dv-row--static dv-grid"
+              style="--dv-cols: minmax(0,1fr) 90px 130px"
+            >
+              <span class="dv-mono dv-clip sa-query">{{ q.query }}</span>
+              <span class="dv-mono dv-num dv-danger">{{ q.count }}</span>
+              <span class="dv-num">
+                <a
+                  class="sa-action"
+                  routerLink="/curations"
+                  [queryParams]="{ query: q.query }"
+                  title="Create curation for this query"
+                  >📌 curate</a
+                >
+              </span>
+            </div>
+          } @empty {
+            <div class="dv-empty">No zero-result queries.</div>
+          }
+        } @else {
+          <div class="dv-empty">No analytics available.</div>
+        }
       </div>
     </div>
-
-    @if (loading()) {
-      <div class="text-center py-5">
-        <div class="spinner-border" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    } @else if (analytics()) {
-      <!-- Summary Cards -->
-      <div class="row g-4 mb-4">
-        <div class="col-md-4">
-          <div class="card text-center">
-            <div class="card-body">
-              <div class="text-muted small mb-1">Total Searches</div>
-              <div class="display-6 fw-bold text-primary">
-                {{ analytics()!.total_searches | number }}
-              </div>
-              <div class="text-muted small">Last {{ selectedDays() }} days</div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="card text-center">
-            <div class="card-body">
-              <div class="text-muted small mb-1">Avg Click Position</div>
-              <div class="display-6 fw-bold text-info">
-                {{ analytics()!.avg_click_position | number:'1.1-1' }}
-              </div>
-              <div class="text-muted small">Lower is better</div>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="card text-center">
-            <div class="card-body">
-              <div class="text-muted small mb-1">Click-Through Rate</div>
-              <div class="display-6 fw-bold" [class.text-success]="analytics()!.click_through_rate >= 0.5" [class.text-warning]="analytics()!.click_through_rate >= 0.2 && analytics()!.click_through_rate < 0.5" [class.text-danger]="analytics()!.click_through_rate < 0.2">
-                {{ (analytics()!.click_through_rate * 100) | number:'1.1-1' }}%
-              </div>
-              <div class="text-muted small">Of searches with clicks</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="row g-4">
-        <!-- Top Queries -->
-        <div class="col-md-6">
-          <div class="card">
-            <div class="card-header">
-              <h5 class="mb-0">Top Queries</h5>
-            </div>
-            <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Query</th>
-                    <th class="text-end">Count</th>
-                    <th class="text-end">Avg Results</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (q of analytics()!.top_queries; track q.query; let i = $index) {
-                    <tr>
-                      <td class="text-muted">{{ i + 1 }}</td>
-                      <td>
-                        <code>{{ q.query }}</code>
-                      </td>
-                      <td class="text-end">
-                        <span class="badge bg-primary">{{ q.count }}</span>
-                      </td>
-                      <td class="text-end text-muted">{{ q.avg_results | number:'1.0-0' }}</td>
-                    </tr>
-                  } @empty {
-                    <tr>
-                      <td colspan="4" class="text-center text-muted py-3">No query data available.</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- Zero-Result Queries -->
-        <div class="col-md-6">
-          <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <h5 class="mb-0">Zero-Result Queries</h5>
-              <span class="badge bg-danger">Needs Attention</span>
-            </div>
-            <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>Query</th>
-                    <th class="text-end">Count</th>
-                    <th class="text-end">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (q of analytics()!.zero_result_queries; track q.query; let i = $index) {
-                    <tr>
-                      <td class="text-muted">{{ i + 1 }}</td>
-                      <td>
-                        <code>{{ q.query }}</code>
-                      </td>
-                      <td class="text-end">
-                        <span class="badge bg-danger">{{ q.count }}</span>
-                      </td>
-                      <td class="text-end">
-                        <a
-                          routerLink="/curations"
-                          [queryParams]="{ query: q.query }"
-                          class="btn btn-sm btn-outline-warning"
-                          title="Create curation for this query"
-                        >
-                          <i class="bi bi-pin-angle me-1"></i>Create Curation
-                        </a>
-                      </td>
-                    </tr>
-                  } @empty {
-                    <tr>
-                      <td colspan="4" class="text-center text-muted py-3">No zero-result queries. Great!</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    }
   `,
+  styles: [
+    `
+      $mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+      :host {
+        display: contents;
+      }
+
+      dv-subnav {
+        display: block;
+        margin-bottom: 16px;
+      }
+
+      .sa-head {
+        align-items: center;
+        gap: 8px;
+      }
+
+      .sa-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      .sa-section {
+        gap: 9px;
+        align-items: center;
+      }
+
+      .sa-query {
+        font-size: 13px;
+      }
+
+      .sa-action {
+        font: 400 11px #{$mono};
+        color: var(--accent-text);
+
+        &:hover {
+          color: var(--text);
+        }
+      }
+    `,
+  ],
 })
 export class SearchAnalyticsComponent implements OnInit {
   analytics = signal<SearchAnalytics | null>(null);
   loading = signal(true);
   selectedDays = signal(30);
+  /** Selectable look-back windows, in days. */
+  readonly ranges = [7, 30, 90];
 
   constructor(private analyticsService: AnalyticsService) {}
 

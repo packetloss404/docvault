@@ -10,6 +10,7 @@ import { WorkflowTemplate } from '../../models/workflow.model';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './workflow-templates.component.html',
+  styleUrl: './workflow-templates.component.scss',
 })
 export class WorkflowTemplatesComponent implements OnInit {
   templates = signal<WorkflowTemplate[]>([]);

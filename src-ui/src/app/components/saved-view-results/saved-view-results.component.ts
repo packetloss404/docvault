@@ -2,88 +2,125 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { SearchService } from '../../services/search.service';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-saved-view-results',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, SubnavComponent],
   template: `
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h3 class="mb-0">{{ viewName() || 'Saved View Results' }}</h3>
-      <a routerLink="/saved-views" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-arrow-left me-1"></i>All Views
-      </a>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner dv-inner--wide">
+        <dv-subnav />
+
+        <div class="dv-section svr-head">
+          <h1 class="dv-h1 dv-h1--sm">{{ viewName() || 'Saved view results' }}</h1>
+          @if (!loading() && !error() && results().length) {
+            <span class="dv-meta"
+              >{{ totalCount() }} document{{ totalCount() !== 1 ? 's' : '' }}</span
+            >
+          }
+          <a class="dv-btn dv-btn--ghost dv-btn--sm dv-push" routerLink="/saved-views"
+            >← all views</a
+          >
+        </div>
+
+        @if (loading()) {
+          <div class="dv-empty">
+            <span class="dv-spinner"></span>
+            <div>Loading results…</div>
+          </div>
+        } @else if (error()) {
+          <div class="svr-error" role="alert">{{ error() }}</div>
+        } @else if (results().length === 0) {
+          <div class="dv-empty">No documents match this view's filters.</div>
+        } @else {
+          <div
+            class="dv-thead dv-grid"
+            style="--dv-cols: minmax(0,1fr) 130px 150px 170px"
+          >
+            <span>title</span>
+            <span>created</span>
+            <span>type</span>
+            <span>correspondent</span>
+          </div>
+
+          @for (doc of results(); track doc.id) {
+            <a
+              class="dv-row dv-grid"
+              style="--dv-cols: minmax(0,1fr) 130px 150px 170px"
+              [routerLink]="['/documents', doc.id]"
+            >
+              <span class="dv-clip svr-title">{{
+                doc.title || doc.original_filename || 'Untitled'
+              }}</span>
+              <span class="dv-ts">{{ formatDate(doc.created) }}</span>
+              <span>
+                @if (doc.document_type_name) {
+                  <span class="dv-chip dv-chip--well">{{ doc.document_type_name }}</span>
+                }
+              </span>
+              <span class="dv-meta dv-clip">{{ doc.correspondent_name || '' }}</span>
+            </a>
+          }
+
+          @if (totalPages() > 1) {
+            <nav class="dv-pager" aria-label="Result pages">
+              <span [class.is-disabled]="currentPage() <= 1" (click)="goToPage(currentPage() - 1)"
+                >prev</span
+              >
+              @for (p of pageNumbers(); track p) {
+                <span [class.is-current]="p === currentPage()" (click)="goToPage(p)">{{ p }}</span>
+              }
+              <span
+                [class.is-disabled]="currentPage() >= totalPages()"
+                (click)="goToPage(currentPage() + 1)"
+                >next</span
+              >
+            </nav>
+          }
+        }
+      </div>
     </div>
-
-    @if (loading()) {
-      <div class="text-center py-5">
-        <div class="spinner-border"></div>
-        <p class="text-muted mt-2">Loading results...</p>
-      </div>
-    } @else if (error()) {
-      <div class="alert alert-danger">
-        <i class="bi bi-exclamation-triangle me-1"></i>
-        {{ error() }}
-      </div>
-    } @else if (results().length === 0) {
-      <div class="text-center py-5 text-muted">
-        <i class="bi bi-inbox" style="font-size: 3rem;"></i>
-        <p class="mt-2">No documents match this view's filters.</p>
-      </div>
-    } @else {
-      <p class="text-muted mb-3">{{ totalCount() }} document{{ totalCount() !== 1 ? 's' : '' }}</p>
-
-      <div class="table-responsive">
-        <table class="table table-hover">
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Created</th>
-              <th>Type</th>
-              <th>Correspondent</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (doc of results(); track doc.id) {
-              <tr>
-                <td>
-                  <a [routerLink]="['/documents', doc.id]" class="text-decoration-none">
-                    {{ doc.title || doc.original_filename || 'Untitled' }}
-                  </a>
-                </td>
-                <td class="text-muted small">{{ formatDate(doc.created) }}</td>
-                <td>
-                  @if (doc.document_type_name) {
-                    <span class="badge bg-light text-dark">{{ doc.document_type_name }}</span>
-                  }
-                </td>
-                <td class="text-muted small">{{ doc.correspondent_name || '' }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Pagination -->
-      @if (totalPages() > 1) {
-        <nav>
-          <ul class="pagination pagination-sm justify-content-center">
-            <li class="page-item" [class.disabled]="currentPage() <= 1">
-              <button class="page-link" (click)="goToPage(currentPage() - 1)">&laquo;</button>
-            </li>
-            @for (p of pageNumbers(); track p) {
-              <li class="page-item" [class.active]="p === currentPage()">
-                <button class="page-link" (click)="goToPage(p)">{{ p }}</button>
-              </li>
-            }
-            <li class="page-item" [class.disabled]="currentPage() >= totalPages()">
-              <button class="page-link" (click)="goToPage(currentPage() + 1)">&raquo;</button>
-            </li>
-          </ul>
-        </nav>
-      }
-    }
   `,
+  styles: [
+    `
+      :host {
+        display: contents;
+      }
+
+      dv-subnav {
+        display: block;
+        margin-bottom: 16px;
+      }
+
+      .svr-head {
+        align-items: baseline;
+        gap: 12px;
+      }
+
+      .svr-title {
+        font-size: 13.5px;
+        font-weight: 500;
+        color: var(--text);
+      }
+
+      .svr-error {
+        background: var(--danger-dim);
+        border: 1px solid var(--danger);
+        border-radius: 9px;
+        padding: 11px 13px;
+        color: var(--danger);
+        font-size: 12.5px;
+        line-height: 1.45;
+      }
+
+      .dv-pager .is-disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+    `,
+  ],
 })
 export class SavedViewResultsComponent implements OnInit {
   viewId = 0;

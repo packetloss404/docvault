@@ -3,12 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SecurityService, AuditLogQueryParams } from '../../services/security.service';
 import { AuditLogEntry } from '../../models/security.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-audit-log',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SubnavComponent],
   templateUrl: './audit-log.component.html',
+  styleUrl: './audit-log.component.scss',
 })
 export class AuditLogComponent implements OnInit {
   entries = signal<AuditLogEntry[]>([]);
@@ -77,6 +79,21 @@ export class AuditLogComponent implements OnInit {
         this.loading.set(false);
       },
     });
+  }
+
+  /**
+   * The API filters by action and date range; the free-text box narrows the
+   * page that is already loaded (the endpoint takes a numeric user id only,
+   * so there is nothing to send it).
+   */
+  displayedEntries(): AuditLogEntry[] {
+    const query = this.filterUser.toLowerCase().trim();
+    if (!query) return this.entries();
+    return this.entries().filter((e) =>
+      [e.username, e.action, e.model_type, e.detail, e.ip_address]
+        .filter((v): v is string => !!v)
+        .some((v) => v.toLowerCase().includes(query)),
+    );
   }
 
   applyFilters(): void {
@@ -150,26 +167,30 @@ export class AuditLogComponent implements OnInit {
     });
   }
 
+  /**
+   * Colour the action word by class: authentication and integrity read ok,
+   * reads and writes read accent, mutations warn, destructive danger.
+   */
   getActionBadgeClass(action: string): string {
     switch (action) {
-      case 'create':
-      case 'upload':
-        return 'bg-success';
-      case 'delete':
-        return 'bg-danger';
-      case 'update':
-        return 'bg-primary';
       case 'login':
       case 'logout':
-        return 'bg-info';
+      case 'verify':
+        return 'dv-ok';
+      case 'create':
+      case 'upload':
       case 'download':
       case 'view':
-        return 'bg-secondary';
+      case 'restore':
+        return 'dv-accent';
+      case 'update':
+      case 'share':
       case 'sign':
-      case 'verify':
-        return 'bg-warning text-dark';
+        return 'dv-warn';
+      case 'delete':
+        return 'dv-danger';
       default:
-        return 'bg-secondary';
+        return 'dv-muted';
     }
   }
 }

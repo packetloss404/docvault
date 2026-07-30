@@ -1,0 +1,144 @@
+// Console design tokens.
+//
+// Dark is the default theme; `[data-theme="light"]` on <body> overrides it.
+// The accent is user-selectable via `[data-accent]` on <body>; four accents ship.
+// See docs/design/console-ui.md for the source design handoff.
+
+@use "sass:list";
+@use "sass:map";
+
+// Each accent needs a hand-tuned pair: the raw hue reads well on dark surfaces,
+// but as *text* on light surfaces it has to be darkened to clear WCAG AA. Never
+// use the raw accent for text on light — that is what `--accent-text` is for.
+$accents: (
+  "teal": (
+    dark-accent: #4ee0c2,
+    dark-ink: #06231d,
+    dark-text: #4ee0c2,
+    dark-rgb: (78, 224, 194),
+    light-accent: #2fc9a8,
+    light-ink: #04221c,
+    light-text: #0b6a58,
+    light-rgb: (20, 140, 118),
+  ),
+  "chartreuse": (
+    dark-accent: #c8f24e,
+    dark-ink: #101310,
+    dark-text: #c8f24e,
+    dark-rgb: (200, 242, 78),
+    light-accent: #b7e438,
+    light-ink: #161a10,
+    light-text: #5f7d0a,
+    light-rgb: (122, 160, 16),
+  ),
+  "amber": (
+    dark-accent: #f2a24e,
+    dark-ink: #201304,
+    dark-text: #f2a24e,
+    dark-rgb: (242, 162, 78),
+    light-accent: #e08a2a,
+    light-ink: #201304,
+    light-text: #8a4d05,
+    light-rgb: (160, 90, 10),
+  ),
+  "periwinkle": (
+    dark-accent: #8a9df2,
+    dark-ink: #0b1030,
+    dark-text: #8a9df2,
+    dark-rgb: (138, 157, 242),
+    light-accent: #6c7fe0,
+    light-ink: #0b1030,
+    light-text: #38489e,
+    light-rgb: (70, 90, 190),
+  ),
+);
+
+$default-accent: "teal";
+
+@function rgba-list($rgb, $alpha) {
+  @return rgba(list.nth($rgb, 1), list.nth($rgb, 2), list.nth($rgb, 3), $alpha);
+}
+
+@mixin accent-vars($name, $scheme) {
+  $a: map.get($accents, $name);
+  $rgb: map.get($a, #{$scheme}-rgb);
+
+  // Light surfaces need marginally more tint to register at all.
+  $dim-alpha: 0.14;
+  $line-alpha: 0.4;
+  @if $scheme == dark {
+    $dim-alpha: 0.12;
+    $line-alpha: 0.35;
+  }
+
+  --accent: #{map.get($a, #{$scheme}-accent)};
+  --accent-ink: #{map.get($a, #{$scheme}-ink)};
+  --accent-text: #{map.get($a, #{$scheme}-text)};
+  --accent-dim: #{rgba-list($rgb, $dim-alpha)};
+  --accent-line: #{rgba-list($rgb, $line-alpha)};
+}
+
+// ---------------------------------------------------------------------------
+// Dark (default)
+// ---------------------------------------------------------------------------
+body {
+  --bg: #101310;
+  --bg2: #0a0c0a;
+  --panel: #161a15;
+  --panel2: #1e231c;
+  --border: #242a21;
+  --border2: #2e3529;
+  --text: #e4e8dd;
+  --muted: #9aa08e;
+  --faint: #6b7263;
+  --danger: #e06c5a;
+  --ok: #6ccf7f;
+  --warn: #e0b45a;
+  --shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --overlay: rgba(5, 7, 5, 0.6);
+
+  // Tinted status fills, used by status chips.
+  --danger-dim: rgba(224, 108, 90, 0.12);
+  --ok-dim: rgba(108, 207, 127, 0.12);
+  --warn-dim: rgba(224, 180, 90, 0.12);
+
+  @include accent-vars($default-accent, dark);
+}
+
+@each $name, $_ in $accents {
+  body[data-accent="#{$name}"] {
+    @include accent-vars($name, dark);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Light
+// ---------------------------------------------------------------------------
+body[data-theme="light"] {
+  --bg: #f1f3ec;
+  --bg2: #e6e9de;
+  --panel: #fbfcf8;
+  --panel2: #eef1e6;
+  --border: #dde2d2;
+  --border2: #cbd2bd;
+  --text: #1c2018;
+  --muted: #5c6353;
+  --faint: #8a9180;
+  --danger: #c2452f;
+  --ok: #2e8f45;
+  --warn: #9a7014;
+  --shadow: 0 12px 32px rgba(40, 48, 30, 0.14);
+  --overlay: rgba(28, 32, 24, 0.42);
+
+  --danger-dim: rgba(194, 69, 47, 0.12);
+  --ok-dim: rgba(46, 143, 69, 0.12);
+  --warn-dim: rgba(154, 112, 20, 0.14);
+
+  @include accent-vars($default-accent, light);
+}
+
+@each $name, $_ in $accents {
+  body[data-theme="light"][data-accent="#{$name}"] {
+    @include accent-vars($name, light);
+  }
+}

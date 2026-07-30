@@ -11,6 +11,7 @@ import {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './transition-dialog.component.html',
+  styleUrl: './transition-dialog.component.scss',
 })
 export class TransitionDialogComponent {
   @Input() transition!: WorkflowTransition;

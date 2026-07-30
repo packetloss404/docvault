@@ -10,85 +10,99 @@ import { PublicShareAccess } from '../../models/collaboration.model';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="container py-5" style="max-width: 600px;">
-      <div class="text-center mb-4">
-        <h4><i class="bi bi-file-earmark-text me-2"></i>DocVault</h4>
-        <p class="text-muted">Shared Document</p>
-      </div>
+    <div class="dv-auth">
+      <div class="dv-auth__col" [class.ps__col--wide]="!!shareData()">
+        <div class="dv-auth__brand">
+          <div class="dv-auth__logo">V</div>
+          <div>
+            <div class="dv-auth__name">DocVault</div>
+            <div class="dv-meta">shared document</div>
+          </div>
+        </div>
 
-      @if (loading()) {
-        <div class="text-center py-5">
-          <div class="spinner-border"></div>
-          <p class="text-muted mt-2">Loading shared document...</p>
-        </div>
-      } @else if (error()) {
-        <div class="card">
-          <div class="card-body text-center py-5">
-            <i class="bi bi-exclamation-triangle text-warning" style="font-size: 3rem;"></i>
-            <p class="mt-3">{{ error() }}</p>
+        @if (loading()) {
+          <div class="dv-auth__card ps__state">
+            <span class="dv-spinner"></span>
+            <span class="dv-meta">loading shared document…</span>
           </div>
-        </div>
-      } @else if (requiresPassword()) {
-        <div class="card">
-          <div class="card-header">
-            <h6 class="mb-0"><i class="bi bi-lock me-1"></i> Password Required</h6>
+        } @else if (error()) {
+          <div class="dv-auth__card ps__card" role="alert">
+            <span class="dv-chip dv-chip--upper dv-chip--warn ps__badge">unavailable</span>
+            <div class="ps__msg">{{ error() }}</div>
           </div>
-          <div class="card-body">
-            <p class="text-muted">This shared document is password-protected.</p>
+        } @else if (requiresPassword()) {
+          <div class="dv-auth__card">
+            <span class="dv-chip dv-chip--upper ps__badge">password required</span>
+            <div class="dv-meta">This shared document is password-protected.</div>
+
             @if (passwordError()) {
-              <div class="alert alert-danger py-2">{{ passwordError() }}</div>
+              <div class="ps__error" role="alert">{{ passwordError() }}</div>
             }
-            <div class="mb-3">
-              <label class="form-label">Password</label>
+
+            <div>
+              <label class="dv-field__label" for="ps-password">password</label>
               <input
+                id="ps-password"
                 type="password"
-                class="form-control"
+                class="dv-input dv-input--mono"
+                autocomplete="current-password"
                 [ngModel]="password()"
                 (ngModelChange)="password.set($event)"
                 (keyup.enter)="submitPassword()"
-                placeholder="Enter password"
               />
             </div>
+
             <button
-              class="btn btn-primary"
+              type="button"
+              class="dv-btn dv-btn--primary dv-btn--block"
               (click)="submitPassword()"
               [disabled]="verifying() || !password()"
             >
               @if (verifying()) {
-                <span class="spinner-border spinner-border-sm me-1"></span>
+                <span class="dv-spinner"></span>
+                Checking…
+              } @else {
+                Access document →
               }
-              Access Document
             </button>
           </div>
-        </div>
-      } @else if (shareData()) {
-        <div class="card">
-          <div class="card-header">
-            <h6 class="mb-0"><i class="bi bi-file-earmark me-1"></i> {{ shareData()!.document_title }}</h6>
+        } @else if (shareData()) {
+          <div class="dv-auth__card ps__doc">
+            <div class="ps__preview">
+              <div class="dv-page ps__page">
+                <span class="dv-meta">preview unavailable</span>
+              </div>
+            </div>
+
+            <div class="ps__detail">
+              <h1 class="dv-h2 ps__title">{{ shareData()!.document_title }}</h1>
+
+              <div class="dv-kv ps__kv">
+                @if (shareData()!.file_version) {
+                  <span class="dv-kv__k">version</span>
+                  <span class="dv-mono">{{ shareData()!.file_version }}</span>
+                }
+                @if (shareData()!.download_count !== undefined) {
+                  <span class="dv-kv__k">downloads</span>
+                  <span class="dv-mono">{{ shareData()!.download_count }}</span>
+                }
+              </div>
+
+              <a
+                class="dv-btn dv-btn--primary ps__download"
+                [href]="getDownloadUrl()"
+                target="_blank"
+                rel="noopener"
+              >
+                ↓ Download
+              </a>
+            </div>
           </div>
-          <div class="card-body">
-            <dl class="row mb-3">
-              @if (shareData()!.file_version) {
-                <dt class="col-sm-4">Version</dt>
-                <dd class="col-sm-8">{{ shareData()!.file_version }}</dd>
-              }
-              @if (shareData()!.download_count !== undefined) {
-                <dt class="col-sm-4">Downloads</dt>
-                <dd class="col-sm-8">{{ shareData()!.download_count }}</dd>
-              }
-            </dl>
-            <a
-              class="btn btn-primary"
-              [href]="getDownloadUrl()"
-              target="_blank"
-            >
-              <i class="bi bi-download me-1"></i> Download
-            </a>
-          </div>
-        </div>
-      }
+        }
+      </div>
     </div>
   `,
+  styleUrl: './public-share.component.scss',
 })
 export class PublicShareComponent implements OnInit {
   slug = '';

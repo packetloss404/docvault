@@ -1,0 +1,73 @@
+// Layout only; every colour comes from a token via the Console primitives.
+.nt-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: 400 12px "JetBrains Mono", ui-monospace, monospace;
+  color: var(--faint);
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &--accent {
+    color: var(--accent-text);
+  }
+}
+
+.nt-list {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+// Unread rows sit on the panel surface with an accent dot; read rows fall back
+// to the screen background so the feed reads as a diminishing stack.
+.nt-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 15px;
+  border-radius: 9px;
+  background: transparent;
+  border: 1px solid var(--border);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--border2);
+  }
+
+  &.is-unread {
+    background: var(--panel);
+  }
+}
+
+.nt-row__spacer {
+  width: 7px;
+  flex-shrink: 0;
+}
+
+.nt-row__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.nt-row__title {
+  font-size: 13.5px;
+}
+
+.nt-row__body {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.nt-row__doc {
+  flex-shrink: 0;
+}
+
+.nt-row__when {
+  flex-shrink: 0;
+  white-space: nowrap;
+}

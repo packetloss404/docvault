@@ -1,664 +1,866 @@
 @if (loading()) {
-  <div class="text-center py-5">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Loading...</span>
-    </div>
+  <div class="dv-empty dd-loading">
+    <span class="dv-spinner"></span>
+    <span class="dv-sr">Loading…</span>
   </div>
 } @else if (document(); as doc) {
-  <!-- Breadcrumb -->
-  <nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb">
-      <li class="breadcrumb-item">
-        <a routerLink="/documents">Documents</a>
-      </li>
-      <li class="breadcrumb-item active">{{ doc.title }}</li>
-    </ol>
-  </nav>
+  <div class="dv-split">
+    <!-- ================= LEFT: preview ================= -->
+    <div class="dv-split__left">
+      <div class="dv-crumb">
+        <a class="dv-crumb__up" routerLink="/documents">documents /</a>
+        <span class="dv-clip">{{ doc.original_filename || doc.title }}</span>
+        <div class="dv-zoom">
+          <button type="button" (click)="zoomOut()" title="Zoom out" aria-label="Zoom out">
+            −
+          </button>
+          <button type="button" (click)="resetZoom()" title="Reset zoom">
+            {{ zoom() }}%
+          </button>
+          <button type="button" (click)="zoomIn()" title="Zoom in" aria-label="Zoom in">
+            ＋
+          </button>
+        </div>
+      </div>
 
-  <!-- Legal Hold Banner -->
-  @if (isHeld()) {
-    <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
-      <i class="bi bi-shield-lock-fill me-2 fs-5"></i>
-      <div>
-        <strong>Legal Hold Active</strong> — This document is under legal hold. Modifications and deletion are restricted.
+      <!-- Annotation tools stay attached to the preview -->
+      <div class="dd-tools">
+        <app-annotation-toolbar
+          [documentId]="doc.id"
+          [authors]="annotationAuthors()"
+          (toolSelected)="onAnnotationTool($event)"
+          (visibilityChanged)="onAnnotationVisibility($event)"
+          (authorFilterChanged)="onAnnotationAuthorFilter($event)"
+        />
+      </div>
+
+      <!--
+        Annotation overlays. Coordinates are normalised 0–1 against the page, so
+        they are only drawn over a surface that maps 1:1 to the page box (the
+        rendered image, thumbnail, or placeholder) — never over the embedded PDF
+        viewer, whose internal layout we cannot address.
+      -->
+      <ng-template #overlays>
+        @for (box of overlayBoxes(); track box.id) {
+          <span
+            class="dv-highlight"
+            [style.left.%]="coord(box, 'x')"
+            [style.top.%]="coord(box, 'y')"
+            [style.width.%]="coord(box, 'width')"
+            [style.height.%]="coord(box, 'height')"
+            [title]="box.annotation_type + ' · ' + box.author_name"
+          ></span>
+        }
+        @for (note of overlayNotes(); track note.id) {
+          <div
+            class="dv-note dd-note"
+            [style.left.%]="coord(note, 'x')"
+            [style.top.%]="coord(note, 'y')"
+          >
+            {{ note.content }}
+            <div class="dv-meta">
+              {{ note.author_name }} · {{ formatRelative(note.created_at) }}
+            </div>
+          </div>
+        }
+      </ng-template>
+
+      <div class="dv-viewer dd-viewer">
+        @switch (previewKind()) {
+          @case ('pdf') {
+            <iframe
+              class="dd-frame"
+              [src]="previewFrameUrl()"
+              title="Document preview"
+            ></iframe>
+          }
+          @case ('image') {
+            <div class="dd-page-wrap" [style.width.%]="zoom()">
+              <img
+                class="dd-image"
+                [src]="getDownloadUrl('original')"
+                [alt]="doc.title"
+              />
+              <ng-container [ngTemplateOutlet]="overlays" />
+            </div>
+          }
+          @case ('thumb') {
+            <div class="dd-page-wrap" [style.width.%]="zoom()">
+              <img
+                class="dd-image"
+                [src]="getPreviewUrl()"
+                [alt]="'Preview of ' + doc.title"
+                (error)="thumbFailed.set(true)"
+              />
+              <ng-container [ngTemplateOutlet]="overlays" />
+            </div>
+          }
+          @default {
+            <div class="dv-page">
+              <span class="dv-meta dd-page-label">
+                [ page {{ currentPage() }} ·
+                @if (doc.content) {
+                  ocr layer available
+                } @else {
+                  no rendered preview
+                }
+                ]
+              </span>
+              <ng-container [ngTemplateOutlet]="overlays" />
+            </div>
+            <a class="dv-link dd-page-link" [href]="getDownloadUrl('original')">
+              download the file to view it
+            </a>
+          }
+        }
+
+        <div class="dd-pages">
+          <button
+            type="button"
+            class="dd-pages__step"
+            (click)="prevPage()"
+            [disabled]="currentPage() === 1"
+            aria-label="Previous page"
+          >
+            ‹
+          </button>
+          <span class="dv-meta">{{ currentPage() }} / {{ pageCount() }}</span>
+          <button
+            type="button"
+            class="dd-pages__step"
+            (click)="nextPage()"
+            [disabled]="currentPage() >= pageCount()"
+            aria-label="Next page"
+          >
+            ›
+          </button>
+        </div>
       </div>
     </div>
-  }
 
-  <!-- Header -->
-  <div class="d-flex justify-content-between align-items-start mb-4">
-    <div>
-      <h2>{{ doc.title }}</h2>
-      <small class="text-muted">{{ doc.original_filename }}</small>
-    </div>
-    <div class="btn-group">
-      <a
-        [href]="getDownloadUrl('original')"
-        class="btn btn-outline-primary btn-sm"
-      >
-        <i class="bi bi-download"></i> Original
-      </a>
-      @if (doc.archive_filename) {
-        <a
-          [href]="getDownloadUrl('archive')"
-          class="btn btn-outline-secondary btn-sm"
-        >
-          <i class="bi bi-file-earmark-pdf"></i> Archive
-        </a>
-      }
-      <button class="btn btn-outline-secondary btn-sm" (click)="requestSignature()">
-        <i class="bi bi-pen"></i> Request Signature
-      </button>
-      <button class="btn btn-outline-danger btn-sm" (click)="deleteDocument()">
-        <i class="bi bi-trash"></i> Delete
-      </button>
-    </div>
-  </div>
+    <!-- ================= RIGHT: metadata panel ================= -->
+    <div class="dv-split__right">
+      <div class="dd-head">
+        @if (isHeld()) {
+          <div class="dv-callout dv-callout--danger dd-hold" role="alert">
+            <div class="dv-callout__label">legal hold active</div>
+            <div class="dd-hold__body">
+              Mutations to this document are refused with HTTP 409 until the hold
+              is released.
+            </div>
+          </div>
+        }
 
-  <!-- Tabs -->
-  <ul class="nav nav-tabs mb-3">
-    <li class="nav-item">
-      <a
-        class="nav-link"
-        [class.active]="activeTab() === 'details'"
-        (click)="setTab('details')"
-        role="button"
-        >Details</a
-      >
-    </li>
-    <li class="nav-item">
-      <a
-        class="nav-link"
-        [class.active]="activeTab() === 'content'"
-        (click)="setTab('content')"
-        role="button"
-        >Content</a
-      >
-    </li>
-    <li class="nav-item">
-      <a
-        class="nav-link"
-        [class.active]="activeTab() === 'preview'"
-        (click)="setTab('preview')"
-        role="button"
-        >Preview</a
-      >
-    </li>
-    <li class="nav-item">
-      <a
-        class="nav-link"
-        [class.active]="activeTab() === 'metadata'"
-        (click)="setTab('metadata')"
-        role="button"
-        >Metadata</a
-      >
-    </li>
-    <li class="nav-item">
-      <a
-        class="nav-link"
-        [class.active]="activeTab() === 'workflows'"
-        (click)="setTab('workflows')"
-        role="button"
-        >Workflows</a
-      >
-    </li>
-    <li class="nav-item">
-      <a
-        class="nav-link"
-        [class.active]="activeTab() === 'signatures'"
-        (click)="setTab('signatures')"
-        role="button"
-        >Signatures</a
-      >
-    </li>
-    <li class="nav-item">
-      <a
-        class="nav-link"
-        [class.active]="activeTab() === 'ai'"
-        (click)="setTab('ai')"
-        role="button"
-        >AI</a
-      >
-    </li>
-    <li class="nav-item">
-      <a
-        class="nav-link"
-        [class.active]="activeTab() === 'zone-ocr'"
-        (click)="setTab('zone-ocr')"
-        role="button"
-        >Zone OCR</a
-      >
-    </li>
-    <li class="nav-item">
-      <a
-        class="nav-link"
-        [class.active]="activeTab() === 'physical'"
-        (click)="setTab('physical')"
-        role="button"
-        >Physical</a
-      >
-    </li>
-  </ul>
+        <h2 class="dv-h2 dv-clip" [title]="doc.title">{{ doc.title }}</h2>
 
-  <!-- Tab Content -->
-  <div class="tab-content">
-    <!-- Details Tab -->
-    @if (activeTab() === 'details') {
-      <div class="card">
-        <div class="card-body">
+        <div class="dd-actions">
+          <a class="dv-btn dv-btn--primary dv-btn--md" [href]="getDownloadUrl('original')">
+            Download
+          </a>
+          @if (doc.archive_filename) {
+            <a class="dv-btn dv-btn--secondary dv-btn--md" [href]="getDownloadUrl('archive')">
+              Archive
+            </a>
+          }
+          <button class="dv-btn dv-btn--secondary dv-btn--md" (click)="requestSignature()">
+            Request signature
+          </button>
+          @if (isCheckedOut()) {
+            <button
+              class="dv-btn dv-btn--warn dv-btn--md"
+              (click)="checkin()"
+              title="Release the edit lock"
+            >
+              Check in
+            </button>
+          } @else {
+            <button
+              class="dv-btn dv-btn--warn dv-btn--md"
+              (click)="checkout()"
+              title="Lock for editing"
+            >
+              Check out
+            </button>
+          }
+          <button
+            class="dv-btn dv-btn--danger dv-btn--md dv-push"
+            (click)="deleteDocument()"
+          >
+            Delete
+          </button>
+        </div>
+
+        @if (actionMessage()) {
+          <div class="dd-notice" [class.dd-notice--error]="actionError()">
+            <span>{{ actionMessage() }}</span>
+            <button class="dv-link dv-push" (click)="clearActionMessage()" aria-label="Dismiss">
+              ✕
+            </button>
+          </div>
+        }
+      </div>
+
+      <div class="dv-tabs dv-tabs--compact dv-tabs--scroll dd-tabs" role="tablist">
+        @for (tab of tabs; track tab.key) {
+          <button
+            class="dv-tab"
+            role="tab"
+            [class.is-active]="activeTab() === tab.key"
+            [attr.aria-selected]="activeTab() === tab.key"
+            (click)="setTab(tab.key)"
+          >
+            {{ tab.label }}
+          </button>
+        }
+      </div>
+
+      <div class="dd-body">
+        <!-- ---------------- Details ---------------- -->
+        @if (activeTab() === 'details') {
           @if (!editing()) {
-            <div class="row">
-              <div class="col-md-8">
-                <dl class="row mb-0">
-                  <dt class="col-sm-4">Title</dt>
-                  <dd class="col-sm-8">{{ doc.title }}</dd>
-
-                  <dt class="col-sm-4">Document Type</dt>
-                  <dd class="col-sm-8">
-                    {{ doc.document_type_name || 'None' }}
-                  </dd>
-
-                  <dt class="col-sm-4">Date</dt>
-                  <dd class="col-sm-8">
-                    {{ doc.created | date : 'mediumDate' }}
-                  </dd>
-
-                  <dt class="col-sm-4">Language</dt>
-                  <dd class="col-sm-8">{{ doc.language }}</dd>
-
-                  <dt class="col-sm-4">ASN</dt>
-                  <dd class="col-sm-8">
-                    {{ doc.archive_serial_number || 'None' }}
-                  </dd>
-
-                  <dt class="col-sm-4">Correspondent</dt>
-                  <dd class="col-sm-8">
-                    {{ doc.correspondent_name || 'None' }}
-                  </dd>
-
-                  <dt class="col-sm-4">Cabinet</dt>
-                  <dd class="col-sm-8">
-                    {{ doc.cabinet_name || 'None' }}
-                  </dd>
-
-                  <dt class="col-sm-4">Tags</dt>
-                  <dd class="col-sm-8">
-                    @if (doc.tag_ids && doc.tag_ids.length > 0) {
-                      @for (tagId of doc.tag_ids; track tagId) {
-                        @for (tag of allTags(); track tag.id) {
-                          @if (tag.id === tagId) {
-                            <span
-                              class="badge me-1"
-                              [style.background-color]="tag.color"
-                            >{{ tag.name }}</span>
-                          }
+            <div class="dd-kvs">
+              <div class="dv-kv">
+                <span class="dv-kv__k">type</span>
+                <span>{{ doc.document_type_name || '—' }}</span>
+              </div>
+              <div class="dv-kv">
+                <span class="dv-kv__k">correspondent</span>
+                <span>{{ doc.correspondent_name || '—' }}</span>
+              </div>
+              <div class="dv-kv">
+                <span class="dv-kv__k">cabinet</span>
+                <span>{{ doc.cabinet_name || '—' }}</span>
+              </div>
+              <div class="dv-kv">
+                <span class="dv-kv__k">created</span>
+                <span class="dv-mono dv-muted">{{ doc.created | date: 'yyyy-MM-dd' }}</span>
+              </div>
+              <div class="dv-kv">
+                <span class="dv-kv__k">added</span>
+                <span class="dv-mono dv-muted">{{ doc.added | date: 'yyyy-MM-dd HH:mm' }}</span>
+              </div>
+              <div class="dv-kv">
+                <span class="dv-kv__k">asn</span>
+                <span class="dv-mono dv-muted">{{ doc.archive_serial_number ?? '—' }}</span>
+              </div>
+              <div class="dv-kv">
+                <span class="dv-kv__k">language</span>
+                <span class="dv-mono dv-muted">{{ doc.language || '—' }}</span>
+              </div>
+              <div class="dv-kv">
+                <span class="dv-kv__k">pages</span>
+                <span class="dv-mono dv-muted">{{ doc.page_count }}</span>
+              </div>
+              <div class="dv-kv">
+                <span class="dv-kv__k">checkout</span>
+                <span>
+                  @if (checkoutStatus(); as cs) {
+                    @if (cs.checked_out && cs.checkout) {
+                      <span class="dv-chip dv-chip--warn dv-chip--upper">locked</span>
+                      <span class="dd-inline-meta dv-meta">
+                        {{ cs.checkout.username }}
+                        @if (cs.checkout.is_expired) {
+                          · <span class="dv-danger">expired</span>
                         }
-                      }
+                      </span>
                     } @else {
-                      None
+                      <span class="dv-chip dv-chip--upper">available</span>
                     }
-                  </dd>
-
-                  <dt class="col-sm-4">Pages</dt>
-                  <dd class="col-sm-8">{{ doc.page_count }}</dd>
-
-                  <dt class="col-sm-4">Added</dt>
-                  <dd class="col-sm-8">{{ doc.added | date : 'medium' }}</dd>
-
-                  @if (signatureRequests().length > 0) {
-                    <dt class="col-sm-4">Signatures</dt>
-                    <dd class="col-sm-8">
-                      @for (req of signatureRequests(); track req.id) {
-                        <span class="badge me-1"
-                          [class.bg-success]="req.status === 'completed'"
-                          [class.bg-warning]="req.status === 'pending'"
-                          [class.bg-secondary]="req.status !== 'completed' && req.status !== 'pending'"
-                        >{{ req.status }}</span>
-                      }
-                    </dd>
+                  } @else {
+                    <span class="dv-faint">loading…</span>
                   }
-                </dl>
-                <button
-                  class="btn btn-primary btn-sm mt-3"
-                  (click)="startEdit()"
-                >
-                  <i class="bi bi-pencil"></i> Edit
-                </button>
+                </span>
               </div>
-              <div class="col-md-4 text-center">
-                <img
-                  [src]="getPreviewUrl()"
-                  alt="Preview"
-                  class="img-fluid rounded shadow-sm"
-                  style="max-height: 280px;"
-                  onerror="this.style.display='none'"
-                />
-              </div>
-            </div>
-          } @else {
-            <!-- Edit Mode -->
-            <div class="row">
-              <div class="col-md-8">
-                <div class="mb-3">
-                  <label class="form-label">Title</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    [ngModel]="editTitle()"
-                    (ngModelChange)="editTitle.set($event)"
-                  />
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Document Type</label>
-                  <select
-                    class="form-select"
-                    [ngModel]="editDocumentType()"
-                    (ngModelChange)="editDocumentType.set($event)"
-                  >
-                    <option [ngValue]="null">None</option>
-                    @for (type of documentTypes(); track type.id) {
-                      <option [ngValue]="type.id">{{ type.name }}</option>
+              @if (signatureRequests().length > 0) {
+                <div class="dv-kv">
+                  <span class="dv-kv__k">signatures</span>
+                  <span class="dd-chips">
+                    @for (req of signatureRequests(); track req.id) {
+                      <span
+                        class="dv-chip dv-chip--upper"
+                        [ngClass]="signatureChipClass(req.status)"
+                        >{{ req.status }}</span
+                      >
                     }
-                  </select>
+                  </span>
                 </div>
-                <div class="mb-3">
-                  <label class="form-label">Correspondent</label>
-                  <select
-                    class="form-select"
-                    [ngModel]="editCorrespondent()"
-                    (ngModelChange)="editCorrespondent.set($event)"
-                  >
-                    <option [ngValue]="null">None</option>
-                    @for (c of allCorrespondents(); track c.id) {
-                      <option [ngValue]="c.id">{{ c.name }}</option>
-                    }
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Cabinet</label>
-                  <select
-                    class="form-select"
-                    [ngModel]="editCabinet()"
-                    (ngModelChange)="editCabinet.set($event)"
-                  >
-                    <option [ngValue]="null">None</option>
-                    @for (c of allCabinets(); track c.id) {
-                      <option [ngValue]="c.id">{{ c.name }}</option>
-                    }
-                  </select>
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Language</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    [ngModel]="editLanguage()"
-                    (ngModelChange)="editLanguage.set($event)"
-                  />
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Archive Serial Number</label>
-                  <input
-                    type="number"
-                    class="form-control"
-                    [ngModel]="editAsn()"
-                    (ngModelChange)="editAsn.set($event)"
-                  />
-                </div>
-                <div class="btn-group">
-                  <button class="btn btn-primary btn-sm" (click)="saveEdit()">
-                    Save
-                  </button>
+              }
+
+              <!-- tags -->
+              <div class="dv-kv">
+                <span class="dv-kv__k">tags</span>
+                <div class="dd-chips">
+                  @for (tag of documentTags(); track tag.id) {
+                    <span class="dv-chip dv-chip--outline-strong dd-tag">
+                      {{ tag.name }}
+                      <button
+                        class="dd-tag__x"
+                        (click)="removeTag(tag.id)"
+                        [disabled]="tagBusy()"
+                        [attr.aria-label]="'Remove tag ' + tag.name"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  }
                   <button
-                    class="btn btn-secondary btn-sm"
-                    (click)="cancelEdit()"
+                    class="dv-chip dv-chip--dashed"
+                    (click)="showTagPicker.set(!showTagPicker())"
                   >
-                    Cancel
+                    + tag
                   </button>
                 </div>
               </div>
-            </div>
-          }
-        </div>
-      </div>
-
-      <!-- Versions -->
-      @if (versions().length > 0) {
-        <div class="card mt-3">
-          <div class="card-header">
-            <h6 class="mb-0">Version History</h6>
-          </div>
-          <div class="card-body p-0">
-            <table class="table table-sm mb-0">
-              <thead>
-                <tr>
-                  <th>Version</th>
-                  <th>Comment</th>
-                  <th>Created</th>
-                  <th>Status</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (ver of versions(); track ver.id) {
-                  <tr>
-                    <td>v{{ ver.version_number }}</td>
-                    <td>{{ ver.comment || '-' }}</td>
-                    <td>{{ ver.created_at | date : 'short' }}</td>
-                    <td>
-                      @if (ver.is_active) {
-                        <span class="badge bg-success">Active</span>
-                      }
-                    </td>
-                    <td>
-                      @if (!ver.is_active) {
-                        <button
-                          class="btn btn-outline-primary btn-sm"
-                          (click)="activateVersion(ver.id)"
-                        >
-                          Activate
-                        </button>
-                      }
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </div>
-      }
-
-      <!-- ML Suggestions -->
-      <app-suggestion-panel [documentId]="doc.id" class="d-block mt-3" />
-
-      <!-- Relationships -->
-      <app-relationship-panel [documentId]="doc.id" class="d-block mt-3" />
-
-      <!-- Checkout / Check-in -->
-      <div class="card mt-3">
-        <div class="card-header">
-          <h6 class="mb-0"><i class="bi bi-lock me-1"></i> Checkout</h6>
-        </div>
-        <div class="card-body">
-          @if (checkoutStatus(); as cs) {
-            @if (cs.checked_out && cs.checkout) {
-              <div class="alert alert-warning py-2 mb-2">
-                <i class="bi bi-lock-fill me-1"></i>
-                Checked out by <strong>{{ cs.checkout.username }}</strong>
-                @if (cs.checkout.is_expired) {
-                  <span class="text-danger ms-1">(expired)</span>
-                }
-              </div>
-              <button class="btn btn-sm btn-outline-success" (click)="checkin()">
-                <i class="bi bi-unlock me-1"></i> Check In
-              </button>
-            } @else {
-              <p class="text-muted mb-2">Document is not checked out.</p>
-              <button class="btn btn-sm btn-outline-primary" (click)="checkout()">
-                <i class="bi bi-lock me-1"></i> Check Out
-              </button>
-            }
-          } @else {
-            <p class="text-muted mb-0">Loading checkout status...</p>
-          }
-        </div>
-      </div>
-
-      <!-- Comments -->
-      <div class="mt-3">
-        <app-comments [documentId]="doc.id" />
-      </div>
-
-      <!-- Share Links -->
-      <div class="card mt-3">
-        <div class="card-header">
-          <h6 class="mb-0"><i class="bi bi-link-45deg me-1"></i> Share Links</h6>
-        </div>
-        <div class="card-body">
-          @if (shareLinks().length > 0) {
-            <table class="table table-sm mb-3">
-              <thead><tr><th>Link</th><th>Downloads</th><th>Expires</th><th></th></tr></thead>
-              <tbody>
-                @for (link of shareLinks(); track link.id) {
-                  <tr>
-                    <td><code class="small">{{ link.slug }}</code>
-                      <button class="btn btn-sm btn-link p-0 ms-1" (click)="copyShareUrl(link)" title="Copy URL"><i class="bi bi-clipboard"></i></button>
-                    </td>
-                    <td>{{ link.download_count }}</td>
-                    <td>
-                      @if (link.is_expired) { <span class="text-danger">Expired</span> }
-                      @else if (link.expiration) { {{ link.expiration | date : 'short' }} }
-                      @else { Never }
-                    </td>
-                    <td>@if (link.has_password) { <i class="bi bi-key-fill text-muted" title="Password protected"></i> }</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          } @else {
-            <p class="text-muted mb-3">No share links.</p>
-          }
-          <div class="row g-2 align-items-end">
-            <div class="col-auto">
-              <label class="form-label">Expires in (hours)</label>
-              <input type="number" class="form-control form-control-sm" [ngModel]="newShareExpHours()" (ngModelChange)="newShareExpHours.set($event)" style="width: 100px;" />
-            </div>
-            <div class="col-auto">
-              <label class="form-label">Password (optional)</label>
-              <input type="text" class="form-control form-control-sm" [ngModel]="newSharePassword()" (ngModelChange)="newSharePassword.set($event)" placeholder="Leave empty for no password" />
-            </div>
-            <div class="col-auto">
-              <button class="btn btn-primary btn-sm" (click)="createShareLink()"><i class="bi bi-plus me-1"></i> Create Link</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    }
-
-    <!-- Content Tab -->
-    @if (activeTab() === 'content') {
-      <div class="card">
-        <div class="card-body">
-          @if (doc.content) {
-            <div class="mb-3">
-              <div class="input-group input-group-sm" style="max-width: 360px;">
-                <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input
-                  type="text"
-                  class="form-control"
-                  placeholder="Search in content..."
-                  [ngModel]="contentSearchQuery()"
-                  (ngModelChange)="contentSearchQuery.set($event)"
-                />
-                @if (contentSearchQuery()) {
-                  <button class="btn btn-outline-secondary" type="button" (click)="contentSearchQuery.set('')">
-                    <i class="bi bi-x"></i>
-                  </button>
-                }
-              </div>
-            </div>
-            <pre class="mb-0" style="white-space: pre-wrap; font-family: inherit;" [innerHTML]="highlightedContent()"></pre>
-          } @else {
-            <p class="text-muted mb-0">No extracted content available.</p>
-          }
-        </div>
-      </div>
-    }
-
-    <!-- Preview Tab -->
-    @if (activeTab() === 'preview') {
-      <app-annotation-toolbar [documentId]="doc.id" class="d-block mb-2" />
-      <div class="row">
-        <div class="col-md-8">
-          <div class="card">
-            <div class="card-body text-center">
-              @if (doc.mime_type === 'application/pdf' || doc.archive_filename) {
-                <iframe
-                  [src]="getDownloadUrl(doc.archive_filename ? 'archive' : 'original')"
-                  style="width: 100%; height: 80vh; border: none;"
-                  title="Document Preview"
-                ></iframe>
-              } @else if (doc.mime_type.startsWith('image/')) {
-                <img
-                  [src]="getDownloadUrl('original')"
-                  alt="Document Preview"
-                  class="img-fluid"
-                  style="max-height: 80vh;"
-                />
-              } @else {
-                <div class="py-5 text-muted">
-                  <i class="bi bi-file-earmark" style="font-size: 3rem;"></i>
-                  <p class="mt-2">
-                    Preview not available for this file type.<br />
-                    <a [href]="getDownloadUrl('original')">Download the file</a> to
-                    view it.
-                  </p>
+              @if (showTagPicker()) {
+                <div class="dd-tagpicker dv-well">
+                  @if (assignableTags().length === 0) {
+                    <span class="dv-faint dd-tagpicker__empty">
+                      No further tags defined.
+                    </span>
+                  } @else {
+                    @for (tag of assignableTags(); track tag.id) {
+                      <button
+                        class="dv-chip dv-chip--outline dd-tagpick"
+                        [disabled]="tagBusy()"
+                        (click)="addTag(tag.id)"
+                      >
+                        {{ tag.name }}
+                      </button>
+                    }
+                  }
                 </div>
               }
             </div>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <app-annotation-panel [documentId]="doc.id" />
-        </div>
-      </div>
-    }
 
-    <!-- Metadata Tab -->
-    @if (activeTab() === 'metadata') {
-      <!-- File Metadata -->
-      <div class="card">
-        <div class="card-header">
-          <h6 class="mb-0">File Information</h6>
-        </div>
-        <div class="card-body">
-          <dl class="row mb-0">
-            <dt class="col-sm-4">Original Filename</dt>
-            <dd class="col-sm-8">
-              <code>{{ doc.original_filename }}</code>
-            </dd>
-
-            <dt class="col-sm-4">MIME Type</dt>
-            <dd class="col-sm-8">
-              <code>{{ doc.mime_type }}</code>
-            </dd>
-
-            <dt class="col-sm-4">Checksum (SHA-256)</dt>
-            <dd class="col-sm-8">
-              <code class="small">{{ doc.checksum }}</code>
-            </dd>
-
-            @if (doc.archive_checksum) {
-              <dt class="col-sm-4">Archive Checksum</dt>
-              <dd class="col-sm-8">
-                <code class="small">{{ doc.archive_checksum }}</code>
-              </dd>
-            }
-
-            <dt class="col-sm-4">Storage Path</dt>
-            <dd class="col-sm-8">
-              <code>{{ doc.filename }}</code>
-            </dd>
-
-            @if (doc.archive_filename) {
-              <dt class="col-sm-4">Archive Path</dt>
-              <dd class="col-sm-8">
-                <code>{{ doc.archive_filename }}</code>
-              </dd>
-            }
-
-            <dt class="col-sm-4">Page Count</dt>
-            <dd class="col-sm-8">{{ doc.page_count }}</dd>
-
-            <dt class="col-sm-4">Language</dt>
-            <dd class="col-sm-8">{{ doc.language }}</dd>
-
-            <dt class="col-sm-4">UUID</dt>
-            <dd class="col-sm-8">
-              <code class="small">{{ doc.uuid }}</code>
-            </dd>
-
-            <dt class="col-sm-4">Owner ID</dt>
-            <dd class="col-sm-8">{{ doc.owner }}</dd>
-
-            <dt class="col-sm-4">Created At</dt>
-            <dd class="col-sm-8">{{ doc.created_at | date : 'medium' }}</dd>
-
-            <dt class="col-sm-4">Updated At</dt>
-            <dd class="col-sm-8">{{ doc.updated_at | date : 'medium' }}</dd>
-          </dl>
-        </div>
-      </div>
-
-      <!-- Custom Fields -->
-      <div class="card mt-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h6 class="mb-0">Custom Fields</h6>
-        </div>
-        <div class="card-body">
-          @if (customFieldInstances().length > 0) {
-            <table class="table table-sm mb-3">
-              <thead>
-                <tr>
-                  <th>Field</th>
-                  <th>Type</th>
-                  <th>Value</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (inst of customFieldInstances(); track inst.id) {
-                  <tr>
-                    <td>{{ inst.field_name }}</td>
-                    <td>
-                      <span class="badge bg-secondary">{{
-                        inst.field_data_type
-                      }}</span>
-                    </td>
-                    <td>{{ inst.value }}</td>
-                    <td class="text-end">
-                      <button
-                        class="btn btn-outline-danger btn-sm"
-                        (click)="removeCustomField(inst.id)"
-                      >
-                        <i class="bi bi-x"></i>
-                      </button>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
+            <button class="dv-btn dv-btn--ghost dv-btn--sm dd-edit" (click)="startEdit()">
+              Edit
+            </button>
           } @else {
-            <p class="text-muted mb-3">No custom fields set.</p>
+            <!-- Inline edit -->
+            <div class="dd-form">
+              <div>
+                <label class="dv-field__label" for="dd-title">title</label>
+                <input
+                  id="dd-title"
+                  type="text"
+                  class="dv-input dv-input--r7"
+                  [ngModel]="editTitle()"
+                  (ngModelChange)="editTitle.set($event)"
+                />
+              </div>
+              <div>
+                <label class="dv-field__label" for="dd-type">document type</label>
+                <select
+                  id="dd-type"
+                  class="dv-input dv-input--r7"
+                  [ngModel]="editDocumentType()"
+                  (ngModelChange)="editDocumentType.set($event)"
+                >
+                  <option [ngValue]="null">None</option>
+                  @for (type of documentTypes(); track type.id) {
+                    <option [ngValue]="type.id">{{ type.name }}</option>
+                  }
+                </select>
+              </div>
+              <div>
+                <label class="dv-field__label" for="dd-corr">correspondent</label>
+                <select
+                  id="dd-corr"
+                  class="dv-input dv-input--r7"
+                  [ngModel]="editCorrespondent()"
+                  (ngModelChange)="editCorrespondent.set($event)"
+                >
+                  <option [ngValue]="null">None</option>
+                  @for (c of allCorrespondents(); track c.id) {
+                    <option [ngValue]="c.id">{{ c.name }}</option>
+                  }
+                </select>
+              </div>
+              <div>
+                <label class="dv-field__label" for="dd-cabinet">cabinet</label>
+                <select
+                  id="dd-cabinet"
+                  class="dv-input dv-input--r7"
+                  [ngModel]="editCabinet()"
+                  (ngModelChange)="editCabinet.set($event)"
+                >
+                  <option [ngValue]="null">None</option>
+                  @for (c of allCabinets(); track c.id) {
+                    <option [ngValue]="c.id">{{ c.name }}</option>
+                  }
+                </select>
+              </div>
+              <div>
+                <label class="dv-field__label" for="dd-lang">language</label>
+                <input
+                  id="dd-lang"
+                  type="text"
+                  class="dv-input dv-input--r7"
+                  [ngModel]="editLanguage()"
+                  (ngModelChange)="editLanguage.set($event)"
+                />
+              </div>
+              <div>
+                <label class="dv-field__label" for="dd-asn">archive serial number</label>
+                <input
+                  id="dd-asn"
+                  type="number"
+                  class="dv-input dv-input--r7"
+                  [ngModel]="editAsn()"
+                  (ngModelChange)="editAsn.set($event)"
+                />
+              </div>
+              <div class="dd-formactions">
+                <button class="dv-btn dv-btn--primary dv-btn--sm" (click)="saveEdit()">
+                  Save
+                </button>
+                <button class="dv-btn dv-btn--ghost dv-btn--sm" (click)="cancelEdit()">
+                  Cancel
+                </button>
+              </div>
+            </div>
           }
 
-          <!-- Add custom field form -->
-          <div class="row g-2 align-items-end">
-            <div class="col-auto">
-              <label class="form-label">Field</label>
-              <select
-                class="form-select form-select-sm"
-                [ngModel]="addFieldId()"
-                (ngModelChange)="addFieldId.set($event)"
-              >
-                <option [ngValue]="null">Select field...</option>
-                @for (f of allCustomFields(); track f.id) {
-                  <option [ngValue]="f.id">{{ f.name }} ({{ f.data_type }})</option>
+          <!-- AI suggestions -->
+          <app-suggestion-panel class="dd-block" [documentId]="doc.id" />
+
+          <!-- Share links -->
+          <div class="dd-section">
+            <div class="dv-eyebrow dd-section__title">share links</div>
+            @if (shareLinks().length > 0) {
+              <div class="dd-links">
+                @for (link of shareLinks(); track link.id) {
+                  <div class="dd-link dv-well">
+                    <div class="dd-link__row">
+                      <span class="dv-mono dv-clip dd-link__slug">{{ link.slug }}</span>
+                      <button
+                        class="dv-link"
+                        (click)="copyShareUrl(link)"
+                        title="Copy share URL"
+                        aria-label="Copy share URL"
+                      >
+                        ⧉
+                      </button>
+                    </div>
+                    <div class="dd-link__meta dv-meta">
+                      <span>{{ link.download_count }} downloads</span>
+                      <span>
+                        @if (link.is_expired) {
+                          <span class="dv-danger">expired</span>
+                        } @else if (link.expiration) {
+                          expires {{ link.expiration | date: 'yyyy-MM-dd HH:mm' }}
+                        } @else {
+                          never expires
+                        }
+                      </span>
+                      @if (link.has_password) {
+                        <span class="dv-warn">password</span>
+                      }
+                    </div>
+                  </div>
                 }
-              </select>
+              </div>
+            } @else {
+              <div class="dv-faint dd-empty-line">No share links.</div>
+            }
+
+            <div class="dd-shareform">
+              <div class="dd-shareform__field">
+                <label class="dv-field__label" for="dd-share-hours">expires in (hours)</label>
+                <input
+                  id="dd-share-hours"
+                  type="number"
+                  class="dv-input dv-input--r7"
+                  [ngModel]="newShareExpHours()"
+                  (ngModelChange)="newShareExpHours.set($event)"
+                />
+              </div>
+              <div class="dd-shareform__field">
+                <label class="dv-field__label" for="dd-share-pw">password (optional)</label>
+                <input
+                  id="dd-share-pw"
+                  type="text"
+                  class="dv-input dv-input--r7"
+                  placeholder="none"
+                  [ngModel]="newSharePassword()"
+                  (ngModelChange)="newSharePassword.set($event)"
+                />
+              </div>
+              <button class="dv-btn dv-btn--accent dv-btn--sm" (click)="createShareLink()">
+                Create link
+              </button>
             </div>
-            <div class="col-auto">
-              <label class="form-label">Value</label>
+          </div>
+        }
+
+        <!-- ---------------- Activity ---------------- -->
+        @if (activeTab() === 'activity') {
+          @if (activityLoading()) {
+            <div class="dv-empty"><span class="dv-spinner"></span></div>
+          } @else if (activityError()) {
+            <div class="dv-empty">Activity could not be loaded.</div>
+          } @else if (activityEntries().length === 0) {
+            <div class="dv-empty">No recorded activity for this document.</div>
+          } @else {
+            <div class="dv-timeline">
+              @for (entry of activityEntries(); track entry.id) {
+                <div class="dv-timeline__item">
+                  <span
+                    class="dv-dot dv-timeline__dot"
+                    [ngClass]="activityDotClass(entry.event_type)"
+                  ></span>
+                  <div class="dv-timeline__body">
+                    <span>{{ entry.title || formatEventType(entry.event_type) }}</span>
+                    @if (entry.body) {
+                      <div class="dv-muted dd-activity__body">{{ entry.body }}</div>
+                    }
+                    <div class="dv-timeline__when">
+                      {{ formatRelative(entry.created_at) }}
+                      @if (entry.user) {
+                        · {{ entry.user }}
+                      }
+                      · {{ formatEventType(entry.event_type) }}
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        }
+
+        <!-- ---------------- Notes ---------------- -->
+        @if (activeTab() === 'notes') {
+          <app-comments [documentId]="doc.id" />
+          <div class="dd-section">
+            <div class="dv-eyebrow dd-section__title">
+              annotations · page {{ currentPage() }}
+            </div>
+            <app-annotation-panel
+              [documentId]="doc.id"
+              [currentPage]="currentPage()"
+              [authorFilter]="annotationAuthorFilter()"
+              (annotationSelected)="onAnnotationSelected($event)"
+            />
+          </div>
+        }
+
+        <!-- ---------------- Ask AI ---------------- -->
+        @if (activeTab() === 'ask') {
+          @if (!aiHealthy()) {
+            <div class="dv-callout dv-callout--warn dd-warn" role="status">
+              <div class="dv-callout__label">unavailable</div>
+              <div class="dd-warn__body">AI features are currently unavailable.</div>
+            </div>
+          } @else {
+            <div class="dd-aiactions">
+              <button
+                class="dv-btn dv-btn--secondary dv-btn--sm"
+                (click)="summarizeDocument()"
+                [disabled]="aiSummaryLoading()"
+              >
+                @if (aiSummaryLoading()) {
+                  <span class="dv-spinner"></span>
+                }
+                Summarize
+              </button>
+              <button
+                class="dv-btn dv-btn--secondary dv-btn--sm"
+                (click)="extractEntities()"
+                [disabled]="aiEntitiesLoading()"
+              >
+                @if (aiEntitiesLoading()) {
+                  <span class="dv-spinner"></span>
+                }
+                Extract entities
+              </button>
+              <button
+                class="dv-btn dv-btn--secondary dv-btn--sm"
+                (click)="suggestTitle()"
+                [disabled]="aiSuggestedTitleLoading()"
+              >
+                @if (aiSuggestedTitleLoading()) {
+                  <span class="dv-spinner"></span>
+                }
+                Suggest title
+              </button>
+            </div>
+
+            @if (aiSummary()) {
+              <div class="dd-section">
+                <div class="dv-eyebrow dd-section__title">summary</div>
+                @if (aiSummary()!.error) {
+                  <div class="dv-danger dd-empty-line">{{ aiSummary()!.error }}</div>
+                } @else {
+                  <div class="dv-callout dd-answer">{{ aiSummary()!.summary }}</div>
+                }
+              </div>
+            }
+
+            @if (aiEntities()) {
+              <div class="dd-section">
+                <div class="dv-eyebrow dd-section__title">extracted entities</div>
+                @if (aiEntities()!.error) {
+                  <div class="dv-danger dd-empty-line">{{ aiEntities()!.error }}</div>
+                } @else if (aiEntities()!.entities) {
+                  <div class="dd-entities">
+                    @for (key of aiEntitiesKeys(); track key) {
+                      <div class="dv-kv">
+                        <span class="dv-kv__k">{{ key }}</span>
+                        <span class="dd-chips">
+                          @for (val of aiEntities()!.entities![key]; track val) {
+                            <span class="dv-chip">{{ val }}</span>
+                          }
+                        </span>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <div class="dv-faint dd-empty-line">No entities found.</div>
+                }
+              </div>
+            }
+
+            @if (aiSuggestedTitle()) {
+              <div class="dd-section">
+                <div class="dv-eyebrow dd-section__title">suggested title</div>
+                @if (aiSuggestedTitle()!.error) {
+                  <div class="dv-danger dd-empty-line">
+                    {{ aiSuggestedTitle()!.error }}
+                  </div>
+                } @else {
+                  <div class="dv-callout dd-answer">
+                    {{ aiSuggestedTitle()!.suggested_title }}
+                  </div>
+                }
+              </div>
+            }
+
+            <div class="dd-section dd-section--grow">
+              <app-document-chat [documentId]="doc.id" />
+            </div>
+          }
+        }
+
+        <!-- ---------------- Versions ---------------- -->
+        @if (activeTab() === 'versions') {
+          @if (checkoutStatus(); as cs) {
+            @if (cs.checked_out && cs.checkout) {
+              <div class="dv-callout dd-checkout">
+                <span class="dv-callout__label">checked out</span>
+                <span class="dd-checkout__text">
+                  — locked by <strong>{{ cs.checkout.username }}</strong>
+                  {{ formatRelative(cs.checkout.checked_out_at) }}. Others see
+                  read-only.
+                  @if (cs.checkout.is_expired) {
+                    <span class="dv-danger">Lock expired.</span>
+                  }
+                  <button class="dv-link dd-checkout__action" (click)="checkin()">
+                    Check in
+                  </button>
+                </span>
+              </div>
+            }
+          }
+
+          @if (versions().length === 0) {
+            <div class="dv-empty">No version history.</div>
+          } @else {
+            <div class="dd-versions">
+              @for (ver of versions(); track ver.id) {
+                <div class="dd-version dv-card dv-card--r9">
+                  <span
+                    class="dv-chip dd-version__chip"
+                    [class.dv-chip--accent]="ver.is_active"
+                    >v{{ ver.version_number }}</span
+                  >
+                  <div class="dd-version__main">
+                    <div class="dd-version__note">{{ ver.comment || 'No comment' }}</div>
+                    <div class="dv-meta">
+                      {{ ver.created_at | date: 'yyyy-MM-dd HH:mm' }}
+                      @if (ver.is_active) {
+                        · active
+                      }
+                    </div>
+                  </div>
+                  <a
+                    class="dv-link dd-version__act"
+                    [routerLink]="['/documents', doc.id, 'compare']"
+                    >compare</a
+                  >
+                  @if (ver.is_active) {
+                    <a class="dd-version__get" [href]="getDownloadUrl('original')">↓ get</a>
+                  } @else {
+                    <button class="dv-link dd-version__act" (click)="activateVersion(ver.id)">
+                      activate
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+
+            @if (diffPair().length === 2) {
+              <a
+                class="dv-btn dv-btn--secondary dv-btn--block dd-diff"
+                [routerLink]="['/documents', doc.id, 'compare']"
+              >
+                Side-by-side diff: v{{ diffPair()[0].version_number }} ↔ v{{
+                  diffPair()[1].version_number
+                }}
+              </a>
+            }
+          }
+        }
+
+        <!-- ---------------- Related ---------------- -->
+        @if (activeTab() === 'related') {
+          <app-relationship-panel [documentId]="doc.id" />
+          <div class="dd-section">
+            <app-similar-documents [documentId]="doc.id" />
+          </div>
+          <div class="dv-well dd-graph">
+            <a class="dv-link dv-mono dd-graph__link" [routerLink]="['/documents', doc.id, 'graph']">
+              open full relationship graph →
+            </a>
+          </div>
+        }
+
+        <!-- ---------------- Content (OCR text) ---------------- -->
+        @if (activeTab() === 'content') {
+          @if (doc.content) {
+            <div class="dd-search">
+              <dv-icon name="search" [size]="14" />
               <input
                 type="text"
-                class="form-control form-control-sm"
-                [ngModel]="addFieldValue()"
-                (ngModelChange)="addFieldValue.set($event)"
+                class="dv-input dv-input--bare dd-search__input"
+                placeholder="Search in content…"
+                [ngModel]="contentSearchQuery()"
+                (ngModelChange)="contentSearchQuery.set($event)"
               />
+              @if (contentSearchQuery()) {
+                <button
+                  class="dv-link"
+                  (click)="contentSearchQuery.set('')"
+                  aria-label="Clear search"
+                >
+                  ✕
+                </button>
+              }
             </div>
-            <div class="col-auto">
+            <pre class="dv-snippet dd-content" [innerHTML]="highlightedContent()"></pre>
+          } @else {
+            <div class="dv-empty">No extracted content available.</div>
+          }
+        }
+
+        <!-- ---------------- Metadata ---------------- -->
+        @if (activeTab() === 'metadata') {
+          <div class="dd-section">
+            <div class="dv-eyebrow dd-section__title">file</div>
+            <div class="dd-kvs">
+              <div class="dv-kv">
+                <span class="dv-kv__k">filename</span>
+                <span class="dv-mono dd-break">{{ doc.original_filename }}</span>
+              </div>
+              <div class="dv-kv">
+                <span class="dv-kv__k">mime</span>
+                <span class="dv-mono dv-muted">{{ doc.mime_type }}</span>
+              </div>
+              <div class="dv-kv">
+                <span class="dv-kv__k">sha-256</span>
+                <span class="dv-mono dv-muted dd-break">{{ doc.checksum }}</span>
+              </div>
+              @if (doc.archive_checksum) {
+                <div class="dv-kv">
+                  <span class="dv-kv__k">archive sha</span>
+                  <span class="dv-mono dv-muted dd-break">{{ doc.archive_checksum }}</span>
+                </div>
+              }
+              <div class="dv-kv">
+                <span class="dv-kv__k">storage path</span>
+                <span class="dv-mono dv-muted dd-break">{{ doc.filename }}</span>
+              </div>
+              @if (doc.archive_filename) {
+                <div class="dv-kv">
+                  <span class="dv-kv__k">archive path</span>
+                  <span class="dv-mono dv-muted dd-break">{{ doc.archive_filename }}</span>
+                </div>
+              }
+              <div class="dv-kv">
+                <span class="dv-kv__k">pages</span>
+                <span class="dv-mono dv-muted">{{ doc.page_count }}</span>
+              </div>
+              <div class="dv-kv">
+                <span class="dv-kv__k">language</span>
+                <span class="dv-mono dv-muted">{{ doc.language }}</span>
+              </div>
+              <div class="dv-kv">
+                <span class="dv-kv__k">uuid</span>
+                <span class="dv-mono dv-muted dd-break">{{ doc.uuid }}</span>
+              </div>
+              <div class="dv-kv">
+                <span class="dv-kv__k">owner id</span>
+                <span class="dv-mono dv-muted">{{ doc.owner ?? '—' }}</span>
+              </div>
+              <div class="dv-kv">
+                <span class="dv-kv__k">created at</span>
+                <span class="dv-mono dv-muted">{{ doc.created_at | date: 'yyyy-MM-dd HH:mm' }}</span>
+              </div>
+              <div class="dv-kv">
+                <span class="dv-kv__k">updated at</span>
+                <span class="dv-mono dv-muted">{{ doc.updated_at | date: 'yyyy-MM-dd HH:mm' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="dd-section">
+            <div class="dv-eyebrow dd-section__title">custom fields</div>
+            @if (customFieldInstances().length > 0) {
+              @for (inst of customFieldInstances(); track inst.id) {
+                <div class="dd-row dv-row dv-row--static dv-row--tight">
+                  <div class="dd-row__main">
+                    <span class="dd-row__label">{{ inst.field_name }}</span>
+                    <span class="dv-chip">{{ inst.field_data_type }}</span>
+                  </div>
+                  <span class="dv-mono dv-muted dv-clip">{{ inst.value }}</span>
+                  <button
+                    class="dv-link dv-danger"
+                    (click)="removeCustomField(inst.id)"
+                    [attr.aria-label]="'Remove ' + inst.field_name"
+                  >
+                    ✕
+                  </button>
+                </div>
+              }
+            } @else {
+              <div class="dv-faint dd-empty-line">No custom fields set.</div>
+            }
+            <div class="dd-addform">
+              <div class="dd-addform__field">
+                <label class="dv-field__label" for="dd-cf">field</label>
+                <select
+                  id="dd-cf"
+                  class="dv-input dv-input--r7"
+                  [ngModel]="addFieldId()"
+                  (ngModelChange)="addFieldId.set($event)"
+                >
+                  <option [ngValue]="null">Select field…</option>
+                  @for (f of allCustomFields(); track f.id) {
+                    <option [ngValue]="f.id">{{ f.name }} ({{ f.data_type }})</option>
+                  }
+                </select>
+              </div>
+              <div class="dd-addform__field">
+                <label class="dv-field__label" for="dd-cf-val">value</label>
+                <input
+                  id="dd-cf-val"
+                  type="text"
+                  class="dv-input dv-input--r7"
+                  [ngModel]="addFieldValue()"
+                  (ngModelChange)="addFieldValue.set($event)"
+                />
+              </div>
               <button
-                class="btn btn-primary btn-sm"
+                class="dv-btn dv-btn--accent dv-btn--sm"
                 (click)="addCustomField()"
                 [disabled]="!addFieldId()"
               >
@@ -666,72 +868,55 @@
               </button>
             </div>
           </div>
-        </div>
-      </div>
 
-      <!-- Document Metadata -->
-      <div class="card mt-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <h6 class="mb-0">Structured Metadata</h6>
-        </div>
-        <div class="card-body">
-          @if (documentMetadata().length > 0) {
-            <table class="table table-sm mb-3">
-              <thead>
-                <tr>
-                  <th>Type</th>
-                  <th>Value</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (md of documentMetadata(); track md.id) {
-                  <tr>
-                    <td>{{ md.metadata_type_label }}</td>
-                    <td>{{ md.value }}</td>
-                    <td class="text-end">
-                      <button
-                        class="btn btn-outline-danger btn-sm"
-                        (click)="removeMetadata(md.id)"
-                      >
-                        <i class="bi bi-x"></i>
-                      </button>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          } @else {
-            <p class="text-muted mb-3">No metadata set.</p>
-          }
-
-          <!-- Add metadata form -->
-          <div class="row g-2 align-items-end">
-            <div class="col-auto">
-              <label class="form-label">Metadata Type</label>
-              <select
-                class="form-select form-select-sm"
-                [ngModel]="addMetadataTypeId()"
-                (ngModelChange)="addMetadataTypeId.set($event)"
-              >
-                <option [ngValue]="null">Select type...</option>
-                @for (mt of allMetadataTypes(); track mt.id) {
-                  <option [ngValue]="mt.id">{{ mt.label || mt.name }}</option>
-                }
-              </select>
-            </div>
-            <div class="col-auto">
-              <label class="form-label">Value</label>
-              <input
-                type="text"
-                class="form-control form-control-sm"
-                [ngModel]="addMetadataValue()"
-                (ngModelChange)="addMetadataValue.set($event)"
-              />
-            </div>
-            <div class="col-auto">
+          <div class="dd-section">
+            <div class="dv-eyebrow dd-section__title">structured metadata</div>
+            @if (documentMetadata().length > 0) {
+              @for (md of documentMetadata(); track md.id) {
+                <div class="dd-row dv-row dv-row--static dv-row--tight">
+                  <div class="dd-row__main">
+                    <span class="dd-row__label">{{ md.metadata_type_label }}</span>
+                  </div>
+                  <span class="dv-mono dv-muted dv-clip">{{ md.value }}</span>
+                  <button
+                    class="dv-link dv-danger"
+                    (click)="removeMetadata(md.id)"
+                    [attr.aria-label]="'Remove ' + md.metadata_type_label"
+                  >
+                    ✕
+                  </button>
+                </div>
+              }
+            } @else {
+              <div class="dv-faint dd-empty-line">No metadata set.</div>
+            }
+            <div class="dd-addform">
+              <div class="dd-addform__field">
+                <label class="dv-field__label" for="dd-mt">metadata type</label>
+                <select
+                  id="dd-mt"
+                  class="dv-input dv-input--r7"
+                  [ngModel]="addMetadataTypeId()"
+                  (ngModelChange)="addMetadataTypeId.set($event)"
+                >
+                  <option [ngValue]="null">Select type…</option>
+                  @for (mt of allMetadataTypes(); track mt.id) {
+                    <option [ngValue]="mt.id">{{ mt.label || mt.name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="dd-addform__field">
+                <label class="dv-field__label" for="dd-mt-val">value</label>
+                <input
+                  id="dd-mt-val"
+                  type="text"
+                  class="dv-input dv-input--r7"
+                  [ngModel]="addMetadataValue()"
+                  (ngModelChange)="addMetadataValue.set($event)"
+                />
+              </div>
               <button
-                class="btn btn-primary btn-sm"
+                class="dv-btn dv-btn--accent dv-btn--sm"
                 (click)="addMetadata()"
                 [disabled]="!addMetadataTypeId()"
               >
@@ -739,180 +924,109 @@
               </button>
             </div>
           </div>
-        </div>
-      </div>
-    }
+        }
 
-    <!-- Workflows Tab -->
-    @if (activeTab() === 'workflows') {
-      <app-workflow-panel [documentId]="doc.id" />
-    }
+        <!-- ---------------- Workflows ---------------- -->
+        @if (activeTab() === 'workflows') {
+          <app-workflow-panel [documentId]="doc.id" />
+        }
 
-    <!-- Signatures Tab -->
-    @if (activeTab() === 'signatures') {
-      <app-document-signatures [documentId]="doc.id" />
-    }
+        <!-- ---------------- Signatures ---------------- -->
+        @if (activeTab() === 'signatures') {
+          <app-document-signatures [documentId]="doc.id" />
+        }
 
-    <!-- AI Tab -->
-    @if (activeTab() === 'ai') {
-      @if (!aiHealthy()) {
-        <div class="alert alert-warning"><i class="bi bi-exclamation-triangle me-1"></i> AI features are currently unavailable.</div>
-      } @else {
-        <!-- AI Stretch Actions -->
-        <div class="card mb-3">
-          <div class="card-header">
-            <h6 class="mb-0"><i class="bi bi-stars me-1"></i> AI Actions</h6>
-          </div>
-          <div class="card-body">
-            <div class="d-flex gap-2 mb-3">
-              <button class="btn btn-outline-primary btn-sm" (click)="summarizeDocument()" [disabled]="aiSummaryLoading()">
-                @if (aiSummaryLoading()) {
-                  <span class="spinner-border spinner-border-sm me-1"></span>
-                } @else {
-                  <i class="bi bi-card-text me-1"></i>
+        <!-- ---------------- Zone OCR ---------------- -->
+        @if (activeTab() === 'zone-ocr') {
+          <div class="dd-addform">
+            <div class="dd-addform__field">
+              <label class="dv-field__label" for="dd-ocr-tpl">ocr template</label>
+              <select
+                id="dd-ocr-tpl"
+                class="dv-input dv-input--r7"
+                [ngModel]="selectedOcrTemplate()"
+                (ngModelChange)="selectedOcrTemplate.set($event)"
+              >
+                <option [ngValue]="null">Select template…</option>
+                @for (t of zoneOcrTemplates(); track t.id) {
+                  <option [ngValue]="t.id">{{ t.name }}</option>
                 }
-                Summarize
-              </button>
-              <button class="btn btn-outline-primary btn-sm" (click)="extractEntities()" [disabled]="aiEntitiesLoading()">
-                @if (aiEntitiesLoading()) {
-                  <span class="spinner-border spinner-border-sm me-1"></span>
-                } @else {
-                  <i class="bi bi-tags me-1"></i>
-                }
-                Extract Entities
-              </button>
-              <button class="btn btn-outline-primary btn-sm" (click)="suggestTitle()" [disabled]="aiSuggestedTitleLoading()">
-                @if (aiSuggestedTitleLoading()) {
-                  <span class="spinner-border spinner-border-sm me-1"></span>
-                } @else {
-                  <i class="bi bi-pencil-square me-1"></i>
-                }
-                Suggest Title
-              </button>
+              </select>
             </div>
-
-            @if (aiSummary()) {
-              <div class="mb-3">
-                <h6 class="text-muted small text-uppercase mb-1">Summary</h6>
-                @if (aiSummary()!.error) {
-                  <div class="alert alert-danger py-2 mb-0">{{ aiSummary()!.error }}</div>
-                } @else {
-                  <div class="border rounded p-2 bg-light">{{ aiSummary()!.summary }}</div>
-                }
-              </div>
-            }
-
-            @if (aiEntities()) {
-              <div class="mb-3">
-                <h6 class="text-muted small text-uppercase mb-1">Extracted Entities</h6>
-                @if (aiEntities()!.error) {
-                  <div class="alert alert-danger py-2 mb-0">{{ aiEntities()!.error }}</div>
-                } @else if (aiEntities()!.entities) {
-                  <div class="border rounded p-2 bg-light">
-                    @for (key of aiEntitiesKeys(); track key) {
-                      <div class="mb-1">
-                        <strong class="text-capitalize">{{ key }}:</strong>
-                        @for (val of aiEntities()!.entities![key]; track val) {
-                          <span class="badge bg-secondary ms-1">{{ val }}</span>
-                        }
-                      </div>
-                    }
-                  </div>
-                } @else {
-                  <p class="text-muted mb-0 small">No entities found.</p>
-                }
-              </div>
-            }
-
-            @if (aiSuggestedTitle()) {
-              <div>
-                <h6 class="text-muted small text-uppercase mb-1">Suggested Title</h6>
-                @if (aiSuggestedTitle()!.error) {
-                  <div class="alert alert-danger py-2 mb-0">{{ aiSuggestedTitle()!.error }}</div>
-                } @else {
-                  <div class="border rounded p-2 bg-light d-flex align-items-center gap-2">
-                    <span class="fst-italic">{{ aiSuggestedTitle()!.suggested_title }}</span>
-                  </div>
-                }
-              </div>
-            }
+            <button
+              class="dv-btn dv-btn--primary dv-btn--sm"
+              (click)="runZoneOcr()"
+              [disabled]="!selectedOcrTemplate()"
+            >
+              Run OCR
+            </button>
+            <a class="dv-btn dv-btn--ghost dv-btn--sm" routerLink="/zone-ocr">
+              Manage templates
+            </a>
           </div>
-        </div>
 
-        <!-- Chat & Similar Docs -->
-        <div class="row">
-          <div class="col-md-6"><app-document-chat [documentId]="doc.id" /></div>
-          <div class="col-md-6"><app-similar-documents [documentId]="doc.id" /></div>
-        </div>
-      }
-    }
-
-    <!-- Zone OCR Tab -->
-    @if (activeTab() === 'zone-ocr') {
-      <div class="card"><div class="card-body">
-        <div class="row g-2 align-items-end mb-3">
-          <div class="col-auto">
-            <label class="form-label">OCR Template</label>
-            <select class="form-select form-select-sm" [ngModel]="selectedOcrTemplate()" (ngModelChange)="selectedOcrTemplate.set($event)">
-              <option [ngValue]="null">Select template...</option>
-              @for (t of zoneOcrTemplates(); track t.id) { <option [ngValue]="t.id">{{ t.name }}</option> }
-            </select>
-          </div>
-          <div class="col-auto">
-            <button class="btn btn-primary btn-sm" (click)="runZoneOcr()" [disabled]="!selectedOcrTemplate()">Run OCR</button>
-          </div>
-          <div class="col-auto"><a routerLink="/zone-ocr" class="btn btn-outline-secondary btn-sm">Manage Templates</a></div>
-        </div>
-        @if (zoneOcrResults().length > 0) {
-          <table class="table table-sm">
-            <thead>
-              <tr>
-                <th>Field</th>
-                <th>Value</th>
-                <th>Confidence</th>
-              </tr>
-            </thead>
-            <tbody>
+          @if (zoneOcrResults().length > 0) {
+            <div class="dd-section">
+              <div
+                class="dv-thead dv-grid dd-ocrhead"
+                [style.--dv-cols]="'1fr 1fr 58px'"
+              >
+                <span>field</span><span>value</span><span class="dv-num">conf</span>
+              </div>
               @for (r of zoneOcrResults(); track r.id) {
-                <tr>
-                  <td>{{ r.field_name ?? r.field }}</td>
-                  <td>{{ r.value }}</td>
-                  <td>{{ r.confidence | number:'1.0-0' }}%</td>
-                </tr>
+                <div
+                  class="dv-row dv-row--static dv-row--tight dv-grid"
+                  [style.--dv-cols]="'1fr 1fr 58px'"
+                >
+                  <span class="dv-clip">{{ r.field_name ?? r.field }}</span>
+                  <span class="dv-mono dv-clip">{{ r.value }}</span>
+                  <span class="dv-mono dv-num dv-muted">
+                    {{ r.confidence | number: '1.0-0' }}%
+                  </span>
+                </div>
               }
-            </tbody>
-          </table>
-        } @else {
-          <p class="text-muted">No OCR results yet.</p>
+            </div>
+          } @else {
+            <div class="dv-empty">No OCR results yet.</div>
+          }
         }
-      </div></div>
-    }
 
-    <!-- Physical Record Tab -->
-    @if (activeTab() === 'physical') {
-      <div class="card"><div class="card-body">
-        @if (physicalRecord()) {
-          <dl class="row mb-0">
-            <dt class="col-sm-4">Location</dt>
-            <dd class="col-sm-8">{{ physicalRecord().location_name ?? physicalRecord().location }}</dd>
-
-            <dt class="col-sm-4">Barcode</dt>
-            <dd class="col-sm-8"><code>{{ physicalRecord().barcode ?? '—' }}</code></dd>
-
-            <dt class="col-sm-4">Status</dt>
-            <dd class="col-sm-8">
-              @if (physicalRecord().is_charged_out) {
-                <span class="badge bg-warning text-dark">Charged Out</span>
-              } @else {
-                <span class="badge bg-success">Available</span>
-              }
-            </dd>
-          </dl>
-          <a [routerLink]="['/physical-locations']" class="btn btn-outline-primary btn-sm mt-2">View Location</a>
-        } @else {
-          <p class="text-muted">No physical record linked to this document.</p>
+        <!-- ---------------- Physical record ---------------- -->
+        @if (activeTab() === 'physical') {
+          @if (physicalRecord()) {
+            <div class="dd-kvs">
+              <div class="dv-kv">
+                <span class="dv-kv__k">location</span>
+                <span>
+                  {{ physicalRecord().location_name ?? physicalRecord().location }}
+                </span>
+              </div>
+              <div class="dv-kv">
+                <span class="dv-kv__k">barcode</span>
+                <span class="dv-mono dv-muted">{{ physicalRecord().barcode ?? '—' }}</span>
+              </div>
+              <div class="dv-kv">
+                <span class="dv-kv__k">status</span>
+                <span>
+                  @if (physicalRecord().is_charged_out) {
+                    <span class="dv-chip dv-chip--warn dv-chip--upper">charged out</span>
+                  } @else {
+                    <span class="dv-chip dv-chip--ok dv-chip--upper">available</span>
+                  }
+                </span>
+              </div>
+            </div>
+            <a
+              class="dv-btn dv-btn--ghost dv-btn--sm dd-edit"
+              [routerLink]="['/physical-locations']"
+            >
+              View location
+            </a>
+          } @else {
+            <div class="dv-empty">No physical record linked to this document.</div>
+          }
         }
-      </div></div>
-    }
+      </div>
+    </div>
   </div>
 }

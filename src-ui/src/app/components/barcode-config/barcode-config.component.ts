@@ -1,14 +1,15 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BarcodeService } from '../../services/barcode.service';
 import { AsnAssignment, BarcodeConfig } from '../../models/barcode.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-barcode-config',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule, SubnavComponent],
   templateUrl: './barcode-config.component.html',
+  styleUrl: './barcode-config.component.scss',
 })
 export class BarcodeConfigComponent implements OnInit {
   config = signal<BarcodeConfig | null>(null);

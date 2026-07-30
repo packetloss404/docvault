@@ -9,12 +9,20 @@ import {
   SearchFilterBuilderComponent,
   FilterRow,
 } from '../search-filter-builder/search-filter-builder.component';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-search-results',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, SearchFilterBuilderComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterModule,
+    SearchFilterBuilderComponent,
+    SubnavComponent,
+  ],
   templateUrl: './search-results.component.html',
+  styleUrl: './search-results.component.scss',
 })
 export class SearchResultsComponent implements OnInit {
   results = signal<SearchResult[]>([]);
@@ -25,6 +33,8 @@ export class SearchResultsComponent implements OnInit {
   currentPage = signal(1);
   pageSize = signal(25);
   activeFilters = signal<FilterRow[]>([]);
+  /** Round-trip time of the last search, for the mono readout. */
+  elapsedMs = signal<number | null>(null);
 
   constructor(
     private searchService: SearchService,
@@ -47,6 +57,7 @@ export class SearchResultsComponent implements OnInit {
 
   doSearch(): void {
     this.loading.set(true);
+    const startedAt = Date.now();
     this.searchService
       .search({
         query: this.query(),
@@ -58,10 +69,19 @@ export class SearchResultsComponent implements OnInit {
           this.results.set(res.results);
           this.facets.set(res.facets);
           this.totalCount.set(res.count);
+          this.elapsedMs.set(Date.now() - startedAt);
           this.loading.set(false);
         },
         error: () => this.loading.set(false),
       });
+  }
+
+  /** True when the response carried at least one facet bucket to show. */
+  hasFacets(): boolean {
+    const f = this.facets();
+    return Boolean(
+      f.tags?.length || f.document_types?.length || f.entities?.length,
+    );
   }
 
   onSearch(): void {

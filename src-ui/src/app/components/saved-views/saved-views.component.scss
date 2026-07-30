@@ -1,0 +1,192 @@
+// Saved views screen. Geometry only — colours come from Console tokens.
+$mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+:host {
+  display: contents;
+}
+
+dv-subnav {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.sv-head {
+  align-items: center;
+}
+
+.sv-form {
+  margin-bottom: 18px;
+
+  &__body {
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+}
+
+.sv-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px 14px;
+}
+
+.sv-switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+}
+
+.sv-switch {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.sv-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sv-rule {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.5px;
+
+  &__join {
+    width: 40px;
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--faint);
+  }
+
+  &__value {
+    font-size: 12px;
+    color: var(--text);
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+.sv-x {
+  background: none;
+  border: none;
+  padding: 0 4px;
+  font: 400 12px #{$mono};
+  color: var(--faint);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--danger);
+  }
+}
+
+.sv-addrule {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+
+  .dv-select {
+    width: 190px;
+    flex-shrink: 0;
+  }
+
+  .dv-input {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.sv-groups-head {
+  gap: 9px;
+  margin-bottom: 0;
+
+  & + .sv-groups-head {
+    margin-top: 0;
+  }
+}
+
+.sv-groups-hint {
+  margin: 0;
+}
+
+.sv-group {
+  padding: 0;
+  overflow: hidden;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 13px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  &__name {
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  &__body {
+    padding: 11px 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .dv-chip {
+    border: none;
+    cursor: pointer;
+  }
+}
+
+.sv-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.sv-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 17px;
+  flex-wrap: wrap;
+
+  &__name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+
+    &:hover {
+      color: var(--accent-text);
+    }
+  }
+}
+
+.sv-rowaction {
+  background: none;
+  border: none;
+  padding: 0;
+  font: 400 11px #{$mono};
+  color: var(--faint);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &--danger:hover {
+    color: var(--danger);
+  }
+}

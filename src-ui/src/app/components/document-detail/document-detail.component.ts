@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { DocumentService } from '../../services/document.service';
@@ -16,7 +17,10 @@ import {
   Tag,
 } from '../../models/organization.model';
 import { SummaryResponse, EntityResponse, TitleSuggestion } from '../../models/ai.model';
-import { CheckoutStatus, ShareLink } from '../../models/collaboration.model';
+import { ActivityEntry, CheckoutStatus, ShareLink } from '../../models/collaboration.model';
+import { Annotation } from '../../models/annotation.model';
+import { AnnotationService } from '../../services/annotation.service';
+import { AnnotationToolSelection } from '../annotation-toolbar/annotation-toolbar.component';
 import { WorkflowPanelComponent } from '../workflow-panel/workflow-panel.component';
 import { CommentsComponent } from '../comments/comments.component';
 import { DocumentSignaturesComponent } from '../document-signatures/document-signatures.component';
@@ -26,10 +30,30 @@ import { DocumentChatComponent } from '../document-chat/document-chat.component'
 import { SimilarDocumentsComponent } from '../similar-documents/similar-documents.component';
 import { AnnotationToolbarComponent } from '../annotation-toolbar/annotation-toolbar.component';
 import { AnnotationPanelComponent } from '../annotation-panel/annotation-panel.component';
+import { IconComponent } from '../icon/icon.component';
 import { AIService } from '../../services/ai.service';
 import { EsignatureService } from '../../services/esignature.service';
 import { ZoneOCRService } from '../../services/zone-ocr.service';
 import { PhysicalRecordService } from '../../services/physical-record.service';
+
+/**
+ * Right-pane tab keys. `preview` is no longer a tab — the preview lives
+ * permanently in the left pane of the split view — and the old `ai` tab is now
+ * `ask`; `setTab` still accepts both legacy names.
+ */
+export type DocumentDetailTab =
+  | 'details'
+  | 'activity'
+  | 'notes'
+  | 'ask'
+  | 'versions'
+  | 'related'
+  | 'content'
+  | 'metadata'
+  | 'workflows'
+  | 'signatures'
+  | 'zone-ocr'
+  | 'physical';
 
 @Component({
   selector: 'app-document-detail',
@@ -47,16 +71,34 @@ import { PhysicalRecordService } from '../../services/physical-record.service';
     SimilarDocumentsComponent,
     AnnotationToolbarComponent,
     AnnotationPanelComponent,
+    IconComponent,
   ],
   templateUrl: './document-detail.component.html',
+  styleUrl: './document-detail.component.scss',
 })
 export class DocumentDetailComponent implements OnInit {
   document = signal<Document | null>(null);
   documentTypes = signal<DocumentType[]>([]);
   versions = signal<DocumentVersion[]>([]);
-  activeTab = signal<'details' | 'content' | 'preview' | 'metadata' | 'workflows' | 'signatures' | 'ai' | 'zone-ocr' | 'physical'>('details');
+  activeTab = signal<DocumentDetailTab>('details');
   editing = signal(false);
   loading = signal(true);
+
+  /** Tab strip, in order. The strip scrolls horizontally inside the 400px pane. */
+  readonly tabs: ReadonlyArray<{ key: DocumentDetailTab; label: string }> = [
+    { key: 'details', label: 'Details' },
+    { key: 'activity', label: 'Activity' },
+    { key: 'notes', label: 'Notes' },
+    { key: 'ask', label: 'Ask AI' },
+    { key: 'versions', label: 'Versions' },
+    { key: 'related', label: 'Related' },
+    { key: 'content', label: 'Content' },
+    { key: 'metadata', label: 'Metadata' },
+    { key: 'workflows', label: 'Workflows' },
+    { key: 'signatures', label: 'Signatures' },
+    { key: 'zone-ocr', label: 'Zone OCR' },
+    { key: 'physical', label: 'Physical' },
+  ];
 
   // Legal hold
   isHeld = signal(false);
@@ -66,6 +108,31 @@ export class DocumentDetailComponent implements OnInit {
   shareLinks = signal<ShareLink[]>([]);
   newShareExpHours = signal<number | null>(24);
   newSharePassword = signal('');
+  isCheckedOut = computed(() => this.checkoutStatus()?.checked_out === true);
+
+  // Activity timeline (loaded lazily when the Activity tab is first opened)
+  activityEntries = signal<ActivityEntry[]>([]);
+  activityLoading = signal(false);
+  activityError = signal(false);
+  private activityRequested = false;
+
+  // Left pane: viewer state
+  zoom = signal(100);
+  currentPage = signal(1);
+  thumbFailed = signal(false);
+  pageCount = computed(() => Math.max(1, this.document()?.page_count ?? 1));
+
+  // Annotations shown as overlays on the rendered page layer
+  annotations = signal<Annotation[]>([]);
+  annotationsVisible = signal(true);
+  annotationAuthorFilter = signal('');
+  activeAnnotationTool = signal<AnnotationToolSelection | null>(null);
+
+  // Tag editing (uses the bulk endpoint — document tags are read-only on PATCH)
+  showTagPicker = signal(false);
+  tagBusy = signal(false);
+  actionMessage = signal('');
+  actionError = signal(false);
 
   // AI / Signatures / Zone OCR / Physical signals
   aiHealthy = signal(true);
@@ -99,6 +166,18 @@ export class DocumentDetailComponent implements OnInit {
   allCorrespondents = signal<AutocompleteItem[]>([]);
   allCabinets = signal<AutocompleteItem[]>([]);
 
+  /** Tags currently on the document, resolved against the tag list. */
+  documentTags = computed<Tag[]>(() => {
+    const ids = this.document()?.tag_ids ?? [];
+    return this.allTags().filter((tag) => ids.includes(tag.id));
+  });
+
+  /** Tags that could still be added. */
+  assignableTags = computed<Tag[]>(() => {
+    const ids = this.document()?.tag_ids ?? [];
+    return this.allTags().filter((tag) => !ids.includes(tag.id));
+  });
+
   // Custom fields & metadata
   customFieldInstances = signal<CustomFieldInstance[]>([]);
   allCustomFields = signal<CustomField[]>([]);
@@ -130,6 +209,8 @@ export class DocumentDetailComponent implements OnInit {
     private esignatureService: EsignatureService,
     private zoneOcrService: ZoneOCRService,
     private physicalRecordService: PhysicalRecordService,
+    private annotationService: AnnotationService,
+    private sanitizer: DomSanitizer,
   ) {}
 
   ngOnInit(): void {
@@ -144,6 +225,7 @@ export class DocumentDetailComponent implements OnInit {
       this.loadLegalHoldStatus(id);
       this.loadCheckoutStatus(id);
       this.loadShareLinks(id);
+      this.loadAnnotations(id);
     }
     this.loadDocumentTypes();
     this.loadOrganization();
@@ -170,6 +252,8 @@ export class DocumentDetailComponent implements OnInit {
     this.documentService.getDocument(id).subscribe({
       next: (doc) => {
         this.document.set(doc);
+        this.thumbFailed.set(false);
+        this.currentPage.set(Math.min(this.currentPage(), Math.max(1, doc.page_count || 1)));
         this.loading.set(false);
       },
       error: () => {
@@ -191,9 +275,291 @@ export class DocumentDetailComponent implements OnInit {
     });
   }
 
-  setTab(tab: 'details' | 'content' | 'preview' | 'metadata' | 'workflows' | 'signatures' | 'ai' | 'zone-ocr' | 'physical'): void {
-    this.activeTab.set(tab);
+  /**
+   * Switch the right-pane tab. `preview` and `ai` are accepted as legacy
+   * aliases: the preview is now permanent in the left pane, and the old AI tab
+   * became `ask`.
+   */
+  setTab(tab: DocumentDetailTab | 'preview' | 'ai'): void {
+    const next: DocumentDetailTab =
+      tab === 'ai' ? 'ask' : tab === 'preview' ? 'details' : tab;
+    this.activeTab.set(next);
+    if (next === 'activity') this.ensureActivityLoaded();
   }
+
+  // --- Activity timeline ---
+
+  ensureActivityLoaded(): void {
+    if (this.activityRequested) return;
+    const id = this.document()?.id ?? Number(this.route.snapshot.paramMap.get('id'));
+    if (!id) return;
+    this.activityRequested = true;
+    this.loadActivity(id);
+  }
+
+  loadActivity(docId: number): void {
+    this.activityLoading.set(true);
+    this.activityError.set(false);
+    this.collaborationService.getDocumentActivity(docId).subscribe({
+      next: (entries) => {
+        this.activityEntries.set(entries);
+        this.activityLoading.set(false);
+      },
+      error: () => {
+        this.activityEntries.set([]);
+        this.activityError.set(true);
+        this.activityLoading.set(false);
+      },
+    });
+  }
+
+  /** Timeline dot colour by event kind. */
+  activityDotClass(eventType: string): string {
+    const type = (eventType || '').toLowerCase();
+    if (type.includes('failed') || type.includes('error')) return 'dv-dot--danger';
+    if (type.includes('warning') || type.includes('retention') || type.includes('quota'))
+      return 'dv-dot--warn';
+    if (type.includes('processed') || type.includes('completed')) return 'dv-dot--ok';
+    if (
+      type.includes('comment') ||
+      type.includes('share') ||
+      type.includes('workflow') ||
+      type.includes('transition')
+    )
+      return 'dv-dot--accent';
+    return '';
+  }
+
+  formatEventType(eventType: string): string {
+    return (eventType || '').replace(/_/g, ' ');
+  }
+
+  /** Short mono timestamp for timeline rows: "3h ago", "12d ago", or a date. */
+  formatRelative(iso: string | null | undefined): string {
+    if (!iso) return '';
+    const then = new Date(iso).getTime();
+    if (Number.isNaN(then)) return '';
+    const seconds = Math.floor((Date.now() - then) / 1000);
+    if (seconds < 60) return 'just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days}d ago`;
+    return new Date(iso).toISOString().slice(0, 10);
+  }
+
+  // --- Left pane viewer ---
+
+  /** Which preview surface the left pane can actually render. */
+  previewKind = computed<'pdf' | 'image' | 'thumb' | 'none'>(() => {
+    const doc = this.document();
+    if (!doc) return 'none';
+    if (doc.mime_type === 'application/pdf' || doc.archive_filename) return 'pdf';
+    if (doc.mime_type?.startsWith('image/')) return 'image';
+    if (doc.thumbnail_path && !this.thumbFailed()) return 'thumb';
+    return 'none';
+  });
+
+  /**
+   * PDF viewer URL. The page and zoom fragment is a standard PDF open
+   * parameter, so the toolbar controls drive the embedded viewer for real.
+   */
+  previewFrameUrl = computed<SafeResourceUrl>(() => {
+    const doc = this.document();
+    if (!doc) return this.sanitizer.bypassSecurityTrustResourceUrl('about:blank');
+    const base = this.documentService.getDownloadUrl(
+      doc.id,
+      doc.archive_filename ? 'archive' : 'original',
+    );
+    return this.sanitizer.bypassSecurityTrustResourceUrl(
+      `${base}#page=${this.currentPage()}&zoom=${this.zoom()}`,
+    );
+  });
+
+  zoomIn(): void {
+    this.zoom.set(Math.min(200, this.zoom() + 25));
+  }
+
+  zoomOut(): void {
+    this.zoom.set(Math.max(50, this.zoom() - 25));
+  }
+
+  resetZoom(): void {
+    this.zoom.set(100);
+  }
+
+  prevPage(): void {
+    this.currentPage.set(Math.max(1, this.currentPage() - 1));
+  }
+
+  nextPage(): void {
+    this.currentPage.set(Math.min(this.pageCount(), this.currentPage() + 1));
+  }
+
+  // --- Annotations (left pane overlay + Notes tab list) ---
+
+  loadAnnotations(docId: number): void {
+    this.annotationService.getAnnotations(docId).subscribe({
+      next: (items) => this.annotations.set(items),
+      error: () => this.annotations.set([]),
+    });
+  }
+
+  /** Annotations on the page currently shown, honouring toolbar filters. */
+  pageAnnotations = computed<Annotation[]>(() => {
+    if (!this.annotationsVisible()) return [];
+    const page = this.currentPage();
+    const author = this.annotationAuthorFilter().trim().toLowerCase();
+    return this.annotations().filter(
+      (a) =>
+        a.page === page &&
+        (!author || (a.author_name ?? '').toLowerCase().includes(author)),
+    );
+  });
+
+  /**
+   * Overlay boxes. Coordinates are normalised 0–1 server-side; anything without
+   * a usable box is left out rather than guessed at.
+   */
+  overlayBoxes = computed<Annotation[]>(() =>
+    this.pageAnnotations().filter(
+      (a) =>
+        ['highlight', 'underline', 'strikethrough', 'rectangle'].includes(
+          a.annotation_type,
+        ) &&
+        this.isFraction(a.coordinates?.['x']) &&
+        this.isFraction(a.coordinates?.['y']) &&
+        this.isFraction(a.coordinates?.['width']) &&
+        this.isFraction(a.coordinates?.['height']),
+    ),
+  );
+
+  /** Sticky notes / text boxes with a point anchor and something to say. */
+  overlayNotes = computed<Annotation[]>(() =>
+    this.pageAnnotations().filter(
+      (a) =>
+        ['sticky_note', 'text_box', 'rubber_stamp'].includes(a.annotation_type) &&
+        !!a.content &&
+        this.isFraction(a.coordinates?.['x']) &&
+        this.isFraction(a.coordinates?.['y']),
+    ),
+  );
+
+  coord(annotation: Annotation, key: string): number {
+    const value = annotation.coordinates?.[key];
+    return typeof value === 'number' ? value * 100 : 0;
+  }
+
+  onAnnotationTool(selection: AnnotationToolSelection): void {
+    this.activeAnnotationTool.set(selection);
+  }
+
+  onAnnotationVisibility(visible: boolean): void {
+    this.annotationsVisible.set(visible);
+  }
+
+  onAnnotationAuthorFilter(author: string): void {
+    this.annotationAuthorFilter.set(author);
+  }
+
+  onAnnotationSelected(annotation: Annotation): void {
+    if (annotation.page) this.currentPage.set(annotation.page);
+  }
+
+  annotationAuthors = computed<string[]>(() => {
+    const names = new Set<string>();
+    for (const a of this.annotations()) {
+      if (a.author_name) names.add(a.author_name);
+    }
+    return [...names];
+  });
+
+  // --- Tags ---
+
+  /**
+   * Tags are read-only on the document serializer, so add/remove go through the
+   * bulk endpoint. A document under legal hold returns HTTP 409 there.
+   */
+  addTag(tagId: number | null): void {
+    const doc = this.document();
+    if (!doc || !tagId) return;
+    this.tagBusy.set(true);
+    this.documentService
+      .bulkOperation({ action: 'add_tags', document_ids: [doc.id], tag_ids: [tagId] })
+      .subscribe({
+        next: () => {
+          this.tagBusy.set(false);
+          this.showTagPicker.set(false);
+          this.setActionMessage('Tag added.', false);
+          this.loadDocument(doc.id);
+        },
+        error: (err) => {
+          this.tagBusy.set(false);
+          this.setActionMessage(this.mutationError(err, 'Could not add the tag.'), true);
+        },
+      });
+  }
+
+  removeTag(tagId: number): void {
+    const doc = this.document();
+    if (!doc) return;
+    this.tagBusy.set(true);
+    this.documentService
+      .bulkOperation({ action: 'remove_tags', document_ids: [doc.id], tag_ids: [tagId] })
+      .subscribe({
+        next: () => {
+          this.tagBusy.set(false);
+          this.setActionMessage('Tag removed.', false);
+          this.loadDocument(doc.id);
+        },
+        error: (err) => {
+          this.tagBusy.set(false);
+          this.setActionMessage(this.mutationError(err, 'Could not remove the tag.'), true);
+        },
+      });
+  }
+
+  private setActionMessage(message: string, isError: boolean): void {
+    this.actionMessage.set(message);
+    this.actionError.set(isError);
+  }
+
+  clearActionMessage(): void {
+    this.actionMessage.set('');
+    this.actionError.set(false);
+  }
+
+  private mutationError(err: unknown, fallback: string): string {
+    const status = (err as { status?: number })?.status;
+    if (status === 409) {
+      return 'Blocked — this document is under legal hold (HTTP 409).';
+    }
+    return fallback;
+  }
+
+  private isFraction(value: unknown): boolean {
+    return typeof value === 'number' && value >= 0 && value <= 1;
+  }
+
+  /** Status chip modifier for a signature request. */
+  signatureChipClass(status: string): string {
+    const value = (status || '').toLowerCase();
+    if (value === 'completed' || value === 'signed') return 'dv-chip--ok';
+    if (value === 'pending' || value === 'sent') return 'dv-chip--warn';
+    if (value === 'declined' || value === 'cancelled' || value === 'expired')
+      return 'dv-chip--danger';
+    return '';
+  }
+
+  /** The two newest versions, used for the side-by-side diff affordance. */
+  diffPair = computed<DocumentVersion[]>(() => {
+    const sorted = [...this.versions()].sort(
+      (a, b) => b.version_number - a.version_number,
+    );
+    return sorted.slice(0, 2);
+  });
 
   // --- AI ---
 

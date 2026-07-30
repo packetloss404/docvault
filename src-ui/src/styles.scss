@@ -1,116 +1,317 @@
-// Bootstrap
+// Bootstrap stays imported while screens migrate to the Console primitives.
+// The bridge at the bottom of this file re-points Bootstrap's own CSS variables
+// at the Console tokens, so a not-yet-converted screen still reads as Console
+// rather than as stock Bootstrap. Remove Bootstrap once no `.btn`/`.card`/
+// `.table`/`.form-*` classes remain in src/app/components.
 @use "bootstrap/scss/bootstrap";
 @use "bootstrap-icons/font/bootstrap-icons.css";
 
-// DocVault theme variables
-:root {
-  --dv-bg: #f8f9fa;
-  --dv-text: #212529;
-  --dv-sidebar-bg: #212529;
-  --dv-sidebar-text: rgba(255, 255, 255, 0.75);
-  --dv-card-bg: #ffffff;
-  --dv-border: #dee2e6;
-  --dv-hover: rgba(0, 0, 0, 0.05);
+@use "fonts";
+@use "tokens";
+@use "console";
+
+// ---------------------------------------------------------------------------
+// Base
+// ---------------------------------------------------------------------------
+
+// Bootstrap's reboot currently supplies these. They are restated here so that
+// deleting the Bootstrap import does not silently shift every layout.
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
 
-[data-bs-theme="dark"] {
-  --dv-bg: #1a1d21;
-  --dv-text: #dee2e6;
-  --dv-sidebar-bg: #111315;
-  --dv-sidebar-text: rgba(255, 255, 255, 0.75);
-  --dv-card-bg: #212529;
-  --dv-border: #495057;
-  --dv-hover: rgba(255, 255, 255, 0.05);
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+figure,
+blockquote,
+dl,
+dd {
+  margin: 0;
 }
 
-// DocVault global styles
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+img,
+svg,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+table {
+  border-collapse: collapse;
+}
+
+html,
 body {
-  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
-  background-color: var(--dv-bg);
-  color: var(--dv-text);
+  height: 100%;
 }
 
-.sidebar {
-  min-height: calc(100vh - 56px);
-  background-color: var(--dv-sidebar-bg);
+body {
+  margin: 0;
+  font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-.sidebar .nav-link {
-  color: var(--dv-sidebar-text);
-  padding: 0.75rem 1rem;
+a {
+  color: var(--accent-text);
+  text-decoration: none;
 
-  &:hover,
-  &.active {
-    color: #fff;
-    background-color: rgba(255, 255, 255, 0.1);
-  }
-
-  i {
-    width: 1.5rem;
-    text-align: center;
-    margin-right: 0.5rem;
+  &:hover {
+    color: var(--text);
   }
 }
 
-.content-area {
-  min-height: calc(100vh - 56px);
-  background-color: var(--dv-bg);
-  color: var(--dv-text);
+::selection {
+  background: var(--accent-dim);
+  color: var(--text);
 }
 
-.card {
-  background-color: var(--dv-card-bg);
-  border-color: var(--dv-border);
-  color: var(--dv-text);
+:focus-visible {
+  outline: 2px solid var(--accent-line);
+  outline-offset: 1px;
 }
 
-.card-header {
-  background-color: var(--dv-card-bg);
-  border-bottom-color: var(--dv-border);
+// Thin scrollbars — a wide light gutter reads as a seam on the dark shell.
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
 }
 
-.card-footer {
-  background-color: var(--dv-card-bg);
-  border-top-color: var(--dv-border);
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border2);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+
+  &:hover {
+    background: var(--faint);
+    background-clip: content-box;
+  }
+}
+
+input,
+button,
+select,
+textarea {
+  font-family: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+// ---------------------------------------------------------------------------
+// Bootstrap bridge
+// ---------------------------------------------------------------------------
+body {
+  --bs-body-bg: var(--bg);
+  --bs-body-color: var(--text);
+  --bs-body-font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+  --bs-border-color: var(--border);
+  --bs-border-color-translucent: var(--border);
+  --bs-secondary-color: var(--muted);
+  --bs-secondary-bg: var(--panel2);
+  --bs-tertiary-bg: var(--panel);
+  --bs-tertiary-color: var(--faint);
+  --bs-emphasis-color: var(--text);
+  --bs-heading-color: var(--text);
+  --bs-link-color: var(--accent-text);
+  --bs-link-hover-color: var(--text);
+  --bs-code-color: var(--accent-text);
+  --bs-highlight-bg: var(--accent-dim);
+  --bs-font-monospace: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.card,
+.modal-content,
+.dropdown-menu,
+.list-group-item,
+.offcanvas,
+.accordion-item {
+  --bs-card-bg: var(--panel);
+  --bs-modal-bg: var(--panel);
+  --bs-dropdown-bg: var(--panel);
+  --bs-list-group-bg: var(--panel);
+  --bs-offcanvas-bg: var(--panel);
+  --bs-accordion-bg: var(--panel);
+  background-color: var(--panel);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.card-header,
+.card-footer,
+.modal-header,
+.modal-footer {
+  background-color: var(--panel);
+  border-color: var(--border);
 }
 
 .table {
-  color: var(--dv-text);
-}
-
-.table-hover > tbody > tr:hover {
-  background-color: var(--dv-hover);
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--text);
+  --bs-table-border-color: var(--border);
+  --bs-table-hover-bg: var(--panel);
+  --bs-table-hover-color: var(--text);
+  --bs-table-striped-bg: var(--panel);
+  --bs-table-striped-color: var(--text);
 }
 
 .form-control,
 .form-select {
-  background-color: var(--dv-card-bg);
-  color: var(--dv-text);
-  border-color: var(--dv-border);
+  background-color: var(--panel);
+  border-color: var(--border);
+  color: var(--text);
+
+  &::placeholder {
+    color: var(--faint);
+  }
 
   &:focus {
-    background-color: var(--dv-card-bg);
-    color: var(--dv-text);
+    background-color: var(--panel);
+    color: var(--text);
+    border-color: var(--accent-line);
+    box-shadow: none;
   }
 }
 
-.dropdown-menu {
-  background-color: var(--dv-card-bg);
-  border-color: var(--dv-border);
+.form-check-input {
+  background-color: var(--bg2);
+  border-color: var(--border2);
+
+  &:checked {
+    background-color: var(--accent);
+    border-color: var(--accent);
+  }
 }
 
 .dropdown-item {
-  color: var(--dv-text);
+  color: var(--text);
 
   &:hover,
   &:focus {
-    background-color: var(--dv-hover);
-    color: var(--dv-text);
+    background-color: var(--panel2);
+    color: var(--text);
+  }
+
+  &.active {
+    background-color: var(--accent-dim);
+    color: var(--accent-text);
   }
 }
 
-.modal-content {
-  background-color: var(--dv-card-bg);
-  border-color: var(--dv-border);
-  color: var(--dv-text);
+.btn-primary {
+  --bs-btn-bg: var(--accent);
+  --bs-btn-border-color: var(--accent);
+  --bs-btn-color: var(--accent-ink);
+  --bs-btn-hover-bg: var(--accent);
+  --bs-btn-hover-border-color: var(--accent);
+  --bs-btn-hover-color: var(--accent-ink);
+  --bs-btn-active-bg: var(--accent);
+  --bs-btn-active-border-color: var(--accent);
+  --bs-btn-active-color: var(--accent-ink);
+  --bs-btn-disabled-bg: var(--accent);
+  --bs-btn-disabled-border-color: var(--accent);
+  --bs-btn-disabled-color: var(--accent-ink);
+}
+
+.btn-secondary,
+.btn-outline-secondary {
+  --bs-btn-bg: var(--panel);
+  --bs-btn-border-color: var(--border2);
+  --bs-btn-color: var(--text);
+  --bs-btn-hover-bg: var(--panel2);
+  --bs-btn-hover-border-color: var(--border2);
+  --bs-btn-hover-color: var(--text);
+  --bs-btn-active-bg: var(--panel2);
+  --bs-btn-active-color: var(--text);
+}
+
+.btn-danger,
+.btn-outline-danger {
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: var(--border);
+  --bs-btn-color: var(--danger);
+  --bs-btn-hover-bg: var(--danger-dim);
+  --bs-btn-hover-border-color: var(--danger);
+  --bs-btn-hover-color: var(--danger);
+  --bs-btn-active-bg: var(--danger-dim);
+  --bs-btn-active-color: var(--danger);
+}
+
+.badge {
+  --bs-badge-color: var(--accent-ink);
+}
+
+.text-muted {
+  color: var(--muted) !important;
+}
+
+.border {
+  border-color: var(--border) !important;
+}
+
+.bg-light,
+.bg-body-tertiary,
+.bg-body-secondary {
+  background-color: var(--panel) !important;
+}
+
+.bg-dark {
+  background-color: var(--bg2) !important;
+}
+
+.alert {
+  background-color: var(--panel);
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.nav-tabs {
+  --bs-nav-tabs-border-color: var(--border);
+  --bs-nav-tabs-link-active-bg: var(--panel);
+  --bs-nav-tabs-link-active-color: var(--text);
+  --bs-nav-tabs-link-active-border-color: var(--border);
+  --bs-nav-link-color: var(--faint);
+  --bs-nav-link-hover-color: var(--text);
+}
+
+.progress {
+  background-color: var(--bg2);
+}
+
+.progress-bar {
+  background-color: var(--accent);
+}
+
+.spinner-border,
+.spinner-grow {
+  color: var(--accent-text);
 }

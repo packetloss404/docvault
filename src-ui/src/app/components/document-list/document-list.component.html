@@ -1,447 +1,371 @@
-<div class="container-fluid">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Documents</h2>
-    <span class="badge bg-secondary">{{ totalCount() }} total</span>
-  </div>
+<div class="dv-screen dv-screen--flush">
+  <!-- Filter tokens -->
+  <div class="dl-tokens">
+    @for (token of filterTokens(); track token.key) {
+      <button class="dv-token is-active" (click)="removeFilter(token)">
+        {{ token.label }} <span aria-hidden="true">✕</span>
+        <span class="dv-sr">Remove filter</span>
+      </button>
+    }
 
-  <!-- Bulk operation result message -->
-  @if (bulkMessage()) {
-    <div
-      class="alert mb-3"
-      [class.alert-success]="!bulkError()"
-      [class.alert-danger]="bulkError()"
-    >
-      {{ bulkMessage() }}
+    <div class="dl-pop">
       <button
-        type="button"
-        class="btn-close float-end"
-        (click)="bulkMessage.set('')"
-      ></button>
-    </div>
-  }
-
-  <!-- Search and Filter Bar -->
-  <div class="row mb-3 g-2">
-    <div class="col-md-6">
-      <div class="input-group">
-        <input
-          type="text"
-          class="form-control"
-          placeholder="Search documents..."
-          [ngModel]="searchQuery()"
-          (ngModelChange)="searchQuery.set($event)"
-          (keyup.enter)="onSearch()"
-        />
-        <button class="btn btn-outline-primary" (click)="onSearch()">
-          <i class="bi bi-search"></i> Search
-        </button>
-      </div>
-    </div>
-    <div class="col-md-3">
-      <select
-        class="form-select"
-        (change)="onTypeFilter($any($event.target).value)"
+        class="dl-addfilter"
+        (click)="showFilterPanel.set(!showFilterPanel())"
       >
-        <option value="">All Document Types</option>
-        @for (type of documentTypes(); track type.id) {
-          <option [value]="type.id">{{ type.name }}</option>
-        }
-      </select>
+        + filter
+      </button>
+      @if (showFilterPanel()) {
+        <div class="dl-pop__panel dv-card dv-card--r10">
+          <label class="dv-field__label" for="dl-search">search</label>
+          <input
+            id="dl-search"
+            class="dv-input dv-input--r7"
+            type="text"
+            placeholder="Title, content, correspondent…"
+            [ngModel]="searchDraft()"
+            (ngModelChange)="searchDraft.set($event)"
+            (keyup.enter)="onSearch()"
+          />
+          <label class="dv-field__label dl-pop__label" for="dl-type">type</label>
+          <select
+            id="dl-type"
+            class="dv-input dv-input--r7"
+            [value]="selectedTypeId() ?? ''"
+            (change)="onTypeFilter($any($event.target).value)"
+          >
+            <option value="">all types</option>
+            @for (type of documentTypes(); track type.id) {
+              <option [value]="type.id">{{ type.name }}</option>
+            }
+          </select>
+          <button class="dv-btn dv-btn--primary dv-btn--sm dl-pop__apply" (click)="onSearch()">
+            Apply
+          </button>
+        </div>
+      }
     </div>
-    <div class="col-md-3 d-flex align-items-center justify-content-end gap-2">
-      <!-- Columns dropdown -->
-      <div class="dropdown">
+
+    <div class="dl-tokens__right">
+      <div class="dl-pop">
         <button
-          class="btn btn-sm btn-outline-secondary dropdown-toggle"
-          type="button"
+          class="dl-addfilter"
           (click)="showColumnDropdown.set(!showColumnDropdown())"
           title="Configure visible columns"
         >
-          <i class="bi bi-layout-three-columns me-1"></i>Columns
+          columns
         </button>
         @if (showColumnDropdown()) {
           <div
-            class="dropdown-menu show p-2"
-            style="min-width: 180px;"
+            class="dl-pop__panel dl-pop__panel--right dv-card dv-card--r10"
             (click)="$event.stopPropagation()"
           >
             @for (col of availableColumns; track col.key) {
-              <div class="form-check">
-                <input
-                  type="checkbox"
-                  class="form-check-input"
-                  [id]="'col-' + col.key"
-                  [checked]="isColumnSelected(col.key)"
-                  (change)="toggleColumn(col.key)"
-                />
-                <label class="form-check-label" [for]="'col-' + col.key">
-                  {{ col.label }}
-                </label>
-              </div>
+              <label class="dl-colrow">
+                <button
+                  type="button"
+                  class="dv-check"
+                  [class.is-checked]="isColumnSelected(col.key)"
+                  (click)="toggleColumn(col.key)"
+                  [attr.aria-pressed]="isColumnSelected(col.key)"
+                >
+                  @if (isColumnSelected(col.key)) {
+                    <span aria-hidden="true">✓</span>
+                  }
+                </button>
+                <span>{{ col.label }}</span>
+              </label>
             }
           </div>
         }
       </div>
-      <span class="text-muted small">
-        Page {{ currentPage() }} of {{ totalPages() }}
+      <span class="dl-sort">
+        sorted by
+        <button class="dl-sort__btn" (click)="toggleSortDirection()">
+          {{ sortLabel() }}
+        </button>
       </span>
     </div>
   </div>
 
-  <!-- Bulk Actions Toolbar -->
-  @if (hasSelection()) {
-    <div
-      class="card mb-3 border-primary"
-    >
-      <div class="card-body py-2">
-        <div class="d-flex align-items-center flex-wrap gap-2">
-          <span class="fw-semibold me-2">
-            <i class="bi bi-check2-square me-1"></i>{{ selectionCount() }}
-            selected
-          </span>
-
-          <!-- Action buttons -->
-          @if (!bulkAction()) {
-            <button
-              class="btn btn-sm btn-outline-primary"
-              (click)="openBulkAction('add_tags')"
-            >
-              <i class="bi bi-tags me-1"></i>Add Tags
-            </button>
-            <button
-              class="btn btn-sm btn-outline-primary"
-              (click)="openBulkAction('set_correspondent')"
-            >
-              <i class="bi bi-people me-1"></i>Set Correspondent
-            </button>
-            <button
-              class="btn btn-sm btn-outline-primary"
-              (click)="openBulkAction('set_type')"
-            >
-              <i class="bi bi-collection me-1"></i>Set Type
-            </button>
-            <button
-              class="btn btn-sm btn-outline-danger"
-              (click)="openBulkAction('delete')"
-            >
-              <i class="bi bi-trash me-1"></i>Delete
-            </button>
-            <div class="ms-auto">
-              <button
-                class="btn btn-sm btn-outline-secondary"
-                (click)="clearSelection()"
-              >
-                Clear Selection
-              </button>
-            </div>
-          }
-
-          <!-- Add Tags form -->
-          @if (bulkAction() === 'add_tags') {
-            <div class="d-flex align-items-center flex-wrap gap-2 flex-grow-1">
-              <div class="d-flex flex-wrap gap-1">
-                @for (tag of tags(); track tag.id) {
-                  <button
-                    class="btn btn-sm"
-                    [class.btn-primary]="isBulkTagSelected(tag.id)"
-                    [class.btn-outline-secondary]="
-                      !isBulkTagSelected(tag.id)
-                    "
-                    (click)="toggleBulkTag(tag.id)"
-                  >
-                    {{ tag.name }}
-                  </button>
-                }
-              </div>
-              <button
-                class="btn btn-sm btn-success"
-                [disabled]="bulkLoading() || selectedTagIds().size === 0"
-                (click)="executeBulkAddTags()"
-              >
-                @if (bulkLoading()) {
-                  <span
-                    class="spinner-border spinner-border-sm me-1"
-                  ></span>
-                }
-                Apply
-              </button>
-              <button
-                class="btn btn-sm btn-outline-secondary"
-                (click)="cancelBulkAction()"
-              >
-                Cancel
-              </button>
-            </div>
-          }
-
-          <!-- Set Correspondent form -->
-          @if (bulkAction() === 'set_correspondent') {
-            <div class="d-flex align-items-center gap-2 flex-grow-1">
-              <select
-                class="form-select form-select-sm"
-                style="max-width: 250px;"
-                [ngModel]="selectedCorrespondentId()"
-                (ngModelChange)="selectedCorrespondentId.set($event)"
-              >
-                <option [ngValue]="null">Choose correspondent...</option>
-                @for (corr of correspondents(); track corr.id) {
-                  <option [ngValue]="corr.id">{{ corr.name }}</option>
-                }
-              </select>
-              <button
-                class="btn btn-sm btn-success"
-                [disabled]="
-                  bulkLoading() || selectedCorrespondentId() === null
-                "
-                (click)="executeBulkSetCorrespondent()"
-              >
-                @if (bulkLoading()) {
-                  <span
-                    class="spinner-border spinner-border-sm me-1"
-                  ></span>
-                }
-                Apply
-              </button>
-              <button
-                class="btn btn-sm btn-outline-secondary"
-                (click)="cancelBulkAction()"
-              >
-                Cancel
-              </button>
-            </div>
-          }
-
-          <!-- Set Type form -->
-          @if (bulkAction() === 'set_type') {
-            <div class="d-flex align-items-center gap-2 flex-grow-1">
-              <select
-                class="form-select form-select-sm"
-                style="max-width: 250px;"
-                [ngModel]="selectedDocTypeId()"
-                (ngModelChange)="selectedDocTypeId.set($event)"
-              >
-                <option [ngValue]="null">Choose document type...</option>
-                @for (type of documentTypes(); track type.id) {
-                  <option [ngValue]="type.id">{{ type.name }}</option>
-                }
-              </select>
-              <button
-                class="btn btn-sm btn-success"
-                [disabled]="bulkLoading() || selectedDocTypeId() === null"
-                (click)="executeBulkSetType()"
-              >
-                @if (bulkLoading()) {
-                  <span
-                    class="spinner-border spinner-border-sm me-1"
-                  ></span>
-                }
-                Apply
-              </button>
-              <button
-                class="btn btn-sm btn-outline-secondary"
-                (click)="cancelBulkAction()"
-              >
-                Cancel
-              </button>
-            </div>
-          }
-
-          <!-- Delete confirmation -->
-          @if (bulkAction() === 'delete') {
-            <div class="d-flex align-items-center gap-2 flex-grow-1">
-              <span class="text-danger fw-semibold">
-                <i class="bi bi-exclamation-triangle me-1"></i>
-                Delete {{ selectionCount() }} document(s)? This cannot be
-                undone.
-              </span>
-              <button
-                class="btn btn-sm btn-danger"
-                [disabled]="bulkLoading()"
-                (click)="executeBulkDelete()"
-              >
-                @if (bulkLoading()) {
-                  <span
-                    class="spinner-border spinner-border-sm me-1"
-                  ></span>
-                }
-                Confirm Delete
-              </button>
-              <button
-                class="btn btn-sm btn-outline-secondary"
-                (click)="cancelBulkAction()"
-              >
-                Cancel
-              </button>
-            </div>
-          }
-        </div>
-      </div>
+  @if (bulkMessage()) {
+    <div class="dl-notice" [class.dl-notice--error]="bulkError()">
+      <span>{{ bulkMessage() }}</span>
+      <button class="dv-link dv-push" (click)="bulkMessage.set('')">✕</button>
     </div>
   }
 
-  <!-- Documents Table -->
-  @if (loading()) {
-    <div class="text-center py-5">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
+  <!-- Table -->
+  <div class="dl-scroll">
+    @if (loading()) {
+      <div class="dv-empty"><span class="dv-spinner"></span></div>
+    } @else if (documents().length === 0) {
+      <div class="dv-empty">
+        No documents match these filters.
+        <div class="dl-empty-action">
+          <button class="dv-btn dv-btn--accent dv-btn--sm" (click)="upload()">
+            Upload a document
+          </button>
+        </div>
       </div>
-    </div>
-  } @else if (documents().length === 0) {
-    <div class="text-center py-5 text-muted">
-      <i class="bi bi-folder2-open" style="font-size: 3rem;"></i>
-      <p class="mt-2">No documents found.</p>
-    </div>
-  } @else {
-    <div class="table-responsive">
-      <table class="table table-hover align-middle">
-        <thead class="table-light">
-          <tr>
-            <th style="width: 40px;">
-              <input
-                type="checkbox"
-                class="form-check-input"
-                [checked]="allSelected()"
-                (change)="toggleSelectAll()"
-                title="Select all documents on this page"
-              />
-            </th>
-            <th style="width: 40px;"></th>
-            @for (col of availableColumns; track col.key) {
-              @if (isColumnSelected(col.key)) {
-                @if (col.sortable) {
-                  <th
-                    role="button"
-                    (click)="sortBy(col.sortField!)"
-                    class="user-select-none"
-                  >
-                    {{ col.label }}
-                    <i class="bi" [ngClass]="getSortIcon(col.sortField!)"></i>
-                  </th>
-                } @else {
-                  <th>{{ col.label }}</th>
-                }
+    } @else {
+      <div
+        class="dv-thead dv-grid dv-thead--sticky"
+        [style.--dv-cols]="gridColumns()"
+      >
+        <button
+          class="dv-check"
+          [class.is-checked]="allSelected()"
+          (click)="toggleSelectAll()"
+          title="Select all documents on this page"
+          [attr.aria-pressed]="allSelected()"
+        >
+          @if (allSelected()) {
+            <span aria-hidden="true">✓</span>
+          }
+        </button>
+        @for (col of visibleColumns(); track col.key) {
+          @if (col.sortable) {
+            <button
+              class="dl-th"
+              [class.dv-num]="col.numeric"
+              (click)="sortBy(col.sortField!)"
+            >
+              {{ col.label }}<span class="dl-th__glyph">{{
+                getSortGlyph(col.sortField!)
+              }}</span>
+            </button>
+          } @else {
+            <span [class.dv-num]="col.numeric">{{ col.label }}</span>
+          }
+        }
+      </div>
+
+      @for (doc of documents(); track doc.id) {
+        <div
+          class="dv-row dv-grid"
+          [class.is-selected]="isSelected(doc.id)"
+          [style.--dv-cols]="gridColumns()"
+          (click)="openDocument(doc)"
+        >
+          <button
+            class="dv-check"
+            [class.is-checked]="isSelected(doc.id)"
+            (click)="toggleSelect(doc.id, $event)"
+            [attr.aria-label]="'Select ' + doc.title"
+            [attr.aria-pressed]="isSelected(doc.id)"
+          >
+            @if (isSelected(doc.id)) {
+              <span aria-hidden="true">✓</span>
+            }
+          </button>
+
+          @for (col of visibleColumns(); track col.key) {
+            @switch (col.key) {
+              @case ('title') {
+                <div class="dl-title dv-clip" [title]="doc.original_filename || doc.title">
+                  {{ doc.title }}
+                </div>
+              }
+              @case ('document_type') {
+                <div>
+                  @if (doc.document_type_name) {
+                    <span class="dv-chip">{{ doc.document_type_name }}</span>
+                  }
+                </div>
+              }
+              @case ('correspondent') {
+                <div class="dl-sub dv-clip">{{ doc.correspondent_name }}</div>
+              }
+              @case ('cabinet') {
+                <div class="dl-sub dv-clip">{{ doc.cabinet_name }}</div>
+              }
+              @case ('created') {
+                <div class="dl-date">{{ doc.created | date: 'yyyy-MM-dd' }}</div>
+              }
+              @case ('added') {
+                <div class="dl-date">{{ doc.added | date: 'yyyy-MM-dd' }}</div>
+              }
+              @case ('archive_serial_number') {
+                <div class="dl-date">{{ doc.archive_serial_number }}</div>
+              }
+              @case ('page_count') {
+                <div class="dl-date">{{ doc.page_count }}</div>
+              }
+              @case ('tags') {
+                <div class="dl-tags">
+                  @for (label of tagLabels(doc); track label) {
+                    <span class="dv-chip dv-chip--outline">{{ label }}</span>
+                  }
+                </div>
               }
             }
-          </tr>
-        </thead>
-        <tbody>
-          @for (doc of documents(); track doc.id) {
-            <tr
-              role="button"
-              (click)="openDocument(doc)"
-              [class.table-active]="isSelected(doc.id)"
-            >
-              <td>
-                <input
-                  type="checkbox"
-                  class="form-check-input"
-                  [checked]="isSelected(doc.id)"
-                  (click)="toggleSelect(doc.id, $event)"
-                />
-              </td>
-              <td>
-                <img
-                  [src]="getPreviewUrl(doc)"
-                  alt="Preview"
-                  class="rounded"
-                  style="width: 32px; height: 44px; object-fit: cover;"
-                  onerror="this.style.display='none'"
-                />
-              </td>
-              @if (isColumnSelected('title')) {
-                <td>
-                  <strong>{{ doc.title }}</strong>
-                  <br />
-                  <small class="text-muted">{{ doc.original_filename }}</small>
-                </td>
-              }
-              @if (isColumnSelected('document_type')) {
-                <td>
-                  @if (doc.document_type_name) {
-                    <span class="badge bg-info text-dark">{{
-                      doc.document_type_name
-                    }}</span>
-                  }
-                </td>
-              }
-              @if (isColumnSelected('correspondent')) {
-                <td>
-                  @if (doc.correspondent_name) {
-                    <span class="badge bg-secondary">{{
-                      doc.correspondent_name
-                    }}</span>
-                  }
-                </td>
-              }
-              @if (isColumnSelected('cabinet')) {
-                <td>
-                  @if (doc.cabinet_name) {
-                    <span class="badge bg-dark">{{ doc.cabinet_name }}</span>
-                  }
-                </td>
-              }
-              @if (isColumnSelected('created')) {
-                <td>{{ doc.created | date : 'mediumDate' }}</td>
-              }
-              @if (isColumnSelected('added')) {
-                <td>{{ doc.added | date : 'short' }}</td>
-              }
-              @if (isColumnSelected('archive_serial_number')) {
-                <td>
-                  @if (doc.archive_serial_number) {
-                    <span class="badge bg-secondary">{{
-                      doc.archive_serial_number
-                    }}</span>
-                  }
-                </td>
-              }
-              @if (isColumnSelected('page_count')) {
-                <td>{{ doc.page_count }}</td>
-              }
-              @if (isColumnSelected('tags')) {
-                <td>
-                  @if (doc.tag_ids && doc.tag_ids.length > 0) {
-                    <div class="d-flex flex-wrap gap-1">
-                      @for (tagId of doc.tag_ids; track tagId) {
-                        <span class="badge bg-warning text-dark">#{{ tagId }}</span>
-                      }
-                    </div>
-                  }
-                </td>
-              }
-            </tr>
           }
-        </tbody>
-      </table>
-    </div>
+        </div>
+      }
 
-    <!-- Pagination -->
-    @if (totalPages() > 1) {
-      <nav>
-        <ul class="pagination justify-content-center">
-          <li class="page-item" [class.disabled]="currentPage() === 1">
-            <a class="page-link" (click)="goToPage(currentPage() - 1)"
-              >Previous</a
-            >
-          </li>
-          @for (p of [].constructor(totalPages()); track $index) {
-            <li
-              class="page-item"
-              [class.active]="currentPage() === $index + 1"
-            >
-              <a class="page-link" (click)="goToPage($index + 1)">{{
-                $index + 1
-              }}</a>
-            </li>
-          }
-          <li
-            class="page-item"
-            [class.disabled]="currentPage() === totalPages()"
+      @if (totalPages() > 1) {
+        <div class="dv-pager">
+          <span
+            [class.dl-pager-off]="currentPage() === 1"
+            (click)="goToPage(currentPage() - 1)"
+            >←</span
           >
-            <a class="page-link" (click)="goToPage(currentPage() + 1)">Next</a>
-          </li>
-        </ul>
-      </nav>
+          @for (page of pageItems(); track $index) {
+            @if (page === null) {
+              <span class="dl-pager-gap">…</span>
+            } @else {
+              <span
+                [class.is-current]="page === currentPage()"
+                (click)="goToPage(page)"
+                >{{ page }}</span
+              >
+            }
+          }
+          <span
+            [class.dl-pager-off]="currentPage() === totalPages()"
+            (click)="goToPage(currentPage() + 1)"
+            >→</span
+          >
+        </div>
+      }
     }
+  </div>
+
+  <!-- Bulk action bar -->
+  @if (hasSelection()) {
+    <div class="dv-bulkbar">
+      <span class="dv-bulkbar__count">{{ selectionCount() }} selected</span>
+
+      @if (!bulkAction()) {
+        <button class="dv-bulkbar__action" (click)="openBulkAction('add_tags')">
+          tag <span class="dv-kbd">T</span>
+        </button>
+        <button class="dv-bulkbar__action" (click)="openBulkAction('set_type')">
+          type <span class="dv-kbd">Y</span>
+        </button>
+        <button
+          class="dv-bulkbar__action"
+          (click)="openBulkAction('set_correspondent')"
+        >
+          correspondent <span class="dv-kbd">C</span>
+        </button>
+        <button class="dv-bulkbar__action" (click)="clearSelection()">
+          clear <span class="dv-kbd">esc</span>
+        </button>
+        <button
+          class="dv-bulkbar__action dv-bulkbar__action--danger"
+          (click)="openBulkAction('delete')"
+        >
+          delete <span class="dv-kbd">⌫</span>
+        </button>
+      }
+
+      @if (bulkAction() === 'add_tags') {
+        <div class="dl-bulkform">
+          <div class="dl-bulkform__chips">
+            @for (tag of tags(); track tag.id) {
+              <button
+                class="dv-chip dv-chip--outline dl-pick"
+                [class.is-picked]="isBulkTagSelected(tag.id)"
+                (click)="toggleBulkTag(tag.id)"
+              >
+                {{ tag.name }}
+              </button>
+            }
+          </div>
+          <button
+            class="dv-btn dv-btn--primary dv-btn--sm"
+            [disabled]="bulkLoading() || selectedTagIds().size === 0"
+            (click)="executeBulkAddTags()"
+          >
+            @if (bulkLoading()) {
+              <span class="dv-spinner"></span>
+            }
+            Apply
+          </button>
+          <button class="dv-btn dv-btn--ghost dv-btn--sm" (click)="cancelBulkAction()">
+            Cancel
+          </button>
+        </div>
+      }
+
+      @if (bulkAction() === 'set_correspondent') {
+        <div class="dl-bulkform">
+          <select
+            class="dv-input dv-input--r7 dl-bulkform__select"
+            [ngModel]="selectedCorrespondentId()"
+            (ngModelChange)="selectedCorrespondentId.set($event)"
+          >
+            <option [ngValue]="null">Choose correspondent…</option>
+            @for (corr of correspondents(); track corr.id) {
+              <option [ngValue]="corr.id">{{ corr.name }}</option>
+            }
+          </select>
+          <button
+            class="dv-btn dv-btn--primary dv-btn--sm"
+            [disabled]="bulkLoading() || selectedCorrespondentId() === null"
+            (click)="executeBulkSetCorrespondent()"
+          >
+            @if (bulkLoading()) {
+              <span class="dv-spinner"></span>
+            }
+            Apply
+          </button>
+          <button class="dv-btn dv-btn--ghost dv-btn--sm" (click)="cancelBulkAction()">
+            Cancel
+          </button>
+        </div>
+      }
+
+      @if (bulkAction() === 'set_type') {
+        <div class="dl-bulkform">
+          <select
+            class="dv-input dv-input--r7 dl-bulkform__select"
+            [ngModel]="selectedDocTypeId()"
+            (ngModelChange)="selectedDocTypeId.set($event)"
+          >
+            <option [ngValue]="null">Choose document type…</option>
+            @for (type of documentTypes(); track type.id) {
+              <option [ngValue]="type.id">{{ type.name }}</option>
+            }
+          </select>
+          <button
+            class="dv-btn dv-btn--primary dv-btn--sm"
+            [disabled]="bulkLoading() || selectedDocTypeId() === null"
+            (click)="executeBulkSetType()"
+          >
+            @if (bulkLoading()) {
+              <span class="dv-spinner"></span>
+            }
+            Apply
+          </button>
+          <button class="dv-btn dv-btn--ghost dv-btn--sm" (click)="cancelBulkAction()">
+            Cancel
+          </button>
+        </div>
+      }
+
+      @if (bulkAction() === 'delete') {
+        <div class="dl-bulkform">
+          <span class="dv-danger dl-bulkform__warn">
+            Delete {{ selectionCount() }} document(s)? This cannot be undone.
+          </span>
+          <button
+            class="dv-btn dv-btn--danger dv-btn--sm"
+            [disabled]="bulkLoading()"
+            (click)="executeBulkDelete()"
+          >
+            @if (bulkLoading()) {
+              <span class="dv-spinner"></span>
+            }
+            Confirm delete
+          </button>
+          <button class="dv-btn dv-btn--ghost dv-btn--sm" (click)="cancelBulkAction()">
+            Cancel
+          </button>
+        </div>
+      }
+    </div>
   }
 </div>

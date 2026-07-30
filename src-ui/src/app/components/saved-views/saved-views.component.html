@@ -1,322 +1,338 @@
-<h3 class="mb-3">Saved Views</h3>
+<div class="dv-screen dv-screen--tight">
+  <div class="dv-inner dv-inner--wide">
+    <dv-subnav />
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <p class="text-muted mb-0">{{ views().length }} saved view{{ views().length !== 1 ? 's' : '' }}</p>
-  <button class="btn btn-primary btn-sm" (click)="startCreate()" [disabled]="creating() || editing()">
-    <i class="bi bi-plus-lg me-1"></i>New View
-  </button>
-</div>
-
-<!-- Create / Edit Form -->
-@if (creating() || editing()) {
-  <div class="card mb-4">
-    <div class="card-header">
-      <h6 class="mb-0">{{ creating() ? 'Create' : 'Edit' }} Saved View</h6>
+    <div class="dv-section sv-head">
+      <span class="dv-eyebrow"
+        >{{ views().length }} saved view{{ views().length !== 1 ? 's' : '' }}</span
+      >
+      <button
+        type="button"
+        class="dv-btn dv-btn--accent dv-btn--md dv-push"
+        (click)="startCreate()"
+        [disabled]="creating() || !!editing()"
+      >
+        + New view
+      </button>
     </div>
-    <div class="card-body">
-      <div class="row g-3">
-        <div class="col-md-6">
-          <label class="form-label">Name</label>
-          <input
-            type="text"
-            class="form-control"
-            [ngModel]="editName()"
-            (ngModelChange)="editName.set($event)"
-            placeholder="View name"
-          />
-        </div>
-        <div class="col-md-6">
-          <label class="form-label">Display Mode</label>
-          <select
-            class="form-select"
-            [ngModel]="editDisplayMode()"
-            (ngModelChange)="editDisplayMode.set($event)"
-          >
-            <option value="table">Table</option>
-            <option value="small_cards">Small Cards</option>
-            <option value="large_cards">Large Cards</option>
-          </select>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Sort Field</label>
-          <select
-            class="form-select"
-            [ngModel]="editSortField()"
-            (ngModelChange)="editSortField.set($event)"
-          >
-            <option value="created">Created</option>
-            <option value="modified">Modified</option>
-            <option value="added">Added</option>
-            <option value="title">Title</option>
-            <option value="correspondent__name">Correspondent</option>
-            <option value="document_type__name">Document Type</option>
-            <option value="archive_serial_number">ASN</option>
-          </select>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Sort Order</label>
-          <select
-            class="form-select"
-            [ngModel]="editSortReverse()"
-            (ngModelChange)="editSortReverse.set($event === 'true')"
-          >
-            <option [value]="true">Descending</option>
-            <option [value]="false">Ascending</option>
-          </select>
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Page Size</label>
-          <select
-            class="form-select"
-            [ngModel]="editPageSize()"
-            (ngModelChange)="editPageSize.set(+$event)"
-          >
-            <option [value]="10">10</option>
-            <option [value]="25">25</option>
-            <option [value]="50">50</option>
-            <option [value]="100">100</option>
-          </select>
-        </div>
-        <div class="col-md-6">
-          <div class="form-check mt-2">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="showDashboard"
-              [ngModel]="editShowDashboard()"
-              (ngModelChange)="editShowDashboard.set($event)"
-            />
-            <label class="form-check-label" for="showDashboard">Show on Dashboard</label>
-          </div>
-        </div>
-        <div class="col-md-6">
-          <div class="form-check mt-2">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="showSidebar"
-              [ngModel]="editShowSidebar()"
-              (ngModelChange)="editShowSidebar.set($event)"
-            />
-            <label class="form-check-label" for="showSidebar">Show in Sidebar</label>
-          </div>
-        </div>
-      </div>
 
-      <!-- Filter Rules (simple, flat list) -->
-      <hr />
-      <h6>Filter Rules</h6>
+    <!-- Create / edit -->
+    @if (creating() || editing()) {
+      <div class="dv-card dv-card--r10 sv-form">
+        <div class="dv-card__head">
+          <span class="dv-card__title"
+            >{{ creating() ? 'Create' : 'Edit' }} saved view</span
+          >
+        </div>
 
-      @if (editRules().length > 0) {
-        <div class="mb-3">
-          @for (rule of editRules(); track $index) {
-            <div class="d-flex align-items-center mb-1">
-              <span class="badge bg-secondary me-2">{{ getRuleTypeLabel(rule.rule_type) }}</span>
-              <span class="small me-2">{{ rule.value }}</span>
-              <button
-                class="btn btn-sm btn-outline-danger ms-auto"
-                (click)="removeRule($index)"
-              >
-                <i class="bi bi-x"></i>
-              </button>
+        <div class="sv-form__body">
+          <div class="sv-fields">
+            <div>
+              <label class="dv-field__label" for="sv-name">name</label>
+              <input
+                type="text"
+                id="sv-name"
+                class="dv-input"
+                placeholder="View name"
+                [ngModel]="editName()"
+                (ngModelChange)="editName.set($event)"
+              />
             </div>
+            <div>
+              <label class="dv-field__label" for="sv-display">display mode</label>
+              <select
+                id="sv-display"
+                class="dv-select"
+                [ngModel]="editDisplayMode()"
+                (ngModelChange)="editDisplayMode.set($event)"
+              >
+                <option value="table">Table</option>
+                <option value="small_cards">Small cards</option>
+                <option value="large_cards">Large cards</option>
+              </select>
+            </div>
+            <div>
+              <label class="dv-field__label" for="sv-sort">sort field</label>
+              <select
+                id="sv-sort"
+                class="dv-select"
+                [ngModel]="editSortField()"
+                (ngModelChange)="editSortField.set($event)"
+              >
+                <option value="created">Created</option>
+                <option value="modified">Modified</option>
+                <option value="added">Added</option>
+                <option value="title">Title</option>
+                <option value="correspondent__name">Correspondent</option>
+                <option value="document_type__name">Document type</option>
+                <option value="archive_serial_number">ASN</option>
+              </select>
+            </div>
+            <div>
+              <label class="dv-field__label" for="sv-order">sort order</label>
+              <select
+                id="sv-order"
+                class="dv-select"
+                [ngModel]="editSortReverse()"
+                (ngModelChange)="editSortReverse.set($event === 'true')"
+              >
+                <option [value]="true">Descending</option>
+                <option [value]="false">Ascending</option>
+              </select>
+            </div>
+            <div>
+              <label class="dv-field__label" for="sv-pagesize">page size</label>
+              <select
+                id="sv-pagesize"
+                class="dv-select"
+                [ngModel]="editPageSize()"
+                (ngModelChange)="editPageSize.set(+$event)"
+              >
+                <option [value]="10">10</option>
+                <option [value]="25">25</option>
+                <option [value]="50">50</option>
+                <option [value]="100">100</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="sv-switches">
+            <div class="sv-switch">
+              <button
+                type="button"
+                class="dv-toggle"
+                [class.is-on]="editShowDashboard()"
+                role="switch"
+                [attr.aria-checked]="editShowDashboard()"
+                aria-label="Show on dashboard"
+                (click)="editShowDashboard.set(!editShowDashboard())"
+              ></button>
+              <span>Show on dashboard</span>
+            </div>
+            <div class="sv-switch">
+              <button
+                type="button"
+                class="dv-toggle"
+                [class.is-on]="editShowSidebar()"
+                role="switch"
+                [attr.aria-checked]="editShowSidebar()"
+                aria-label="Show in sidebar"
+                (click)="editShowSidebar.set(!editShowSidebar())"
+              ></button>
+              <span>Show in sidebar</span>
+            </div>
+          </div>
+
+          <hr class="dv-divider" />
+
+          <!-- Flat filter rules -->
+          <div class="dv-eyebrow">filter rules</div>
+
+          @if (editRules().length > 0) {
+            <div class="sv-rules">
+              @for (rule of editRules(); track $index) {
+                <div class="sv-rule">
+                  <span class="dv-chip">{{ getRuleTypeLabel(rule.rule_type) }}</span>
+                  <span class="dv-mono sv-rule__value">{{ rule.value }}</span>
+                  <button
+                    type="button"
+                    class="sv-x dv-push"
+                    aria-label="Remove rule"
+                    (click)="removeRule($index)"
+                  >
+                    ✕
+                  </button>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="dv-meta">no rules — the view matches every document</div>
           }
-        </div>
-      }
 
-      <div class="d-flex gap-2 align-items-end">
-        <div>
-          <label class="form-label small">Rule Type</label>
-          <select
-            class="form-select form-select-sm"
-            [ngModel]="newRuleType()"
-            (ngModelChange)="newRuleType.set($event)"
-          >
-            @for (rt of ruleTypes; track rt.value) {
-              <option [value]="rt.value">{{ rt.label }}</option>
-            }
-          </select>
-        </div>
-        <div class="flex-grow-1">
-          <label class="form-label small">Value</label>
-          <input
-            type="text"
-            class="form-control form-control-sm"
-            [ngModel]="newRuleValue()"
-            (ngModelChange)="newRuleValue.set($event)"
-            placeholder="Rule value"
-            (keyup.enter)="addRule()"
-          />
-        </div>
-        <button class="btn btn-sm btn-outline-primary" (click)="addRule()">
-          <i class="bi bi-plus"></i> Add
-        </button>
-      </div>
-
-      <!-- OR Filter Groups (B2.4) -->
-      <hr />
-      <div class="d-flex justify-content-between align-items-center mb-2">
-        <h6 class="mb-0">Filter Groups <span class="badge bg-info text-dark ms-1">AND/OR</span></h6>
-        <button class="btn btn-sm btn-outline-secondary" (click)="addFilterGroup()">
-          <i class="bi bi-plus-lg me-1"></i>Add Group
-        </button>
-      </div>
-
-      <p class="text-muted small mb-2">
-        Filters within a group are combined with the group operator (AND / OR).
-        Groups are always combined with AND between each other.
-      </p>
-
-      @for (group of editFilterGroups(); track $index; let gi = $index) {
-        <div class="card mb-3 border-secondary">
-          <div class="card-header d-flex align-items-center justify-content-between py-1 px-3 bg-light">
-            <div class="d-flex align-items-center gap-2">
-              <span class="small fw-semibold">Group {{ gi + 1 }}</span>
-              <button
-                class="btn btn-sm py-0 px-2"
-                [class.btn-warning]="group.operator === 'OR'"
-                [class.btn-primary]="group.operator === 'AND'"
-                title="Toggle AND / OR within this group"
-                (click)="toggleGroupOperator(gi)"
-              >
-                {{ group.operator }}
-              </button>
-              <span class="text-muted small">between filters in this group</span>
-            </div>
-            <button
-              class="btn btn-sm btn-outline-danger py-0"
-              title="Remove group"
-              (click)="removeFilterGroup(gi)"
+          <div class="sv-addrule">
+            <select
+              class="dv-select dv-input--r7"
+              aria-label="Rule type"
+              [ngModel]="newRuleType()"
+              (ngModelChange)="newRuleType.set($event)"
             >
-              <i class="bi bi-trash"></i>
+              @for (rt of ruleTypes; track rt.value) {
+                <option [value]="rt.value">{{ rt.label }}</option>
+              }
+            </select>
+            <input
+              type="text"
+              class="dv-input dv-input--r7"
+              placeholder="Rule value"
+              aria-label="Rule value"
+              [ngModel]="newRuleValue()"
+              (ngModelChange)="newRuleValue.set($event)"
+              (keyup.enter)="addRule()"
+            />
+            <button type="button" class="dv-btn dv-btn--ghost dv-btn--sm" (click)="addRule()">
+              + add
             </button>
           </div>
-          <div class="card-body py-2 px-3">
-            <!-- Existing filters in group -->
-            @if (group.filters.length > 0) {
-              <div class="mb-2">
-                @for (f of group.filters; track $index; let fi = $index) {
-                  <div class="d-flex align-items-center mb-1">
-                    @if (fi > 0) {
-                      <span class="badge me-2"
-                        [class.bg-warning]="group.operator === 'OR'"
-                        [class.bg-primary]="group.operator === 'AND'"
-                        [class.text-dark]="group.operator === 'OR'"
-                      >{{ group.operator }}</span>
-                    }
-                    <span class="badge bg-secondary me-2">{{ getRuleTypeLabel(f.rule_type) }}</span>
-                    <span class="small me-auto">{{ f.value }}</span>
-                    <button
-                      class="btn btn-sm btn-outline-danger ms-2 py-0"
-                      (click)="removeFilterFromGroup(gi, fi)"
-                    ><i class="bi bi-x"></i></button>
-                  </div>
-                }
-              </div>
-            } @else {
-              <p class="text-muted small mb-2">No filters in this group yet.</p>
-            }
 
-            <!-- Add filter to group -->
-            <div class="d-flex gap-2 align-items-end">
-              <div>
-                <select
-                  class="form-select form-select-sm"
-                  [ngModel]="getGroupRuleType(gi)"
-                  (ngModelChange)="setGroupRuleType(gi, $event)"
+          <hr class="dv-divider" />
+
+          <!-- AND/OR filter groups -->
+          <div class="dv-section sv-groups-head">
+            <span class="dv-eyebrow">filter groups</span>
+            <span class="dv-chip dv-chip--accent">and / or</span>
+            <button
+              type="button"
+              class="dv-btn dv-btn--ghost dv-btn--sm dv-push"
+              (click)="addFilterGroup()"
+            >
+              + group
+            </button>
+          </div>
+
+          <p class="dv-meta sv-groups-hint">
+            filters inside a group combine with the group operator; groups always
+            combine with and
+          </p>
+
+          @for (group of editFilterGroups(); track $index; let gi = $index) {
+            <div class="dv-well sv-group">
+              <div class="sv-group__head">
+                <span class="dv-mono sv-group__name">group {{ gi + 1 }}</span>
+                <button
+                  type="button"
+                  class="dv-chip"
+                  [class.dv-chip--warn]="group.operator === 'OR'"
+                  [class.dv-chip--accent]="group.operator === 'AND'"
+                  title="Toggle AND / OR within this group"
+                  (click)="toggleGroupOperator(gi)"
                 >
-                  @for (rt of ruleTypes; track rt.value) {
-                    <option [value]="rt.value">{{ rt.label }}</option>
-                  }
-                </select>
+                  {{ group.operator }}
+                </button>
+                <span class="dv-meta">between filters in this group</span>
+                <button
+                  type="button"
+                  class="sv-x dv-push"
+                  title="Remove group"
+                  aria-label="Remove group"
+                  (click)="removeFilterGroup(gi)"
+                >
+                  ✕
+                </button>
               </div>
-              <div class="flex-grow-1">
-                <input
-                  type="text"
-                  class="form-control form-control-sm"
-                  placeholder="Value"
-                  [ngModel]="getGroupRuleValue(gi)"
-                  (ngModelChange)="setGroupRuleValue(gi, $event)"
-                  (keyup.enter)="addFilterToGroup(gi)"
-                />
+
+              <div class="sv-group__body">
+                @if (group.filters.length > 0) {
+                  <div class="sv-rules">
+                    @for (f of group.filters; track $index; let fi = $index) {
+                      <div class="sv-rule">
+                        <span class="dv-mono sv-rule__join">{{
+                          fi > 0 ? group.operator.toLowerCase() : 'where'
+                        }}</span>
+                        <span class="dv-chip">{{ getRuleTypeLabel(f.rule_type) }}</span>
+                        <span class="dv-mono sv-rule__value">{{ f.value }}</span>
+                        <button
+                          type="button"
+                          class="sv-x dv-push"
+                          aria-label="Remove filter from group"
+                          (click)="removeFilterFromGroup(gi, fi)"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <div class="dv-meta">no filters in this group yet</div>
+                }
+
+                <div class="sv-addrule">
+                  <select
+                    class="dv-select dv-input--r7"
+                    aria-label="Group rule type"
+                    [ngModel]="getGroupRuleType(gi)"
+                    (ngModelChange)="setGroupRuleType(gi, $event)"
+                  >
+                    @for (rt of ruleTypes; track rt.value) {
+                      <option [value]="rt.value">{{ rt.label }}</option>
+                    }
+                  </select>
+                  <input
+                    type="text"
+                    class="dv-input dv-input--r7"
+                    placeholder="Value"
+                    aria-label="Group rule value"
+                    [ngModel]="getGroupRuleValue(gi)"
+                    (ngModelChange)="setGroupRuleValue(gi, $event)"
+                    (keyup.enter)="addFilterToGroup(gi)"
+                  />
+                  <button
+                    type="button"
+                    class="dv-btn dv-btn--ghost dv-btn--sm"
+                    (click)="addFilterToGroup(gi)"
+                  >
+                    + add
+                  </button>
+                </div>
               </div>
-              <button class="btn btn-sm btn-outline-primary" (click)="addFilterToGroup(gi)">
-                <i class="bi bi-plus"></i>
-              </button>
             </div>
+          }
+
+          <hr class="dv-divider" />
+
+          <div class="sv-actions">
+            <button
+              type="button"
+              class="dv-btn dv-btn--primary dv-btn--md"
+              [disabled]="!editName()"
+              (click)="save()"
+            >
+              {{ creating() ? 'Create' : 'Save' }}
+            </button>
+            <button type="button" class="dv-btn dv-btn--ghost dv-btn--md" (click)="cancelEdit()">
+              Cancel
+            </button>
           </div>
         </div>
-      }
-
-      <hr />
-      <div class="d-flex gap-2">
-        <button class="btn btn-primary btn-sm" (click)="save()" [disabled]="!editName()">
-          {{ creating() ? 'Create' : 'Save' }}
-        </button>
-        <button class="btn btn-outline-secondary btn-sm" (click)="cancelEdit()">Cancel</button>
       </div>
-    </div>
-  </div>
-}
+    }
 
-<!-- Saved Views List -->
-@if (views().length > 0) {
-  <div class="table-responsive">
-    <table class="table table-hover">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Display</th>
-          <th>Rules</th>
-          <th>Dashboard</th>
-          <th>Sidebar</th>
-          <th class="text-end">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
+    <!-- List -->
+    @if (views().length > 0) {
+      <div class="sv-list">
         @for (view of views(); track view.id) {
-          <tr>
-            <td>
-              <a [routerLink]="['/saved-views', view.id, 'results']" class="text-decoration-none">
-                {{ view.name }}
-              </a>
-            </td>
-            <td>
-              <span class="badge bg-light text-dark">{{ view.display_mode }}</span>
-            </td>
-            <td>{{ view.rule_count }} rule{{ view.rule_count !== 1 ? 's' : '' }}</td>
-            <td>
-              @if (view.show_on_dashboard) {
-                <i class="bi bi-check-circle text-success"></i>
-              } @else {
-                <i class="bi bi-dash text-muted"></i>
-              }
-            </td>
-            <td>
-              @if (view.show_in_sidebar) {
-                <i class="bi bi-check-circle text-success"></i>
-              } @else {
-                <i class="bi bi-dash text-muted"></i>
-              }
-            </td>
-            <td class="text-end">
-              <button class="btn btn-sm btn-outline-primary me-1" (click)="startEdit(view)">
-                <i class="bi bi-pencil"></i>
-              </button>
-              <button class="btn btn-sm btn-outline-danger" (click)="deleteView(view)">
-                <i class="bi bi-trash"></i>
-              </button>
-            </td>
-          </tr>
+          <div class="dv-card dv-card--r10 dv-card--hover sv-row">
+            <a class="sv-row__name" [routerLink]="['/saved-views', view.id, 'results']">
+              {{ view.name }}
+            </a>
+            <span class="dv-chip dv-chip--well">{{ view.display_mode }}</span>
+            <span class="dv-meta"
+              >{{ view.rule_count }} rule{{ view.rule_count !== 1 ? 's' : '' }}</span
+            >
+            <span
+              class="dv-meta dv-push"
+              [class.dv-accent]="view.show_on_dashboard"
+              [title]="view.show_on_dashboard ? 'On dashboard' : 'Not on dashboard'"
+              >{{ view.show_on_dashboard ? '📌 dashboard' : '— dashboard' }}</span
+            >
+            <span
+              class="dv-meta"
+              [class.dv-accent]="view.show_in_sidebar"
+              [title]="view.show_in_sidebar ? 'In sidebar' : 'Not in sidebar'"
+              >{{ view.show_in_sidebar ? '📌 sidebar' : '— sidebar' }}</span
+            >
+            <button type="button" class="sv-rowaction" (click)="startEdit(view)">edit</button>
+            <button
+              type="button"
+              class="sv-rowaction sv-rowaction--danger"
+              (click)="deleteView(view)"
+            >
+              delete
+            </button>
+          </div>
         }
-      </tbody>
-    </table>
+      </div>
+    } @else if (!creating()) {
+      <div class="dv-empty">No saved views yet. Create one to get started.</div>
+    }
   </div>
-} @else {
-  @if (!creating()) {
-    <div class="text-center py-5 text-muted">
-      <i class="bi bi-bookmark" style="font-size: 3rem;"></i>
-      <p class="mt-2">No saved views yet. Create one to get started.</p>
-    </div>
-  }
-}
+</div>

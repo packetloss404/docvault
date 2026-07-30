@@ -1,0 +1,67 @@
+// Document-type field editor: one-off geometry only.
+
+.tabstrip-action {
+  // Sits on the tab strip, lifted clear of the underline like the prototype.
+  margin-bottom: 8px;
+}
+
+.pagehead {
+  margin: 18px 0 16px;
+}
+
+.stack {
+  margin-bottom: 14px;
+}
+
+.form-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) 120px 160px;
+  gap: 14px;
+  align-items: end;
+}
+
+.form-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 8px;
+
+  .dv-field__label {
+    margin-bottom: 0;
+  }
+}
+
+.form-note {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.row-name {
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+// Inline error notice (no `.dv-alert` primitive exists yet).
+.form-error {
+  background: var(--danger-dim);
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin-bottom: 14px;
+  color: var(--danger);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+@media (max-width: 700px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}

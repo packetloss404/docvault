@@ -1,0 +1,205 @@
+<div class="dv-screen">
+  <div
+    class="db-grid"
+    cdkDropList
+    cdkDropListOrientation="mixed"
+    (cdkDropListDropped)="onCdkDrop($event)"
+  >
+    @for (widget of widgets(); track widget) {
+      <div
+        class="db-cell"
+        [class.db-cell--wide]="isWideWidget(widget)"
+        [class.db-cell--tall]="widget === 'recent_documents'"
+        [style.grid-row]="widget === 'recent_documents' ? 'span ' + sideWidgetCount() : null"
+        cdkDrag
+      >
+        <div class="db-placeholder" *cdkDragPlaceholder></div>
+
+        <!-- Greeting -->
+        @if (widget === 'welcome') {
+          <div class="db-welcome" cdkDragHandle>
+            <h1 class="dv-h1">{{ greeting() }}</h1>
+            <span class="dv-ts">{{ now | date: 'EEE yyyy-MM-dd · HH:mm' }}</span>
+            <span class="dv-meta db-welcome__library">{{ libraryLine() }}</span>
+            <button
+              class="dv-link db-reset"
+              (click)="resetLayout()"
+              title="Reset widget layout to defaults"
+            >
+              reset layout
+            </button>
+          </div>
+        }
+
+        <!-- Statistics -->
+        @if (widget === 'statistics') {
+          <div class="db-stats" cdkDragHandle>
+            <div class="dv-stat">
+              <div class="dv-stat__label">documents</div>
+              <div class="dv-stat__row">
+                <span class="dv-stat__value">{{
+                  documentCount().toLocaleString()
+                }}</span>
+                @if (addedThisMonth()) {
+                  <span class="dv-stat__delta dv-ok"
+                    >+{{ addedThisMonth() }} this month</span
+                  >
+                }
+              </div>
+            </div>
+
+            @if (shellStats.storageLabel()) {
+              <div class="dv-stat">
+                <div class="dv-stat__label">storage</div>
+                <div class="dv-stat__row">
+                  <span class="dv-stat__value">{{ shellStats.storageLabel() }}</span>
+                  <span class="dv-stat__delta dv-faint">on disk</span>
+                </div>
+              </div>
+            }
+
+            <div class="dv-stat">
+              <div class="dv-stat__label">pending ocr</div>
+              <div class="dv-stat__row">
+                <span class="dv-stat__value">{{ shellStats.activeTasks() ?? '—' }}</span>
+                @if (shellStats.activeTasks() === 0) {
+                  <span class="dv-stat__delta dv-faint">queue idle</span>
+                }
+              </div>
+            </div>
+
+            <div class="dv-stat">
+              <div class="dv-stat__label">awaiting signature</div>
+              <div class="dv-stat__row">
+                <span class="dv-stat__value">{{ pendingSignatures() ?? '—' }}</span>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Recent documents -->
+        @if (widget === 'recent_documents') {
+          <div class="dv-card dv-card--r12 dv-card--flush db-fill">
+            <div class="dv-card__head" cdkDragHandle>
+              <span class="dv-card__title">Recent documents</span>
+              <a class="dv-link dv-push" routerLink="/documents">view all →</a>
+            </div>
+            @if (recentLoading()) {
+              <div class="dv-empty"><span class="dv-spinner"></span></div>
+            } @else if (recentDocuments().length === 0) {
+              <div class="dv-empty">Nothing ingested yet.</div>
+            } @else {
+              @for (doc of recentDocuments(); track doc.id) {
+                <a class="dv-listrow" [routerLink]="['/documents', doc.id]">
+                  <div
+                    class="dv-thumb"
+                    [style.--dv-thumb-src]="thumbSrc(doc)"
+                  ></div>
+                  <div class="db-recent__main">
+                    <div class="db-recent__title dv-clip">{{ doc.title }}</div>
+                    <div class="db-recent__from">{{ doc.correspondent_name }}</div>
+                  </div>
+                  @if (doc.document_type_name) {
+                    <span class="dv-chip">{{ doc.document_type_name }}</span>
+                  }
+                  <span class="dv-meta">{{ doc.added | date: 'MM-dd' }}</span>
+                </a>
+              }
+            }
+          </div>
+        }
+
+        <!-- Needs your attention -->
+        @if (widget === 'attention') {
+          <div class="dv-card dv-card--r12 dv-card--pad-sm">
+            <div class="dv-card__title db-cardtitle" cdkDragHandle>
+              Needs your attention
+            </div>
+            @if (attentionItems().length === 0) {
+              <div class="dv-meta">Nothing needs your attention.</div>
+            } @else {
+              <div class="db-attention">
+                @for (item of attentionItems(); track item.text) {
+                  <div class="db-attention__row">
+                    <span
+                      class="dv-dot dv-dot--sm"
+                      [class.dv-dot--ok]="item.tone === 'ok'"
+                      [class.dv-dot--warn]="item.tone === 'warn'"
+                      [class.dv-dot--danger]="item.tone === 'danger'"
+                      [class.dv-dot--accent]="item.tone === 'accent'"
+                    ></span>
+                    <span>{{ item.text }}</span>
+                    <span class="dv-meta dv-push">{{ item.category }}</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Saved views -->
+        @if (widget === 'saved_views') {
+          <div class="dv-card dv-card--r12 dv-card--pad-sm">
+            <div class="dv-card__title db-cardtitle" cdkDragHandle>Saved views</div>
+            @if (dashboardViews().length === 0) {
+              <div class="dv-meta">
+                No dashboard views yet.
+                <a class="dv-link" routerLink="/saved-views">Create one →</a>
+              </div>
+            } @else {
+              <div class="db-views">
+                @for (view of dashboardViews(); track view.id) {
+                  <div class="db-views__row">
+                    <a
+                      class="dv-link"
+                      [routerLink]="['/saved-views', view.id, 'results']"
+                      >{{ view.name }}</a
+                    >
+                    <span class="dv-meta dv-push"
+                      >{{ view.rule_count }} rules</span
+                    >
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Quick upload -->
+        @if (widget === 'upload') {
+          <div cdkDragHandle>
+            <label
+              class="dv-dropzone db-drop"
+              [class.db-drop--active]="uploadDragActive()"
+              (dragover)="onUploadDragOver($event)"
+              (dragleave)="onUploadDragLeave($event)"
+              (drop)="onUploadDrop($event)"
+            >
+              @if (uploading()) {
+                <span class="dv-spinner"></span>
+                <div>Uploading…</div>
+              } @else {
+                Drop files anywhere to ingest
+                <span class="dv-meta db-drop__hint">pdf · img · office · email</span>
+              }
+              <input
+                class="db-drop__input"
+                type="file"
+                multiple
+                (change)="onFileSelected($event)"
+              />
+            </label>
+            @if (uploadMessage()) {
+              <div
+                class="db-uploadmsg"
+                [class.db-uploadmsg--error]="uploadError()"
+              >
+                {{ uploadMessage() }}
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

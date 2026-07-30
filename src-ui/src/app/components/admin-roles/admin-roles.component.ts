@@ -3,156 +3,158 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SecurityService } from '../../services/security.service';
 import { Role, Permission } from '../../models/security.model';
+import { SubnavComponent } from '../subnav/subnav.component';
+
+/** Permission chips shown on a role card before collapsing into "+N more". */
+const ROLE_CHIP_LIMIT = 6;
 
 @Component({
   selector: 'app-admin-roles',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SubnavComponent],
+  styleUrl: './admin-roles.component.scss',
   template: `
-    <div class="container-fluid py-4">
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0"><i class="bi bi-shield-check me-2"></i>Role Management</h2>
-        <button class="btn btn-primary" (click)="startCreate()">
-          <i class="bi bi-plus-lg me-1"></i> New Role
-        </button>
-      </div>
-
-      @if (errorMessage()) {
-        <div class="alert alert-danger alert-dismissible">
-          {{ errorMessage() }}
-          <button type="button" class="btn-close" (click)="errorMessage.set('')"></button>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner dv-inner--wide">
+        <div class="dv-pagehead">
+          <h1 class="dv-h1 dv-h1--sm">Admin</h1>
+          <dv-subnav />
+          <button type="button" class="dv-btn dv-btn--primary dv-push" (click)="startCreate()">
+            + New role
+          </button>
         </div>
-      }
 
-      @if (successMessage()) {
-        <div class="alert alert-success alert-dismissible">
-          {{ successMessage() }}
-          <button type="button" class="btn-close" (click)="successMessage.set('')"></button>
-        </div>
-      }
-
-      <!-- Create / Edit Form -->
-      @if (showForm()) {
-        <div class="card mb-4 border-primary">
-          <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">{{ editing() ? 'Edit Role' : 'Create Role' }}</h5>
+        @if (errorMessage()) {
+          <div class="ar-banner ar-banner--error" role="alert">
+            <span>{{ errorMessage() }}</span>
+            <button
+              type="button"
+              class="ar-banner__close"
+              aria-label="Dismiss"
+              (click)="errorMessage.set('')"
+            >
+              ✕
+            </button>
           </div>
-          <div class="card-body">
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label">Role Name <span class="text-danger">*</span></label>
+        }
+
+        @if (successMessage()) {
+          <div class="ar-banner ar-banner--ok" role="status">
+            <span>{{ successMessage() }}</span>
+            <button
+              type="button"
+              class="ar-banner__close"
+              aria-label="Dismiss"
+              (click)="successMessage.set('')"
+            >
+              ✕
+            </button>
+          </div>
+        }
+
+        <!-- Create / Edit form -->
+        @if (showForm()) {
+          <div class="dv-card dv-card--pad dv-card--accent ar-form">
+            <div class="dv-card__title">{{ editing() ? 'Edit role' : 'New role' }}</div>
+
+            <div class="ar-form__row">
+              <div>
+                <label class="dv-field__label" for="ar-name">role name *</label>
                 <input
+                  id="ar-name"
                   type="text"
-                  class="form-control"
+                  class="dv-input"
                   [(ngModel)]="formName"
-                  placeholder="e.g. Document Manager, Read-Only Auditor"
+                  placeholder="e.g. Document Manager"
                 />
               </div>
-              <div class="col-12">
-                <label class="form-label">Permissions</label>
-                @if (permissions().length === 0) {
-                  <p class="text-muted small mb-0">No permissions available.</p>
-                } @else {
-                  <div class="border rounded p-2" style="max-height: 250px; overflow-y: auto;">
-                    <div class="row g-1">
-                      @for (perm of permissions(); track perm.id) {
-                        <div class="col-md-4">
-                          <div class="form-check">
-                            <input
-                              class="form-check-input"
-                              type="checkbox"
-                              [id]="'rperm-' + perm.id"
-                              [checked]="formPermissions.includes(perm.id)"
-                              (change)="togglePermission(perm.id, $event)"
-                            />
-                            <label class="form-check-label small" [for]="'rperm-' + perm.id">
-                              {{ perm.name }}
-                            </label>
-                          </div>
-                        </div>
-                      }
-                    </div>
-                  </div>
-                }
-              </div>
             </div>
-            <div class="mt-3 d-flex gap-2">
+
+            <div class="ar-perms">
+              <span class="dv-field__label">permissions</span>
+              @if (permissions().length === 0) {
+                <span class="dv-meta">No permissions available.</span>
+              } @else {
+                <div class="dv-well ar-perms__box">
+                  @for (perm of permissions(); track perm.id) {
+                    <label class="ar-check" [for]="'rperm-' + perm.id">
+                      <input
+                        class="dv-checkbox"
+                        type="checkbox"
+                        [id]="'rperm-' + perm.id"
+                        [checked]="formPermissions.includes(perm.id)"
+                        (change)="togglePermission(perm.id, $event)"
+                      />
+                      <span>{{ perm.name }}</span>
+                    </label>
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="ar-form__actions">
               <button
-                class="btn btn-primary"
+                type="button"
+                class="dv-btn dv-btn--primary dv-btn--md"
                 (click)="save()"
                 [disabled]="saving() || !formName.trim()"
               >
                 @if (saving()) {
-                  <span class="spinner-border spinner-border-sm me-1"></span>
+                  <span class="dv-spinner"></span>
                 }
-                {{ editing() ? 'Save Changes' : 'Create Role' }}
+                {{ editing() ? 'Save changes' : 'Create role' }}
               </button>
-              <button class="btn btn-outline-secondary" (click)="cancelForm()">Cancel</button>
+              <button type="button" class="dv-btn dv-btn--ghost dv-btn--md" (click)="cancelForm()">
+                Cancel
+              </button>
             </div>
           </div>
-        </div>
-      }
+        }
 
-      <!-- Roles Table -->
-      <div class="card">
-        <div class="card-header">
-          <h5 class="mb-0">Roles</h5>
-        </div>
-        <div class="card-body p-0">
-          @if (loading()) {
-            <div class="text-center py-5">
-              <div class="spinner-border text-primary"></div>
-              <p class="mt-2 text-muted">Loading roles…</p>
-            </div>
-          } @else if (roles().length === 0) {
-            <div class="text-center py-5 text-muted">
-              <i class="bi bi-shield-check fs-1 d-block mb-2"></i>
-              No roles defined yet.
-            </div>
-          } @else {
-            <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                  <tr>
-                    <th>Name</th>
-                    <th>Permissions</th>
-                    <th class="text-end">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (role of roles(); track role.id) {
-                    <tr>
-                      <td><strong>{{ role.name }}</strong></td>
-                      <td>
-                        @if (role.permissions.length === 0) {
-                          <span class="text-muted small">None</span>
-                        } @else {
-                          <span class="badge bg-info text-dark me-1">
-                            {{ role.permissions.length }} permission{{ role.permissions.length !== 1 ? 's' : '' }}
-                          </span>
-                        }
-                      </td>
-                      <td class="text-end">
-                        <button
-                          class="btn btn-sm btn-outline-primary me-1"
-                          (click)="startEdit(role)"
-                        >
-                          <i class="bi bi-pencil"></i>
-                        </button>
-                        <button
-                          class="btn btn-sm btn-outline-danger"
-                          (click)="deleteRole(role)"
-                        >
-                          <i class="bi bi-trash"></i>
-                        </button>
-                      </td>
-                    </tr>
+        <!-- Roles -->
+        @if (loading()) {
+          <div class="dv-empty"><span class="dv-spinner"></span> Loading roles…</div>
+        } @else if (roles().length === 0) {
+          <div class="dv-empty">No roles defined yet.</div>
+        } @else {
+          <div class="ar-grid">
+            @for (role of roles(); track role.id) {
+              <div class="dv-card ar-card">
+                <div class="ar-card__head">
+                  <span class="ar-card__name">{{ role.name }}</span>
+                  <span class="dv-meta dv-push">
+                    {{ role.permissions.length }} permission{{
+                      role.permissions.length !== 1 ? 's' : ''
+                    }}
+                  </span>
+                </div>
+
+                <div class="ar-card__perms">
+                  @if (role.permissions.length === 0) {
+                    <span class="dv-meta">no permissions granted</span>
                   }
-                </tbody>
-              </table>
-            </div>
-          }
-        </div>
+                  @for (pid of visiblePermissions(role); track pid) {
+                    <span class="dv-chip dv-chip--outline-strong">{{ permissionName(pid) }}</span>
+                  }
+                  @if (hiddenPermissionCount(role) > 0) {
+                    <span class="dv-chip dv-chip--well">+{{ hiddenPermissionCount(role) }} more</span>
+                  }
+                </div>
+
+                <div class="ar-card__foot">
+                  <button type="button" class="ar-action" (click)="startEdit(role)">edit</button>
+                  <button
+                    type="button"
+                    class="ar-action ar-action--danger"
+                    (click)="deleteRole(role)"
+                  >
+                    delete
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
       </div>
     </div>
   `,
@@ -192,6 +194,21 @@ export class AdminRolesComponent implements OnInit {
     this.securityService.getPermissions().subscribe({
       next: (perms) => this.permissions.set(perms),
     });
+  }
+
+  /** Codename of a granted permission, for the chip row on a role card. */
+  permissionName(id: number): string {
+    const perm = this.permissions().find((p) => p.id === id);
+    return perm?.codename ?? `#${id}`;
+  }
+
+  /** First few granted permissions — a full list would swamp the card. */
+  visiblePermissions(role: Role): number[] {
+    return role.permissions.slice(0, ROLE_CHIP_LIMIT);
+  }
+
+  hiddenPermissionCount(role: Role): number {
+    return Math.max(0, role.permissions.length - ROLE_CHIP_LIMIT);
   }
 
   startCreate(): void {

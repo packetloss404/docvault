@@ -269,15 +269,133 @@ describe('DocumentListComponent', () => {
       expect(component.ordering()).toBe('title');
     });
 
-    it('getSortIcon returns correct icon class', () => {
+    it('getSortGlyph indicates the active sort direction', () => {
       component.ordering.set('title');
-      expect(component.getSortIcon('title')).toBe('bi-sort-up');
+      expect(component.getSortGlyph('title')).toBe('↑');
 
       component.ordering.set('-title');
-      expect(component.getSortIcon('title')).toBe('bi-sort-down');
+      expect(component.getSortGlyph('title')).toBe('↓');
+    });
 
+    it('getSortGlyph is blank for a column that is not the sort key', () => {
       component.ordering.set('created');
-      expect(component.getSortIcon('title')).toBe('bi-chevron-expand');
+      expect(component.getSortGlyph('title')).toBe('');
+    });
+
+    it('toggleSortDirection flips the current ordering', () => {
+      component.ordering.set('-created');
+      component.toggleSortDirection();
+      expect(component.ordering()).toBe('created');
+      component.toggleSortDirection();
+      expect(component.ordering()).toBe('-created');
+    });
+
+    it('sortLabel names the column and direction', () => {
+      component.ordering.set('-added');
+      expect(component.sortLabel()).toBe('added ↓');
+      component.ordering.set('title');
+      expect(component.sortLabel()).toBe('title ↑');
+    });
+  });
+
+  // --- Filter tokens ---
+
+  describe('filter tokens', () => {
+    it('has no tokens when nothing is filtered', () => {
+      expect(component.filterTokens()).toEqual([]);
+    });
+
+    it('shows a token for an active search', () => {
+      component.searchQuery.set('lease');
+      const tokens = component.filterTokens();
+      expect(tokens.length).toBe(1);
+      expect(tokens[0].key).toBe('search');
+      expect(tokens[0].label).toContain('lease');
+    });
+
+    it('names the document type in its token', () => {
+      component.documentTypes.set([{ id: 5, name: 'Invoice' } as any]);
+      component.selectedTypeId.set(5);
+      expect(component.filterTokens()[0].label).toBe('type = Invoice');
+    });
+
+    it('removing the search token clears the query and reloads', () => {
+      component.searchQuery.set('lease');
+      component.searchDraft.set('lease');
+      component.removeFilter({ key: 'search', label: 'search = "lease"' });
+      expect(component.searchQuery()).toBe('');
+      expect(component.searchDraft()).toBe('');
+    });
+
+    it('removing the type token clears the type', () => {
+      component.selectedTypeId.set(5);
+      component.removeFilter({ key: 'type', label: 'type = Invoice' });
+      expect(component.selectedTypeId()).toBeNull();
+    });
+
+    it('onSearch promotes the draft to the active query', () => {
+      component.searchDraft.set('  tax  ');
+      component.onSearch();
+      expect(component.searchQuery()).toBe('tax');
+    });
+  });
+
+  // --- Grid columns ---
+
+  describe('grid columns', () => {
+    it('starts the grid with the checkbox track', () => {
+      expect(component.gridColumns().startsWith('28px ')).toBe(true);
+    });
+
+    it('contributes one track per visible column', () => {
+      component.selectedColumns.set(['title', 'added']);
+      const tracks = component.gridColumns().split(' ');
+      // 28px checkbox + title (minmax has no spaces) + added
+      expect(component.visibleColumns().length).toBe(2);
+      expect(tracks[0]).toBe('28px');
+      expect(component.gridColumns()).toContain('110px');
+    });
+  });
+
+  // --- Pagination window ---
+
+  describe('pageItems', () => {
+    it('lists every page when there are few', () => {
+      component.totalCount.set(75); // 3 pages at 25/page
+      expect(component.pageItems()).toEqual([1, 2, 3]);
+    });
+
+    it('collapses the middle with a gap on long ranges', () => {
+      component.totalCount.set(25 * 143);
+      component.currentPage.set(1);
+      const items = component.pageItems();
+      expect(items[0]).toBe(1);
+      expect(items).toContain(null);
+      expect(items[items.length - 1]).toBe(143);
+    });
+
+    it('keeps the current page in the window', () => {
+      component.totalCount.set(25 * 143);
+      component.currentPage.set(70);
+      expect(component.pageItems()).toContain(70);
+    });
+  });
+
+  // --- Tag labels ---
+
+  describe('tagLabels', () => {
+    it('resolves known tag ids to names', () => {
+      component.tags.set([{ id: 7, name: 'taxes' } as any]);
+      expect(component.tagLabels({ tag_ids: [7] } as any)).toEqual(['taxes']);
+    });
+
+    it('falls back to the id for an unknown tag', () => {
+      component.tags.set([]);
+      expect(component.tagLabels({ tag_ids: [9] } as any)).toEqual(['#9']);
+    });
+
+    it('returns nothing when a document has no tags', () => {
+      expect(component.tagLabels({} as any)).toEqual([]);
     });
   });
 

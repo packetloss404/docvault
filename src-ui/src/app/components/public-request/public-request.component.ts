@@ -10,137 +10,153 @@ import { PublicRequestInfo } from '../../models/portal.model';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    @if (loading()) {
-      <div class="d-flex justify-content-center align-items-center" style="min-height: 100vh;">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    } @else if (errorMsg()) {
-      <div class="d-flex justify-content-center align-items-center" style="min-height: 100vh;">
-        <div class="text-center">
-          <i class="bi bi-exclamation-triangle fs-1 text-warning"></i>
-          <p class="mt-2">{{ errorMsg() }}</p>
-        </div>
-      </div>
-    } @else if (request()) {
-      <div style="min-height: 100vh; background: #f8f9fa;">
-        <!-- Header -->
-        <div class="py-4 bg-primary text-white">
-          <div class="container text-center">
-            <h2 class="mb-1">Document Request</h2>
-            <p class="mb-0 opacity-75">{{ request()!.portal_name }}</p>
-          </div>
-        </div>
-
-        <div class="container py-4" style="max-width: 640px;">
-          <!-- Request Info -->
-          <div class="card mb-4">
-            <div class="card-body">
-              <h5>{{ request()!.title }}</h5>
-              @if (request()!.description) {
-                <p style="white-space: pre-wrap;">{{ request()!.description }}</p>
-              }
-              @if (request()!.deadline) {
-                <div class="d-flex align-items-center gap-2">
-                  <i class="bi bi-calendar-event text-muted"></i>
-                  <span>
-                    Deadline: <strong>{{ request()!.deadline | date: 'mediumDate' }}</strong>
-                  </span>
-                  @if (daysRemaining() !== null) {
-                    <span
-                      class="badge"
-                      [ngClass]="daysRemaining()! <= 0 ? 'bg-danger' : daysRemaining()! <= 3 ? 'bg-warning text-dark' : 'bg-success'"
-                    >
-                      @if (daysRemaining()! <= 0) {
-                        Overdue
-                      } @else if (daysRemaining() === 1) {
-                        1 day left
-                      } @else {
-                        {{ daysRemaining() }} days left
-                      }
-                    </span>
-                  }
-                </div>
-              }
+    <div class="dv-auth">
+      <div class="dv-auth__col pr__col">
+        <div class="dv-auth__brand">
+          <div class="dv-auth__logo">V</div>
+          <div>
+            <div class="dv-auth__name">DocVault</div>
+            <div class="dv-meta">
+              document request@if (request()) { · {{ request()!.portal_name }} }
             </div>
           </div>
+        </div>
 
-          <!-- Success -->
+        @if (loading()) {
+          <div class="dv-auth__card pr__state">
+            <span class="dv-spinner"></span>
+            <span class="dv-meta">loading request…</span>
+          </div>
+        } @else if (errorMsg()) {
+          <div class="dv-auth__card" role="alert">
+            <span class="dv-chip dv-chip--upper dv-chip--warn pr__badge">unavailable</span>
+            <div class="pr__msg">{{ errorMsg() }}</div>
+          </div>
+        } @else if (request()) {
+          <div class="dv-auth__card pr__brief">
+            <h1 class="dv-h2">{{ request()!.title }}</h1>
+
+            @if (request()!.description) {
+              <div class="pr__desc">{{ request()!.description }}</div>
+            }
+
+            @if (request()!.deadline) {
+              <div class="pr__deadline">
+                <span class="dv-eyebrow">deadline</span>
+                <span class="dv-mono pr__date">{{
+                  request()!.deadline | date: 'yyyy-MM-dd'
+                }}</span>
+                @if (daysRemaining() !== null) {
+                  <span
+                    class="dv-chip dv-chip--upper"
+                    [class.dv-chip--danger]="daysRemaining()! <= 0"
+                    [class.dv-chip--warn]="
+                      daysRemaining()! > 0 && daysRemaining()! <= 3
+                    "
+                    [class.dv-chip--ok]="daysRemaining()! > 3"
+                  >
+                    @if (daysRemaining()! <= 0) {
+                      overdue
+                    } @else if (daysRemaining() === 1) {
+                      1 day left
+                    } @else {
+                      {{ daysRemaining() }} days left
+                    }
+                  </span>
+                }
+              </div>
+            }
+          </div>
+
           @if (uploadSuccess()) {
-            <div class="alert alert-success">
-              <i class="bi bi-check-circle me-2"></i>
-              Your document has been uploaded successfully. Thank you!
+            <div class="dv-callout pr__done" role="status">
+              <div class="dv-callout__label">uploaded</div>
+              <div class="pr__msg">
+                Your document has been uploaded. Thank you.
+              </div>
             </div>
           } @else {
-            <!-- Upload Form -->
-            <div class="card">
-              <div class="card-header">
-                <i class="bi bi-cloud-upload me-1"></i>Upload Your Document
+            <div class="dv-auth__card">
+              <span class="dv-eyebrow">upload your document</span>
+
+              <div>
+                <label class="dv-field__label" for="pr-name">your name</label>
+                <input
+                  id="pr-name"
+                  type="text"
+                  class="dv-input"
+                  autocomplete="name"
+                  [ngModel]="submitterName()"
+                  (ngModelChange)="submitterName.set($event)"
+                />
               </div>
-              <div class="card-body">
-                <div class="mb-3">
-                  <label class="form-label">Your Name</label>
-                  <input
-                    type="text"
-                    class="form-control"
-                    [ngModel]="submitterName()"
-                    (ngModelChange)="submitterName.set($event)"
-                  />
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">Your Email</label>
-                  <input
-                    type="email"
-                    class="form-control"
-                    [ngModel]="submitterEmail()"
-                    (ngModelChange)="submitterEmail.set($event)"
-                  />
-                </div>
-                <div class="mb-3">
-                  <label class="form-label">File <span class="text-danger">*</span></label>
+
+              <div>
+                <label class="dv-field__label" for="pr-email">your email</label>
+                <input
+                  id="pr-email"
+                  type="email"
+                  class="dv-input"
+                  autocomplete="email"
+                  [ngModel]="submitterEmail()"
+                  (ngModelChange)="submitterEmail.set($event)"
+                />
+              </div>
+
+              <div>
+                <span class="dv-field__label">
+                  file <span class="dv-danger">*</span>
+                </span>
+                <label class="dv-dropzone pr__drop">
                   <input
                     type="file"
-                    class="form-control"
+                    class="pr__file"
                     (change)="onFileSelected($event)"
                   />
-                </div>
-
-                @if (uploading()) {
-                  <div class="progress mb-3" style="height: 24px;">
-                    <div
-                      class="progress-bar progress-bar-striped progress-bar-animated"
-                      role="progressbar"
-                      [style.width.%]="uploadProgress()"
-                    >
-                      {{ uploadProgress() }}%
-                    </div>
-                  </div>
-                }
-
-                @if (uploadError()) {
-                  <div class="alert alert-danger py-2">{{ uploadError() }}</div>
-                }
-
-                <button
-                  class="btn btn-primary w-100"
-                  (click)="upload()"
-                  [disabled]="uploading() || !selectedFile()"
-                >
-                  @if (uploading()) {
-                    <span class="spinner-border spinner-border-sm me-1"></span>
-                    Uploading...
+                  @if (selectedFile()) {
+                    <span class="pr__filename dv-clip">{{
+                      selectedFile()!.name
+                    }}</span>
+                    <span class="dv-meta">choose a different file</span>
                   } @else {
-                    <i class="bi bi-cloud-upload me-1"></i>Upload
+                    <span>Drop a file here, or click to choose</span>
                   }
-                </button>
+                </label>
               </div>
+
+              @if (uploading()) {
+                <div>
+                  <div class="dv-bar">
+                    <div class="dv-bar__fill" [style.width.%]="uploadProgress()"></div>
+                  </div>
+                  <div class="dv-meta pr__pct">{{ uploadProgress() }}%</div>
+                </div>
+              }
+
+              @if (uploadError()) {
+                <div class="pr__error" role="alert">{{ uploadError() }}</div>
+              }
+
+              <button
+                type="button"
+                class="dv-btn dv-btn--primary dv-btn--block"
+                (click)="upload()"
+                [disabled]="uploading() || !selectedFile()"
+              >
+                @if (uploading()) {
+                  <span class="dv-spinner"></span>
+                  Uploading…
+                } @else {
+                  Upload →
+                }
+              </button>
             </div>
           }
-        </div>
+        }
       </div>
-    }
+    </div>
   `,
+  styleUrl: './public-request.component.scss',
 })
 export class PublicRequestComponent implements OnInit {
   request = signal<PublicRequestInfo | null>(null);

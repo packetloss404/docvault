@@ -1,0 +1,85 @@
+// "AI SUGGESTS" callout inside the 400px document panel.
+:host {
+  display: block;
+}
+
+.sp {
+  display: block;
+}
+
+.sp__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 24px;
+}
+
+.sp__state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.sp__rows {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.sp__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding-left: 7px;
+  border-left: 2px solid var(--border2);
+
+  &--ok {
+    border-left-color: var(--ok);
+  }
+
+  &--warn {
+    border-left-color: var(--warn);
+  }
+}
+
+.sp__kind {
+  flex-shrink: 0;
+}
+
+.sp__name {
+  font-size: 12.5px;
+  font-weight: 500;
+  flex: 1;
+}
+
+.sp__meter {
+  flex-shrink: 0;
+}
+
+.sp__pct {
+  flex-shrink: 0;
+  width: 30px;
+  text-align: right;
+}
+
+.sp__act {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--faint);
+  flex-shrink: 0;
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &--accept {
+    color: var(--accent-text);
+    font-weight: 500;
+  }
+}

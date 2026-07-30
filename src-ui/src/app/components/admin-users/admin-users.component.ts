@@ -3,228 +3,233 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SecurityService } from '../../services/security.service';
 import { User, Group } from '../../models/security.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SubnavComponent],
   template: `
-    <div class="container-fluid py-4">
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0"><i class="bi bi-people me-2"></i>User Management</h2>
-        <button class="btn btn-primary" (click)="startCreate()">
-          <i class="bi bi-plus-lg me-1"></i> New User
-        </button>
-      </div>
-
-      @if (errorMessage()) {
-        <div class="alert alert-danger alert-dismissible">
-          {{ errorMessage() }}
-          <button type="button" class="btn-close" (click)="errorMessage.set('')"></button>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner dv-inner--wide">
+        <div class="dv-pagehead">
+          <h1 class="dv-h1 dv-h1--sm">Admin</h1>
+          <dv-subnav />
+          <button type="button" class="dv-btn dv-btn--primary dv-push" (click)="startCreate()">
+            + Invite user
+          </button>
         </div>
-      }
 
-      @if (successMessage()) {
-        <div class="alert alert-success alert-dismissible">
-          {{ successMessage() }}
-          <button type="button" class="btn-close" (click)="successMessage.set('')"></button>
-        </div>
-      }
-
-      <!-- Create / Edit Form -->
-      @if (showForm()) {
-        <div class="card mb-4 border-primary">
-          <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">{{ editing() ? 'Edit User' : 'Create User' }}</h5>
+        @if (errorMessage()) {
+          <div class="au-banner au-banner--error" role="alert">
+            <span>{{ errorMessage() }}</span>
+            <button
+              type="button"
+              class="au-banner__close"
+              aria-label="Dismiss"
+              (click)="errorMessage.set('')"
+            >
+              ✕
+            </button>
           </div>
-          <div class="card-body">
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label">Username <span class="text-danger">*</span></label>
+        }
+
+        @if (successMessage()) {
+          <div class="au-banner au-banner--ok" role="status">
+            <span>{{ successMessage() }}</span>
+            <button
+              type="button"
+              class="au-banner__close"
+              aria-label="Dismiss"
+              (click)="successMessage.set('')"
+            >
+              ✕
+            </button>
+          </div>
+        }
+
+        <!-- Create / Edit form -->
+        @if (showForm()) {
+          <div class="dv-card dv-card--pad dv-card--accent au-form">
+            <div class="dv-card__title">{{ editing() ? 'Edit user' : 'Invite user' }}</div>
+
+            <div class="au-form__grid">
+              <div>
+                <label class="dv-field__label" for="au-username">username *</label>
                 <input
+                  id="au-username"
                   type="text"
-                  class="form-control"
+                  class="dv-input"
                   [(ngModel)]="formUsername"
                   placeholder="username"
                 />
               </div>
-              <div class="col-md-6">
-                <label class="form-label">Email</label>
+              <div>
+                <label class="dv-field__label" for="au-email">email</label>
                 <input
+                  id="au-email"
                   type="email"
-                  class="form-control"
+                  class="dv-input"
                   [(ngModel)]="formEmail"
                   placeholder="user@example.com"
                 />
               </div>
-              <div class="col-md-6">
-                <label class="form-label">First Name</label>
+              <div>
+                <label class="dv-field__label" for="au-first">first name</label>
                 <input
+                  id="au-first"
                   type="text"
-                  class="form-control"
+                  class="dv-input"
                   [(ngModel)]="formFirstName"
                   placeholder="First name"
                 />
               </div>
-              <div class="col-md-6">
-                <label class="form-label">Last Name</label>
+              <div>
+                <label class="dv-field__label" for="au-last">last name</label>
                 <input
+                  id="au-last"
                   type="text"
-                  class="form-control"
+                  class="dv-input"
                   [(ngModel)]="formLastName"
                   placeholder="Last name"
                 />
               </div>
-              <div class="col-md-6">
-                <label class="form-label">Password {{ editing() ? '(leave blank to keep current)' : '' }}</label>
+              <div>
+                <label class="dv-field__label" for="au-password">
+                  password {{ editing() ? '(blank keeps current)' : '' }}
+                </label>
                 <input
+                  id="au-password"
                   type="password"
-                  class="form-control"
+                  class="dv-input dv-input--mono"
                   [(ngModel)]="formPassword"
-                  placeholder="{{ editing() ? 'New password (optional)' : 'Password' }}"
+                  [placeholder]="editing() ? 'New password (optional)' : 'Password'"
                 />
               </div>
-              <div class="col-md-3 d-flex align-items-end">
-                <div class="form-check">
-                  <input
-                    class="form-check-input"
-                    type="checkbox"
-                    id="isActive"
-                    [(ngModel)]="formIsActive"
-                  />
-                  <label class="form-check-label" for="isActive">Active</label>
+              <div>
+                <span class="dv-field__label">flags</span>
+                <div class="au-checks">
+                  <label class="au-check" for="isActive">
+                    <input
+                      class="dv-checkbox"
+                      type="checkbox"
+                      id="isActive"
+                      [(ngModel)]="formIsActive"
+                    />
+                    active
+                  </label>
+                  <label class="au-check" for="isStaff">
+                    <input
+                      class="dv-checkbox"
+                      type="checkbox"
+                      id="isStaff"
+                      [(ngModel)]="formIsStaff"
+                    />
+                    staff / admin
+                  </label>
                 </div>
               </div>
-              <div class="col-md-3 d-flex align-items-end">
-                <div class="form-check">
-                  <input
-                    class="form-check-input"
-                    type="checkbox"
-                    id="isStaff"
-                    [(ngModel)]="formIsStaff"
-                  />
-                  <label class="form-check-label" for="isStaff">Staff / Admin</label>
-                </div>
-              </div>
-              <div class="col-12">
-                <label class="form-label">Groups</label>
-                <div class="d-flex flex-wrap gap-2">
+              <div class="au-form__wide">
+                <span class="dv-field__label">groups</span>
+                <div class="au-checks">
                   @for (group of groups(); track group.id) {
-                    <div class="form-check">
+                    <label class="au-check" [for]="'group-' + group.id">
                       <input
-                        class="form-check-input"
+                        class="dv-checkbox"
                         type="checkbox"
                         [id]="'group-' + group.id"
                         [checked]="formGroups.includes(group.id)"
                         (change)="toggleGroup(group.id, $event)"
                       />
-                      <label class="form-check-label" [for]="'group-' + group.id">
-                        {{ group.name }}
-                      </label>
-                    </div>
+                      {{ group.name }}
+                    </label>
                   }
                   @if (groups().length === 0) {
-                    <span class="text-muted small">No groups defined yet.</span>
+                    <span class="dv-meta">No groups defined yet.</span>
                   }
                 </div>
               </div>
             </div>
-            <div class="mt-3 d-flex gap-2">
+
+            <div class="au-form__actions">
               <button
-                class="btn btn-primary"
+                type="button"
+                class="dv-btn dv-btn--primary dv-btn--md"
                 (click)="save()"
                 [disabled]="saving() || !formUsername.trim()"
               >
                 @if (saving()) {
-                  <span class="spinner-border spinner-border-sm me-1"></span>
+                  <span class="dv-spinner"></span>
                 }
-                {{ editing() ? 'Save Changes' : 'Create User' }}
+                {{ editing() ? 'Save changes' : 'Create user' }}
               </button>
-              <button class="btn btn-outline-secondary" (click)="cancelForm()">Cancel</button>
+              <button type="button" class="dv-btn dv-btn--ghost dv-btn--md" (click)="cancelForm()">
+                Cancel
+              </button>
             </div>
           </div>
-        </div>
-      }
+        }
 
-      <!-- Users Table -->
-      <div class="card">
-        <div class="card-header">
-          <h5 class="mb-0">Users</h5>
-        </div>
-        <div class="card-body p-0">
+        <!-- Users table -->
+        <div class="au-table">
           @if (loading()) {
-            <div class="text-center py-5">
-              <div class="spinner-border text-primary"></div>
-              <p class="mt-2 text-muted">Loading users…</p>
-            </div>
+            <div class="dv-empty"><span class="dv-spinner"></span> Loading users…</div>
           } @else if (users().length === 0) {
-            <div class="text-center py-5 text-muted">
-              <i class="bi bi-people fs-1 d-block mb-2"></i>
-              No users found.
-            </div>
+            <div class="dv-empty">No users found.</div>
           } @else {
-            <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                  <tr>
-                    <th>Username</th>
-                    <th>Full Name</th>
-                    <th>Email</th>
-                    <th>Groups</th>
-                    <th>Status</th>
-                    <th class="text-end">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (user of users(); track user.id) {
-                    <tr>
-                      <td>
-                        <strong>{{ user.username }}</strong>
-                        @if (user.is_staff) {
-                          <span class="badge bg-warning text-dark ms-1">Staff</span>
-                        }
-                      </td>
-                      <td>{{ user.first_name }} {{ user.last_name }}</td>
-                      <td>{{ user.email || '—' }}</td>
-                      <td>
-                        @for (gid of user.groups; track gid) {
-                          <span class="badge bg-secondary me-1">{{ groupName(gid) }}</span>
-                        }
-                        @if (user.groups.length === 0) {
-                          <span class="text-muted small">—</span>
-                        }
-                      </td>
-                      <td>
-                        @if (user.is_active) {
-                          <span class="badge bg-success">Active</span>
-                        } @else {
-                          <span class="badge bg-secondary">Inactive</span>
-                        }
-                      </td>
-                      <td class="text-end">
-                        <button
-                          class="btn btn-sm btn-outline-primary me-1"
-                          (click)="startEdit(user)"
-                        >
-                          <i class="bi bi-pencil"></i>
-                        </button>
-                        <button
-                          class="btn btn-sm btn-outline-danger"
-                          (click)="deleteUser(user)"
-                        >
-                          <i class="bi bi-trash"></i>
-                        </button>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
+            <div
+              class="dv-thead dv-grid"
+              style="--dv-cols: 36px 1fr 110px minmax(0, 1fr) 90px 100px"
+            >
+              <span></span><span>user</span><span>role</span><span>groups</span>
+              <span>status</span><span></span>
             </div>
+            @for (user of users(); track user.id) {
+              <div
+                class="dv-row dv-row--static dv-grid"
+                style="--dv-cols: 36px 1fr 110px minmax(0, 1fr) 90px 100px"
+              >
+                <span class="dv-avatar dv-avatar--md">{{ initials(user) }}</span>
+                <div class="dv-clip">
+                  <div class="au-user__name">
+                    {{ fullName(user) }}
+                  </div>
+                  <div class="dv-meta dv-clip">{{ user.email || user.username }}</div>
+                </div>
+                <span>
+                  <span class="dv-chip" [class.dv-chip--accent]="user.is_staff">
+                    {{ user.is_staff ? 'staff' : 'user' }}
+                  </span>
+                </span>
+                <span class="au-groups">
+                  @for (gid of user.groups; track gid) {
+                    <span class="dv-chip dv-chip--outline">{{ groupName(gid) }}</span>
+                  }
+                  @if (user.groups.length === 0) {
+                    <span class="dv-meta">—</span>
+                  }
+                </span>
+                <span class="dv-meta" [class.dv-ok]="user.is_active">
+                  {{ user.is_active ? '✓ active' : 'inactive' }}
+                </span>
+                <span class="au-actions">
+                  <button type="button" class="au-action" (click)="startEdit(user)">edit</button>
+                  <button
+                    type="button"
+                    class="au-action au-action--danger"
+                    (click)="deleteUser(user)"
+                  >
+                    del
+                  </button>
+                </span>
+              </div>
+            }
           }
         </div>
       </div>
     </div>
   `,
+  styleUrl: './admin-users.component.scss',
 })
 export class AdminUsersComponent implements OnInit {
   users = signal<User[]>([]);
@@ -271,6 +276,20 @@ export class AdminUsersComponent implements OnInit {
 
   groupName(id: number): string {
     return this.groups().find((g) => g.id === id)?.name ?? String(id);
+  }
+
+  /** "Ada Lovelace" when the names are set, otherwise the username. */
+  fullName(user: User): string {
+    const name = `${user.first_name} ${user.last_name}`.trim();
+    return name || user.username;
+  }
+
+  /** Two-letter avatar label, mirroring the rail avatar chip. */
+  initials(user: User): string {
+    const first = user.first_name?.trim();
+    const last = user.last_name?.trim();
+    if (first && last) return (first[0] + last[0]).toLowerCase();
+    return user.username.slice(0, 2).toLowerCase();
   }
 
   startCreate(): void {

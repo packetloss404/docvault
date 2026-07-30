@@ -1,0 +1,142 @@
+// Dashboard geometry. The design's composition is the default widget order;
+// widgets stay reorderable, so "wide" widgets span the full grid and the rest
+// stack in the narrow column.
+
+.db-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+.db-cell {
+  min-width: 0;
+
+  &--wide {
+    grid-column: 1 / -1;
+  }
+
+  // Recent documents holds the 1.6fr column and spans the side cards' rows.
+  &--tall {
+    grid-column: 1;
+    align-self: stretch;
+  }
+}
+
+.db-cell--tall .db-fill {
+  height: 100%;
+}
+
+.db-placeholder {
+  border: 1.5px dashed var(--accent-line);
+  border-radius: 12px;
+  background: var(--accent-dim);
+  min-height: 60px;
+}
+
+.db-welcome {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  flex-wrap: wrap;
+  cursor: grab;
+
+  &__library {
+    color: var(--faint);
+  }
+}
+
+.db-reset {
+  margin-left: auto;
+  font: 400 11px "JetBrains Mono", monospace;
+}
+
+.db-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  cursor: grab;
+}
+
+.db-cardtitle {
+  margin-bottom: 10px;
+  cursor: grab;
+}
+
+.db-recent {
+  &__main {
+    min-width: 0;
+    flex: 1;
+  }
+
+  &__title {
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  &__from {
+    font-size: 11.5px;
+    color: var(--faint);
+    margin-top: 1px;
+  }
+}
+
+.db-attention,
+.db-views {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 13px;
+}
+
+.db-attention__row,
+.db-views__row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.db-drop {
+  display: block;
+  cursor: pointer;
+  position: relative;
+
+  &--active {
+    border-color: var(--accent-line);
+    color: var(--muted);
+  }
+
+  &__hint {
+    display: block;
+    margin-top: 2px;
+  }
+
+  &__input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.db-uploadmsg {
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: var(--ok);
+
+  &--error {
+    color: var(--danger);
+  }
+}
+
+@media (max-width: 900px) {
+  .db-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .db-cell--wide {
+    grid-column: auto;
+  }
+}

@@ -1,0 +1,164 @@
+// Search results screen. Geometry only — every colour is a Console token.
+$mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+:host {
+  display: contents;
+}
+
+dv-subnav {
+  display: block;
+  margin-bottom: 16px;
+}
+
+app-search-filter-builder {
+  display: block;
+  margin-top: 14px;
+}
+
+// Query bar: mono text with an accent caret, matching the command palette.
+.sr-querybar {
+  display: flex;
+  gap: 10px;
+
+  &__box {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    border-radius: 9px;
+    padding: 11px 16px;
+    min-width: 0;
+
+    &:focus-within {
+      border-color: var(--accent-line);
+    }
+  }
+
+  &__caret {
+    color: var(--accent-text);
+    font: 500 14px #{$mono};
+    flex-shrink: 0;
+  }
+
+  &__input {
+    font: 400 14px #{$mono};
+  }
+
+  .dv-btn {
+    border-radius: 9px;
+    padding: 0 20px;
+    font-size: 13.5px;
+  }
+}
+
+.sr-readout {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--faint);
+
+  &__sep {
+    color: var(--border2);
+  }
+}
+
+// Results + facets.
+.sr-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  gap: 18px;
+  align-items: start;
+  margin-top: 18px;
+
+  // No facet buckets in the response — the results take the full measure.
+  &--full {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .sr-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.sr-main {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.sr-result {
+  display: block;
+  padding: 14px 18px;
+  color: var(--text);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--panel2);
+    border-color: var(--border2);
+    color: var(--text);
+  }
+
+  &__head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  // Also carries `.dv-snippet` when the title is highlighted, so that the
+  // `<mark>` inside the innerHTML picks up the global accent styling; the
+  // snippet's own size/colour is overridden back to title weight here.
+  &__title {
+    font-size: 14.5px;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--text);
+    min-width: 0;
+  }
+
+  &__snippet {
+    margin-top: 6px;
+  }
+
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 8px;
+  }
+
+  &__foot {
+    display: flex;
+    gap: 6px;
+    margin-top: 7px;
+  }
+}
+
+.sr-facets {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sr-facet {
+  padding: 8px 14px;
+  font-size: 12.5px;
+  color: var(--muted);
+  cursor: default;
+
+  &:hover {
+    background: transparent;
+  }
+}
+
+.dv-pager .is-disabled {
+  opacity: 0.4;
+  cursor: default;
+}

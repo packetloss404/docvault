@@ -1,14 +1,15 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { OrganizationService } from '../../services/organization.service';
 import { Correspondent } from '../../models/organization.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-correspondents',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule, SubnavComponent],
   templateUrl: './correspondents.component.html',
+  styleUrl: './correspondents.component.scss',
 })
 export class CorrespondentsComponent implements OnInit {
   correspondents = signal<Correspondent[]>([]);
@@ -68,6 +69,14 @@ export class CorrespondentsComponent implements OnInit {
         next: () => { this.cancel(); this.load(); },
       });
     }
+  }
+
+  /** Up to two initials for the row avatar ("Acme Utilities" -> "AU"). */
+  initials(name: string): string {
+    const parts = (name || '').trim().split(/\s+/).filter((p) => p.length > 0);
+    if (parts.length === 0) return '??';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
   deleteCorrespondent(c: Correspondent): void {

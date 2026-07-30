@@ -1,0 +1,85 @@
+// Ask-AI chat inside the 400px document panel.
+:host {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+}
+
+.ch {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+.ch__head {
+  display: flex;
+  align-items: center;
+}
+
+.ch__clear {
+  font: 400 11px "JetBrains Mono", ui-monospace, monospace;
+}
+
+.ch__log {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.ch__turn {
+  padding: 11px 13px;
+}
+
+.ch__who {
+  margin-bottom: 6px;
+}
+
+.ch__body {
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ch__thinking {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ch__empty {
+  padding: 20px 12px;
+}
+
+.ch__cites {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.ch__cite {
+  font: 400 10.5px "JetBrains Mono", ui-monospace, monospace;
+  color: var(--accent-text);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ch__compose {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.ch__ask {
+  padding: 0 15px;
+  font-size: 12px;
+  border-radius: 7px;
+  flex-shrink: 0;
+}

@@ -10,6 +10,7 @@ import { Comment } from '../../models/collaboration.model';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './comments.component.html',
+  styleUrl: './comments.component.scss',
 })
 export class CommentsComponent implements OnInit {
   @Input({ required: true }) documentId!: number;
@@ -100,6 +101,16 @@ export class CommentsComponent implements OnInit {
   isOwnComment(comment: Comment): boolean {
     const user = this.authService.currentUser();
     return user !== null && user.id === comment.user;
+  }
+
+  /** Two-letter initials chip shown beside each note. */
+  initials(username: string): string {
+    const parts = (username || '')
+      .split(/[\s._-]+/)
+      .filter((part) => part.length > 0);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].slice(0, 2).toLowerCase();
+    return (parts[0][0] + parts[1][0]).toLowerCase();
   }
 
   formatTime(dateString: string): string {

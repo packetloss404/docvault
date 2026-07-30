@@ -1,77 +1,97 @@
-<div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">{{ transition.label }}</h5>
-        <button type="button" class="btn-close" (click)="onCancel()"></button>
+<div class="dv-overlay" (click)="onCancel()">
+  <div
+    class="td-modal"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-label]="transition.label"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="td-modal__head">
+      <span class="dv-h2">{{ transition.label }}</span>
+      <button
+        type="button"
+        class="td-modal__close dv-push"
+        aria-label="Close"
+        (click)="onCancel()"
+      >
+        ✕
+      </button>
+    </div>
+
+    <div class="td-modal__body">
+      <div class="dv-chain">
+        <span class="dv-chip">{{ transition.origin_state_label }}</span>
+        <span class="dv-chain__arrow">→</span>
+        <span class="dv-chip dv-chip--accent">{{ transition.destination_state_label }}</span>
       </div>
-      <div class="modal-body">
-        <p class="text-muted">
-          {{ transition.origin_state_label }} &rarr;
-          {{ transition.destination_state_label }}
-        </p>
-        @for (field of fields; track field.id) {
-          <div class="mb-3">
-            <label class="form-label">
-              {{ field.label }}
-              @if (field.required) {
-                <span class="text-danger">*</span>
-              }
-            </label>
-            @if (field.field_type === 'text') {
-              <textarea
-                class="form-control form-control-sm"
-                [ngModel]="fieldValues()[field.name] || ''"
-                (ngModelChange)="setFieldValue(field.name, $event)"
-              ></textarea>
-            } @else if (field.field_type === 'boolean') {
-              <select
-                class="form-select form-select-sm"
-                [ngModel]="fieldValues()[field.name] || ''"
-                (ngModelChange)="setFieldValue(field.name, $event)"
-              >
-                <option value="">Select...</option>
-                <option value="true">Yes</option>
-                <option value="false">No</option>
-              </select>
-            } @else {
-              <input
-                [type]="
-                  field.field_type === 'integer'
-                    ? 'number'
-                    : field.field_type === 'date'
-                      ? 'date'
-                      : 'text'
-                "
-                class="form-control form-control-sm"
-                [ngModel]="fieldValues()[field.name] || ''"
-                (ngModelChange)="setFieldValue(field.name, $event)"
-              />
+
+      @for (field of fields; track field.id) {
+        <div class="td-field">
+          <label class="dv-field__label" [for]="'td-f-' + field.id">
+            {{ field.label }}@if (field.required) {
+              <span class="dv-danger"> *</span>
             }
-            @if (field.help_text) {
-              <small class="form-text text-muted">{{ field.help_text }}</small>
-            }
-          </div>
-        }
-        <div class="mb-3">
-          <label class="form-label">Comment</label>
-          <textarea
-            class="form-control form-control-sm"
-            [ngModel]="comment()"
-            (ngModelChange)="comment.set($event)"
-            rows="2"
-            placeholder="Optional comment..."
-          ></textarea>
+          </label>
+          @if (field.field_type === 'text') {
+            <textarea
+              [id]="'td-f-' + field.id"
+              class="dv-input td-textarea"
+              rows="3"
+              [ngModel]="fieldValues()[field.name] || ''"
+              (ngModelChange)="setFieldValue(field.name, $event)"
+            ></textarea>
+          } @else if (field.field_type === 'boolean') {
+            <select
+              [id]="'td-f-' + field.id"
+              class="dv-select"
+              [ngModel]="fieldValues()[field.name] || ''"
+              (ngModelChange)="setFieldValue(field.name, $event)"
+            >
+              <option value="">Select…</option>
+              <option value="true">Yes</option>
+              <option value="false">No</option>
+            </select>
+          } @else {
+            <input
+              [id]="'td-f-' + field.id"
+              [type]="
+                field.field_type === 'integer'
+                  ? 'number'
+                  : field.field_type === 'date'
+                    ? 'date'
+                    : 'text'
+              "
+              class="dv-input"
+              [ngModel]="fieldValues()[field.name] || ''"
+              (ngModelChange)="setFieldValue(field.name, $event)"
+            />
+          }
+          @if (field.help_text) {
+            <div class="dv-meta td-help">{{ field.help_text }}</div>
+          }
         </div>
+      }
+
+      <div class="td-field">
+        <label class="dv-field__label" for="td-comment">comment</label>
+        <textarea
+          id="td-comment"
+          class="dv-input td-textarea"
+          rows="2"
+          [ngModel]="comment()"
+          (ngModelChange)="comment.set($event)"
+          placeholder="Optional comment…"
+        ></textarea>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary btn-sm" (click)="onCancel()">
-          Cancel
-        </button>
-        <button class="btn btn-primary btn-sm" (click)="onExecute()">
-          Execute Transition
-        </button>
-      </div>
+    </div>
+
+    <div class="td-modal__foot">
+      <button type="button" class="dv-btn dv-btn--ghost dv-btn--md" (click)="onCancel()">
+        Cancel
+      </button>
+      <button type="button" class="dv-btn dv-btn--primary dv-btn--md" (click)="onExecute()">
+        Execute transition ↵
+      </button>
     </div>
   </div>
 </div>

@@ -1,7 +1,6 @@
-import { Component, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { FormsModule } from '@angular/forms';
 import {
   CdkDragDrop,
   CdkDrag,
@@ -10,9 +9,13 @@ import {
   CdkDropList,
   moveItemInArray,
 } from '@angular/cdk/drag-drop';
+import { AuthService } from '../../services/auth.service';
 import { DocumentService } from '../../services/document.service';
 import { SearchService } from '../../services/search.service';
 import { OrganizationService } from '../../services/organization.service';
+import { EsignatureService } from '../../services/esignature.service';
+import { ShellStatsService } from '../../services/shell-stats.service';
+import { UploadService } from '../../services/upload.service';
 import {
   PreferencesService,
   UserPreferences,
@@ -26,6 +29,7 @@ export type WidgetType =
   | 'welcome'
   | 'statistics'
   | 'recent_documents'
+  | 'attention'
   | 'saved_views'
   | 'upload';
 
@@ -33,360 +37,42 @@ const DEFAULT_LAYOUT: WidgetType[] = [
   'welcome',
   'statistics',
   'recent_documents',
+  'attention',
   'saved_views',
   'upload',
 ];
 
+/** One row of the "Needs your attention" card. */
+export interface AttentionItem {
+  text: string;
+  category: string;
+  tone: 'ok' | 'warn' | 'danger' | 'accent';
+}
+
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule, CdkDropList, CdkDrag, CdkDragHandle, CdkDragPlaceholder],
-  template: `
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2 class="mb-0">Dashboard</h2>
-      <button
-        class="btn btn-sm btn-outline-secondary"
-        (click)="resetLayout()"
-        title="Reset widget layout to defaults"
-      >
-        <i class="bi bi-arrow-counterclockwise me-1"></i>Reset Layout
-      </button>
-    </div>
-
-    <div
-      class="row g-4"
-      cdkDropList
-      cdkDropListOrientation="mixed"
-      (cdkDropListDropped)="onCdkDrop($event)"
-    >
-      @for (widget of widgets(); track widget; let i = $index) {
-        <div
-          class="col-md-6"
-          cdkDrag
-        >
-          <!-- CDK drag placeholder -->
-          <div *cdkDragPlaceholder class="dv-drag-placeholder col-md-6"></div>
-
-          <!-- Widget Card -->
-          <div class="card h-100 dv-widget-card">
-            <div class="card-header d-flex align-items-center" cdkDragHandle>
-              <i
-                class="bi bi-grip-vertical me-2 text-muted dv-drag-handle"
-                style="cursor: grab;"
-              ></i>
-              <span class="fw-semibold">{{ getWidgetTitle(widget) }}</span>
-            </div>
-
-            <!-- Statistics Widget -->
-            @if (widget === 'statistics') {
-              <div class="card-body">
-                @if (statsLoading()) {
-                  <div class="text-center py-3">
-                    <div
-                      class="spinner-border spinner-border-sm text-primary"
-                      role="status"
-                    ></div>
-                  </div>
-                } @else {
-                  <div class="row g-3">
-                    <div class="col-6">
-                      <div class="d-flex align-items-center">
-                        <div
-                          class="bg-primary bg-opacity-10 rounded-3 p-2 me-2"
-                        >
-                          <i
-                            class="bi bi-file-earmark-text text-primary"
-                          ></i>
-                        </div>
-                        <div>
-                          <div class="text-muted small">Documents</div>
-                          <div class="fw-bold fs-5">
-                            {{ documentCount() }}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="col-6">
-                      <div class="d-flex align-items-center">
-                        <div
-                          class="bg-success bg-opacity-10 rounded-3 p-2 me-2"
-                        >
-                          <i class="bi bi-collection text-success"></i>
-                        </div>
-                        <div>
-                          <div class="text-muted small">Types</div>
-                          <div class="fw-bold fs-5">
-                            {{ typeCount() }}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="col-6">
-                      <div class="d-flex align-items-center">
-                        <div
-                          class="bg-warning bg-opacity-10 rounded-3 p-2 me-2"
-                        >
-                          <i class="bi bi-tags text-warning"></i>
-                        </div>
-                        <div>
-                          <div class="text-muted small">Tags</div>
-                          <div class="fw-bold fs-5">{{ tagCount() }}</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="col-6">
-                      <div class="d-flex align-items-center">
-                        <div
-                          class="bg-info bg-opacity-10 rounded-3 p-2 me-2"
-                        >
-                          <i class="bi bi-people text-info"></i>
-                        </div>
-                        <div>
-                          <div class="text-muted small">Correspondents</div>
-                          <div class="fw-bold fs-5">
-                            {{ correspondentCount() }}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                }
-              </div>
-            }
-
-            <!-- Recent Documents Widget -->
-            @if (widget === 'recent_documents') {
-              <div class="card-body p-0">
-                @if (recentLoading()) {
-                  <div class="text-center py-3">
-                    <div
-                      class="spinner-border spinner-border-sm text-primary"
-                      role="status"
-                    ></div>
-                  </div>
-                } @else if (recentDocuments().length === 0) {
-                  <div class="text-center text-muted py-4">
-                    <i class="bi bi-folder2-open fs-3"></i>
-                    <p class="mt-2 mb-0">No documents yet.</p>
-                  </div>
-                } @else {
-                  <div class="list-group list-group-flush">
-                    @for (
-                      doc of recentDocuments();
-                      track doc.id
-                    ) {
-                      <a
-                        [routerLink]="['/documents', doc.id]"
-                        class="list-group-item list-group-item-action"
-                      >
-                        <div class="d-flex justify-content-between">
-                          <div>
-                            <div class="fw-semibold">{{ doc.title }}</div>
-                            <small class="text-muted">{{
-                              doc.original_filename
-                            }}</small>
-                          </div>
-                          <small class="text-muted">{{
-                            doc.added | date: 'shortDate'
-                          }}</small>
-                        </div>
-                      </a>
-                    }
-                  </div>
-                  <div class="card-footer text-center">
-                    <a
-                      routerLink="/documents"
-                      class="btn btn-sm btn-outline-primary"
-                      >View All Documents</a
-                    >
-                  </div>
-                }
-              </div>
-            }
-
-            <!-- Upload Widget -->
-            @if (widget === 'upload') {
-              <div class="card-body">
-                <div
-                  class="border border-2 border-dashed rounded-3 p-4 text-center"
-                  [class.border-primary]="uploadDragActive()"
-                  [class.bg-primary]="uploadDragActive()"
-                  [class.bg-opacity-10]="uploadDragActive()"
-                  (dragover)="onUploadDragOver($event)"
-                  (dragleave)="uploadDragActive.set(false)"
-                  (drop)="onUploadDrop($event)"
-                >
-                  @if (uploading()) {
-                    <div
-                      class="spinner-border text-primary mb-2"
-                      role="status"
-                    ></div>
-                    <p class="mb-0">Uploading...</p>
-                  } @else {
-                    <i class="bi bi-cloud-arrow-up fs-1 text-muted"></i>
-                    <p class="mb-2 text-muted">
-                      Drag & drop files here, or click to browse
-                    </p>
-                    <label class="btn btn-outline-primary btn-sm">
-                      <i class="bi bi-plus-lg me-1"></i>Choose Files
-                      <input
-                        type="file"
-                        class="d-none"
-                        multiple
-                        (change)="onFileSelected($event)"
-                      />
-                    </label>
-                  }
-                </div>
-                @if (uploadMessage()) {
-                  <div
-                    class="alert mt-3 mb-0"
-                    [class.alert-success]="!uploadError()"
-                    [class.alert-danger]="uploadError()"
-                  >
-                    {{ uploadMessage() }}
-                  </div>
-                }
-              </div>
-            }
-
-            <!-- Saved Views Widget -->
-            @if (widget === 'saved_views') {
-              <div class="card-body p-0">
-                @if (dashboardViews().length === 0) {
-                  <div class="text-center text-muted py-4">
-                    <i class="bi bi-bookmarks fs-3"></i>
-                    <p class="mt-2 mb-0">
-                      No saved views on the dashboard.
-                    </p>
-                  </div>
-                } @else {
-                  <div class="list-group list-group-flush">
-                    @for (
-                      view of dashboardViews();
-                      track view.id
-                    ) {
-                      <div
-                        class="list-group-item d-flex justify-content-between align-items-center"
-                      >
-                        <div>
-                          <i class="bi bi-bookmark me-1"></i>
-                          <span class="fw-semibold">{{ view.name }}</span>
-                          <small class="text-muted ms-2">
-                            {{ view.display_mode }} &middot;
-                            {{ view.rule_count }} filter rule{{
-                              view.rule_count !== 1 ? 's' : ''
-                            }}
-                          </small>
-                        </div>
-                        <a
-                          [routerLink]="[
-                            '/saved-views',
-                            view.id,
-                            'results'
-                          ]"
-                          class="btn btn-sm btn-outline-primary"
-                          >View</a
-                        >
-                      </div>
-                    }
-                  </div>
-                }
-              </div>
-            }
-
-            <!-- Welcome Widget -->
-            @if (widget === 'welcome') {
-              <div class="card-body">
-                <h5 class="card-title">
-                  <i class="bi bi-hand-wave me-2"></i>Welcome to DocVault
-                </h5>
-                <p class="card-text text-muted">
-                  Your document management system is ready. Here are
-                  some tips to get started:
-                </p>
-                <ul class="list-unstyled mb-0">
-                  <li class="mb-2">
-                    <i class="bi bi-check-circle text-success me-2"></i>
-                    <a routerLink="/documents" class="text-decoration-none"
-                      >Upload your first document</a
-                    >
-                  </li>
-                  <li class="mb-2">
-                    <i class="bi bi-check-circle text-success me-2"></i>
-                    <a routerLink="/tags" class="text-decoration-none"
-                      >Create tags to organize documents</a
-                    >
-                  </li>
-                  <li class="mb-2">
-                    <i class="bi bi-check-circle text-success me-2"></i>
-                    <a
-                      routerLink="/correspondents"
-                      class="text-decoration-none"
-                      >Set up correspondents</a
-                    >
-                  </li>
-                  <li class="mb-2">
-                    <i class="bi bi-check-circle text-success me-2"></i>
-                    <a routerLink="/saved-views" class="text-decoration-none"
-                      >Create saved views for quick access</a
-                    >
-                  </li>
-                  <li>
-                    <i class="bi bi-check-circle text-success me-2"></i>
-                    <span>Drag widgets to customize your dashboard layout</span>
-                  </li>
-                </ul>
-              </div>
-            }
-          </div>
-        </div>
-      }
-    </div>
-  `,
-  styles: [
-    `
-      .dv-widget-card {
-        transition: box-shadow 0.2s ease;
-      }
-      .dv-widget-card:hover {
-        box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
-      }
-      .dv-drag-handle {
-        font-size: 1.2rem;
-      }
-      .dv-drag-over {
-        outline: 2px dashed var(--bs-primary);
-        outline-offset: -2px;
-        border-radius: 0.375rem;
-      }
-      .dv-drag-placeholder {
-        background: var(--bs-gray-200);
-        border: 2px dashed var(--bs-primary);
-        border-radius: 0.375rem;
-        min-height: 120px;
-        transition: transform 0.2s;
-      }
-      .cdk-drag-preview {
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-        border-radius: 0.375rem;
-        opacity: 0.9;
-      }
-      .cdk-drag-animating {
-        transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
-      }
-      .border-dashed {
-        border-style: dashed !important;
-      }
-      .list-group-item {
-        background-color: var(--dv-card-bg, #ffffff);
-        color: var(--dv-text, #212529);
-        border-color: var(--dv-border, #dee2e6);
-      }
-    `,
+  imports: [
+    DatePipe,
+    RouterModule,
+    CdkDropList,
+    CdkDrag,
+    CdkDragHandle,
+    CdkDragPlaceholder,
   ],
+  templateUrl: './dashboard.component.html',
+  styleUrl: './dashboard.component.scss',
 })
 export class DashboardComponent implements OnInit {
+  private readonly documentService = inject(DocumentService);
+  private readonly searchService = inject(SearchService);
+  private readonly organizationService = inject(OrganizationService);
+  private readonly preferencesService = inject(PreferencesService);
+  private readonly esignatures = inject(EsignatureService);
+  private readonly auth = inject(AuthService);
+  readonly shellStats = inject(ShellStatsService);
+  readonly uploads = inject(UploadService);
+
   // Widget layout
   widgets = signal<WidgetType[]>([...DEFAULT_LAYOUT]);
 
@@ -400,6 +86,8 @@ export class DashboardComponent implements OnInit {
   typeCount = signal(0);
   tagCount = signal(0);
   correspondentCount = signal(0);
+  /** Documents added since the first of the current month. */
+  addedThisMonth = signal<number | null>(null);
 
   // Recent documents widget
   recentLoading = signal(true);
@@ -408,24 +96,75 @@ export class DashboardComponent implements OnInit {
   // Saved views widget
   dashboardViews = signal<SavedViewListItem[]>([]);
 
-  // Upload widget
+  // Attention widget
+  pendingSignatures = signal<number | null>(null);
+
+  // Upload widget — mirrors UploadService so existing tests and template keep working
   uploading = signal(false);
   uploadDragActive = signal(false);
   uploadMessage = signal('');
   uploadError = signal(false);
 
-  constructor(
-    private documentService: DocumentService,
-    private searchService: SearchService,
-    private organizationService: OrganizationService,
-    private preferencesService: PreferencesService,
-  ) {}
+  readonly now = new Date();
+
+  readonly greeting = computed(() => {
+    const hour = this.now.getHours();
+    const timeOfDay =
+      hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+    const name = this.auth.currentUser()?.username;
+    return name ? `${timeOfDay}, ${name}` : timeOfDay;
+  });
+
+  /** Secondary mono line: counts the design does not give a stat card. */
+  readonly libraryLine = computed(
+    () =>
+      `${this.typeCount()} types · ${this.tagCount()} tags · ${this.correspondentCount()} correspondents`,
+  );
+
+  readonly attentionItems = computed<AttentionItem[]>(() => {
+    const items: AttentionItem[] = [];
+    const pending = this.pendingSignatures();
+    if (pending) {
+      items.push({
+        text: `${pending} signature request${pending === 1 ? '' : 's'} pending`,
+        category: 'e-sign',
+        tone: 'accent',
+      });
+    }
+    const active = this.shellStats.activeTasks();
+    if (active) {
+      items.push({
+        text: `${active} document${active === 1 ? '' : 's'} still processing`,
+        category: 'ingest',
+        tone: 'warn',
+      });
+    }
+    return items;
+  });
+
+  constructor() {
+    // Keep the local upload mirrors in step with the shared service, so the
+    // shell's Upload button and this widget report the same state.
+    effect(() => {
+      this.uploading.set(this.uploads.uploading());
+      this.uploadMessage.set(this.uploads.message());
+      this.uploadError.set(this.uploads.error());
+    });
+    // Refresh lists after any upload completes, wherever it was started.
+    effect(() => {
+      if (this.uploads.completedTick() > 0) {
+        this.loadStatistics();
+        this.loadRecentDocuments();
+      }
+    });
+  }
 
   ngOnInit(): void {
     this.loadLayout();
     this.loadStatistics();
     this.loadRecentDocuments();
     this.loadDashboardViews();
+    this.loadAttention();
   }
 
   // --- Layout persistence ---
@@ -447,7 +186,11 @@ export class DashboardComponent implements OnInit {
 
     this.preferencesService.getPreferences().subscribe({
       next: (prefs: UserPreferences) => {
-        if (prefs.dashboard_layout && Array.isArray(prefs.dashboard_layout) && prefs.dashboard_layout.length > 0) {
+        if (
+          prefs.dashboard_layout &&
+          Array.isArray(prefs.dashboard_layout) &&
+          prefs.dashboard_layout.length > 0
+        ) {
           this.widgets.set(prefs.dashboard_layout as WidgetType[]);
         }
       },
@@ -459,13 +202,11 @@ export class DashboardComponent implements OnInit {
 
   saveLayout(): void {
     const layout = this.widgets();
-    // Persist to localStorage
     try {
       localStorage.setItem(DASHBOARD_ORDER_KEY, JSON.stringify(layout));
     } catch {
       // Ignore storage errors
     }
-    // Also sync to server preferences
     this.preferencesService
       .updatePreferences({ dashboard_layout: layout })
       .subscribe();
@@ -476,6 +217,24 @@ export class DashboardComponent implements OnInit {
     this.saveLayout();
   }
 
+  /** The greeting and the stat row span the full grid width. */
+  isWideWidget(widget: WidgetType): boolean {
+    return widget === 'welcome' || widget === 'statistics';
+  }
+
+  /**
+   * How many rows the recent-documents card should span so the side cards stack
+   * beside it in the narrow column, as the design's 1.6fr/1fr split shows.
+   */
+  readonly sideWidgetCount = computed(() =>
+    Math.max(
+      1,
+      this.widgets().filter(
+        (w) => !this.isWideWidget(w) && w !== 'recent_documents',
+      ).length,
+    ),
+  );
+
   // --- CDK Drag & drop reordering ---
 
   onCdkDrop(event: CdkDragDrop<WidgetType[]>): void {
@@ -485,47 +244,6 @@ export class DashboardComponent implements OnInit {
       this.widgets.set(layout);
       this.saveLayout();
     }
-  }
-
-  // --- Legacy native drag signals (kept for template compatibility) ---
-
-  onDragStart(event: DragEvent, index: number): void {
-    this.dragSourceIndex.set(index);
-  }
-
-  onDragOver(event: DragEvent, index: number): void {
-    event.preventDefault();
-  }
-
-  onDragEnter(event: DragEvent, index: number): void {
-    event.preventDefault();
-    this.dragOverIndex.set(index);
-  }
-
-  onDragLeave(event: DragEvent): void {
-    const relatedTarget = event.relatedTarget as HTMLElement;
-    if (!relatedTarget || !(event.currentTarget as HTMLElement).contains(relatedTarget)) {
-      this.dragOverIndex.set(null);
-    }
-  }
-
-  onDrop(event: DragEvent, targetIndex: number): void {
-    event.preventDefault();
-    const sourceIndex = this.dragSourceIndex();
-    if (sourceIndex !== null && sourceIndex !== targetIndex) {
-      const layout = [...this.widgets()];
-      const [moved] = layout.splice(sourceIndex, 1);
-      layout.splice(targetIndex, 0, moved);
-      this.widgets.set(layout);
-      this.saveLayout();
-    }
-    this.dragSourceIndex.set(null);
-    this.dragOverIndex.set(null);
-  }
-
-  onDragEnd(event: DragEvent): void {
-    this.dragSourceIndex.set(null);
-    this.dragOverIndex.set(null);
   }
 
   // --- Widget data loading ---
@@ -569,6 +287,18 @@ export class DashboardComponent implements OnInit {
       },
       error: () => checkDone(),
     });
+
+    // Month-to-date delta for the documents stat card.
+    const monthStart = new Date(this.now.getFullYear(), this.now.getMonth(), 1);
+    this.documentService
+      .getDocuments({
+        page_size: 1,
+        created_after: monthStart.toISOString().slice(0, 10),
+      })
+      .subscribe({
+        next: (res) => this.addedThisMonth.set(res.count),
+        error: () => this.addedThisMonth.set(null),
+      });
   }
 
   loadRecentDocuments(): void {
@@ -590,12 +320,50 @@ export class DashboardComponent implements OnInit {
     });
   }
 
+  loadAttention(): void {
+    this.esignatures.getRequests({ status: 'pending' }).subscribe({
+      next: (requests) => this.pendingSignatures.set(requests?.length ?? 0),
+      error: () => this.pendingSignatures.set(null),
+    });
+  }
+
+  getWidgetTitle(type: WidgetType): string {
+    const titles: Record<WidgetType, string> = {
+      welcome: 'Welcome',
+      statistics: 'Statistics',
+      recent_documents: 'Recent Documents',
+      attention: 'Needs your attention',
+      saved_views: 'Saved Views',
+      upload: 'Quick Upload',
+    };
+    return titles[type];
+  }
+
+  getPreviewUrl(doc: Document): string {
+    return this.documentService.getPreviewUrl(doc.id);
+  }
+
+  /** `--dv-thumb-src` value; the stripe placeholder shows through on a 404. */
+  thumbSrc(doc: Document): string {
+    return `url("${this.getPreviewUrl(doc)}")`;
+  }
+
   // --- Upload handling ---
+
+  pickFiles(): void {
+    this.uploads.pick();
+  }
 
   onUploadDragOver(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
     this.uploadDragActive.set(true);
+  }
+
+  onUploadDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.uploadDragActive.set(false);
   }
 
   onUploadDrop(event: DragEvent): void {
@@ -604,77 +372,15 @@ export class DashboardComponent implements OnInit {
     this.uploadDragActive.set(false);
     const files = event.dataTransfer?.files;
     if (files && files.length > 0) {
-      this.uploadFiles(files);
+      this.uploads.upload(files);
     }
   }
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {
-      this.uploadFiles(input.files);
+      this.uploads.upload(input.files);
       input.value = '';
     }
-  }
-
-  private uploadFiles(files: FileList): void {
-    this.uploading.set(true);
-    this.uploadMessage.set('');
-    this.uploadError.set(false);
-
-    let completed = 0;
-    let errors = 0;
-    const total = files.length;
-
-    for (let i = 0; i < files.length; i++) {
-      const formData = new FormData();
-      formData.append('document', files[i]);
-      formData.append('title', files[i].name);
-
-      this.documentService.createDocument(formData as unknown as Partial<Document>).subscribe({
-        next: () => {
-          completed++;
-          if (completed + errors === total) {
-            this.onUploadComplete(completed, errors);
-          }
-        },
-        error: () => {
-          errors++;
-          if (completed + errors === total) {
-            this.onUploadComplete(completed, errors);
-          }
-        },
-      });
-    }
-  }
-
-  private onUploadComplete(completed: number, errors: number): void {
-    this.uploading.set(false);
-    if (errors === 0) {
-      this.uploadMessage.set(
-        `Successfully uploaded ${completed} file${completed !== 1 ? 's' : ''}.`,
-      );
-      this.uploadError.set(false);
-      this.loadStatistics();
-      this.loadRecentDocuments();
-    } else {
-      this.uploadMessage.set(
-        `Uploaded ${completed} file${completed !== 1 ? 's' : ''}, ${errors} failed.`,
-      );
-      this.uploadError.set(true);
-    }
-    setTimeout(() => this.uploadMessage.set(''), 5000);
-  }
-
-  // --- Helpers ---
-
-  getWidgetTitle(type: WidgetType): string {
-    const titles: Record<WidgetType, string> = {
-      welcome: 'Welcome',
-      statistics: 'Statistics',
-      recent_documents: 'Recent Documents',
-      saved_views: 'Saved Views',
-      upload: 'Quick Upload',
-    };
-    return titles[type] || type;
   }
 }

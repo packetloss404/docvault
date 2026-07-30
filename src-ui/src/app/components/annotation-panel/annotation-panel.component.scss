@@ -1,0 +1,115 @@
+// Compact annotation list inside the 400px document panel.
+.ap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ap__item {
+  padding: 11px 13px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--border2);
+  }
+
+  &.is-selected {
+    border-color: var(--accent-line);
+    background: var(--panel2);
+  }
+}
+
+.ap__meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+// The swatch shows the annotation's own colour, which is user data.
+.ap__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  border: 1px solid var(--border2);
+}
+
+.ap__author {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.ap__kind {
+  flex-shrink: 0;
+}
+
+.ap__del {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--faint);
+  font: 400 12px "JetBrains Mono", ui-monospace, monospace;
+  line-height: 1;
+  flex-shrink: 0;
+
+  &:hover {
+    color: var(--danger);
+  }
+}
+
+.ap__when {
+  margin-top: 4px;
+}
+
+.ap__text {
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin-top: 6px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ap__toggle {
+  margin-top: 7px;
+  font: 400 11px "JetBrains Mono", ui-monospace, monospace;
+}
+
+.ap__replies {
+  margin-top: 8px;
+  margin-left: 20px;
+  border-left: 1px solid var(--border);
+  padding-left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ap__replymeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ap__replyauthor {
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.ap__compose {
+  display: flex;
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.ap__send {
+  padding: 0 12px;
+  font-size: 12px;
+  border-radius: 7px;
+  flex-shrink: 0;
+}
+
+.ap__empty {
+  padding: 22px 12px;
+}

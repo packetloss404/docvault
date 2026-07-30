@@ -20,6 +20,7 @@ interface DisplaySuggestion {
   standalone: true,
   imports: [CommonModule],
   templateUrl: './suggestion-panel.component.html',
+  styleUrl: './suggestion-panel.component.scss',
 })
 export class SuggestionPanelComponent implements OnInit, OnChanges {
   @Input({ required: true }) documentId!: number;
@@ -100,16 +101,18 @@ export class SuggestionPanelComponent implements OnInit, OnChanges {
     return `${Math.round(confidence * 100)}%`;
   }
 
+  /** Confidence meter fill modifier (`.dv-bar__fill--*`). */
   confidenceClass(confidence: number): string {
-    if (confidence >= 0.8) return 'bg-success';
-    if (confidence >= 0.5) return 'bg-warning text-dark';
-    return 'bg-secondary';
+    if (confidence >= 0.8) return 'dv-bar__fill--ok';
+    if (confidence >= 0.5) return 'dv-bar__fill--warn';
+    return '';
   }
 
+  /** Row tone modifier keyed off the same thresholds as the meter. */
   confidenceBorderClass(confidence: number): string {
-    if (confidence >= 0.8) return 'border-success';
-    if (confidence >= 0.5) return 'border-warning';
-    return 'border-secondary';
+    if (confidence >= 0.8) return 'sp__row--ok';
+    if (confidence >= 0.5) return 'sp__row--warn';
+    return '';
   }
 
   categoryLabel(category: string): string {
@@ -127,18 +130,19 @@ export class SuggestionPanelComponent implements OnInit, OnChanges {
     }
   }
 
+  /** `dv-icon` name for a suggestion category. */
   categoryIcon(category: string): string {
     switch (category) {
       case 'tags':
-        return 'bi-tag';
+        return 'tag';
       case 'correspondent':
-        return 'bi-person';
+        return 'inbox';
       case 'document_type':
-        return 'bi-file-earmark';
+        return 'doc';
       case 'storage_path':
-        return 'bi-folder2';
+        return 'folder';
       default:
-        return 'bi-question-circle';
+        return 'doc';
     }
   }
 

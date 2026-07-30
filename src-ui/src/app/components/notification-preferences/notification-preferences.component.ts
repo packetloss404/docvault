@@ -33,6 +33,7 @@ const CHANNELS: Array<'in_app' | 'email' | 'webhook'> = ['in_app', 'email', 'web
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './notification-preferences.component.html',
+  styleUrl: './notification-preferences.component.scss',
 })
 export class NotificationPreferencesComponent implements OnInit {
   preferences = signal<NotificationPreference[]>([]);
@@ -177,9 +178,10 @@ export class NotificationPreferencesComponent implements OnInit {
     return Math.min(100, Math.round((used / max) * 100));
   }
 
+  /** Console bar-fill modifier for a usage percentage. */
   getProgressBarClass(percent: number): string {
-    if (percent >= 90) return 'bg-danger';
-    if (percent >= 75) return 'bg-warning';
-    return 'bg-success';
+    if (percent >= 90) return 'dv-bar__fill--danger';
+    if (percent >= 75) return 'dv-bar__fill--warn';
+    return 'dv-bar__fill--ok';
   }
 }

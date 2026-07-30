@@ -53,7 +53,24 @@ jobs:
           cache: npm
           cache-dependency-path: src-ui/package-lock.json
       - run: npm ci
-      - run: npm test -- --watch=false
+      - name: Test
+        run: |
+          set -o pipefail
+          npm test -- --watch=false 2>&1 | tee test-output.txt
+      # Vitest can fail to start a worker, skip those spec files, and still exit
+      # 0 reporting the rest as passed. Compare the reported file count with the
+      # number of spec files on disk so a partial run cannot look green.
+      - name: Verify every spec file ran
+        run: |
+          expected=$(find src -name '*.spec.ts' | wc -l | tr -d '[:space:]')
+          reported=$(sed -r 's/\x1B\[[0-9;]*[mGKH]//g' test-output.txt \
+            | grep -oE 'Test Files[[:space:]]+[0-9]+ passed[[:space:]]*\([0-9]+\)' \
+            | grep -oE '[0-9]+' | head -1)
+          echo "spec files on disk: $expected; reported by vitest: ${reported:-none}"
+          if [ "$expected" != "$reported" ]; then
+            echo "::error::vitest reported ${reported:-no} spec files but $expected exist - a worker was likely skipped"
+            exit 1
+          fi
       - run: npm run build
 
   helm:

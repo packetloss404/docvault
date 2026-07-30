@@ -1,87 +1,73 @@
-<div class="container-fluid">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Notifications</h2>
-    <div class="d-flex gap-2">
+<div class="dv-screen dv-screen--tight">
+  <div class="dv-inner dv-inner--narrow">
+    <div class="dv-pagehead">
+      <h1 class="dv-h1 dv-h1--sm">Notifications</h1>
+      @if (unreadCount() > 0) {
+        <span class="dv-meta dv-accent">● {{ unreadCount() }} unread</span>
+      } @else {
+        <span class="dv-meta dv-ok">● all read</span>
+      }
       <button
-        class="btn btn-sm"
-        [class.btn-primary]="showUnreadOnly()"
-        [class.btn-outline-secondary]="!showUnreadOnly()"
+        type="button"
+        class="dv-token dv-push"
+        [class.is-active]="showUnreadOnly()"
         (click)="toggleFilter()"
       >
-        <i class="bi bi-funnel me-1"></i>
-        {{ showUnreadOnly() ? 'Showing Unread' : 'Show All' }}
+        {{ showUnreadOnly() ? 'unread only' : 'all' }}
       </button>
-      <button class="btn btn-outline-primary btn-sm" (click)="markAllRead()">
-        <i class="bi bi-check-all me-1"></i> Mark All as Read
+      <button type="button" class="nt-link nt-link--accent" (click)="markAllRead()">
+        mark all read
       </button>
+      <a class="nt-link" routerLink="/notification-preferences">preferences →</a>
     </div>
-  </div>
 
-  @if (loading()) {
-    <div class="text-center py-4">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
+    @if (loading()) {
+      <div class="dv-empty"><span class="dv-spinner"></span> Loading notifications…</div>
+    } @else {
+      <div class="nt-list">
+        @for (notification of notifications(); track notification.id) {
+          <div
+            class="nt-row"
+            [class.is-unread]="!notification.read"
+            (click)="markRead(notification)"
+          >
+            @if (!notification.read) {
+              <span class="dv-dot dv-dot--accent"></span>
+            } @else {
+              <span class="nt-row__spacer"></span>
+            }
+
+            <div class="nt-row__text">
+              <div class="nt-row__title">{{ notification.title }}</div>
+              @if (notification.body) {
+                <div class="dv-muted nt-row__body">{{ truncateBody(notification.body) }}</div>
+              }
+            </div>
+
+            @if (notification.document) {
+              <a
+                class="dv-chip dv-chip--outline nt-row__doc"
+                [routerLink]="['/documents', notification.document]"
+                (click)="$event.stopPropagation()"
+                >#{{ notification.document }}</a
+              >
+            }
+
+            <span class="dv-chip" [ngClass]="getEventBadgeClass(notification.event_type)">
+              {{ notification.event_type }}
+            </span>
+            <span class="dv-meta nt-row__when">{{ formatTime(notification.created_at) }}</span>
+          </div>
+        } @empty {
+          <div class="dv-empty">
+            @if (showUnreadOnly()) {
+              No unread notifications.
+            } @else {
+              No notifications yet.
+            }
+          </div>
+        }
       </div>
-    </div>
-  } @else {
-    <div class="table-responsive">
-      <table class="table table-sm table-hover">
-        <thead>
-          <tr>
-            <th style="width: 30px;"></th>
-            <th style="width: 140px;">Event Type</th>
-            <th>Title</th>
-            <th>Body</th>
-            <th style="width: 100px;">Document</th>
-            <th style="width: 100px;">Time</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (notification of notifications(); track notification.id) {
-            <tr
-              [class.table-light]="!notification.read"
-              [class.fw-semibold]="!notification.read"
-              style="cursor: pointer;"
-              (click)="markRead(notification)"
-            >
-              <td class="text-center">
-                @if (!notification.read) {
-                  <i class="bi bi-circle-fill text-primary" style="font-size: 0.5rem;"></i>
-                }
-              </td>
-              <td>
-                <span class="badge" [class]="getEventBadgeClass(notification.event_type)">
-                  {{ notification.event_type }}
-                </span>
-              </td>
-              <td>{{ notification.title }}</td>
-              <td class="text-muted">{{ truncateBody(notification.body) }}</td>
-              <td>
-                @if (notification.document) {
-                  <a
-                    [routerLink]="['/documents', notification.document]"
-                    class="btn btn-outline-primary btn-sm"
-                    (click)="$event.stopPropagation()"
-                  >
-                    <i class="bi bi-file-earmark me-1"></i>#{{ notification.document }}
-                  </a>
-                }
-              </td>
-              <td class="text-muted small">{{ formatTime(notification.created_at) }}</td>
-            </tr>
-          } @empty {
-            <tr>
-              <td colspan="6" class="text-muted text-center py-4">
-                @if (showUnreadOnly()) {
-                  No unread notifications.
-                } @else {
-                  No notifications yet.
-                }
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-  }
+    }
+  </div>
 </div>

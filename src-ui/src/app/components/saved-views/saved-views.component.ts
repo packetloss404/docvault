@@ -11,12 +11,14 @@ import {
   Filter,
   FILTER_RULE_TYPES,
 } from '../../models/search.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-saved-views',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, SubnavComponent],
   templateUrl: './saved-views.component.html',
+  styleUrl: './saved-views.component.scss',
 })
 export class SavedViewsComponent implements OnInit {
   views = signal<SavedViewListItem[]>([]);

@@ -1,19 +1,24 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
 import { SourceService } from '../../services/source.service';
 import { Source, MailAccount } from '../../models/source.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-sources',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [DatePipe, FormsModule, SubnavComponent],
   templateUrl: './sources.component.html',
+  styleUrl: './sources.component.scss',
 })
 export class SourcesComponent implements OnInit {
   sources = signal<Source[]>([]);
   mailAccounts = signal<MailAccount[]>([]);
+  /**
+   * Retained for API compatibility. The Console layout shows the watch-folder
+   * and mail-account sections stacked, so nothing switches on it any more.
+   */
   activeTab = signal<'sources' | 'mail'>('sources');
 
   // Source form

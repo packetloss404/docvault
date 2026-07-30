@@ -1,16 +1,17 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { OrganizationService } from '../../services/organization.service';
 import { Tag } from '../../models/organization.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 const MAX_TAG_DEPTH = 5;
 
 @Component({
   selector: 'app-tags',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule, SubnavComponent],
   templateUrl: './tags.component.html',
+  styleUrl: './tags.component.scss',
 })
 export class TagsComponent implements OnInit {
   tags = signal<Tag[]>([]);

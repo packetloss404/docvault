@@ -1,0 +1,495 @@
+// Document detail (split view). Geometry only — every colour is a Console
+// token; shared patterns live in src/_console.scss.
+$mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+// The split has to become a flex child of `.dv-main`, so the host must not
+// introduce a box of its own.
+:host {
+  display: contents;
+}
+
+.dd-loading {
+  flex: 1;
+  display: grid;
+  place-items: center;
+}
+
+// ---------------------------------------------------------------------------
+// Left pane: annotation tools + viewer
+// ---------------------------------------------------------------------------
+.dd-tools {
+  flex-shrink: 0;
+  padding: 10px 22px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// The viewer scrolls in both directions once zoomed past 100%.
+.dd-viewer {
+  overflow: auto;
+}
+
+.dd-frame {
+  width: 100%;
+  flex: 1;
+  min-height: 70vh;
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  background: var(--panel);
+}
+
+// Page box for a rendered image/thumbnail: the positioning context that
+// normalised annotation coordinates map onto.
+.dd-page-wrap {
+  position: relative;
+  max-width: 100%;
+  flex-shrink: 0;
+  line-height: 0;
+}
+
+.dd-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+}
+
+.dd-note {
+  position: absolute;
+  max-width: 62%;
+  line-height: 1.45;
+  z-index: 2;
+}
+
+.dd-page-label {
+  padding: 0 12px;
+  text-align: center;
+}
+
+.dd-page-link {
+  font: 400 11px #{$mono};
+}
+
+.dd-pages {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  &__step {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--faint);
+    font: 400 11px #{$mono};
+    padding: 2px 8px;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      color: var(--text);
+    }
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Right pane: head, tabs, body
+// ---------------------------------------------------------------------------
+.dd-head {
+  flex-shrink: 0;
+  padding: 18px 22px 0;
+}
+
+// Colouring comes from .dv-callout--danger; only the spacing is local.
+.dd-hold {
+  margin-bottom: 14px;
+
+  &__body {
+    font-size: 12.5px;
+    line-height: 1.5;
+    margin-top: 6px;
+  }
+}
+
+.dd-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.dd-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--panel);
+  border: 1px solid var(--accent-line);
+  font-size: 12.5px;
+
+  &--error {
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+}
+
+// Twelve tabs do not fit 400px; the scrolling behaviour is .dv-tabs--scroll.
+.dd-tabs {
+  flex-shrink: 0;
+  margin-top: 16px;
+  padding: 0 22px;
+}
+
+.dd-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+}
+
+// ---------------------------------------------------------------------------
+// Shared body pieces
+// ---------------------------------------------------------------------------
+.dd-kvs {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.dd-chips {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.dd-inline-meta {
+  margin-left: 7px;
+}
+
+.dd-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  &__x {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--faint);
+    font: inherit;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      color: var(--danger);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.dd-tagpicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 10px 11px;
+
+  &__empty {
+    font-size: 12px;
+  }
+}
+
+.dd-tagpick {
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: var(--accent-line);
+    color: var(--accent-text);
+  }
+}
+
+.dd-edit {
+  margin-top: 16px;
+  align-self: flex-start;
+}
+
+.dd-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dd-formactions {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.dd-block,
+.dd-section {
+  display: block;
+  margin-top: 18px;
+
+  &--grow {
+    flex: 1;
+    min-height: 0;
+  }
+
+  &__title {
+    display: block;
+    margin-bottom: 9px;
+  }
+}
+
+.dd-empty-line {
+  font-size: 12.5px;
+  padding: 2px 0 4px;
+}
+
+.dd-break {
+  overflow-wrap: anywhere;
+}
+
+// Key/value-ish row with a trailing remove affordance.
+.dd-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  &__main {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__label {
+    font-size: 12.5px;
+    font-weight: 500;
+  }
+}
+
+.dd-addform {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+
+  &__field {
+    flex: 1;
+    min-width: 120px;
+  }
+}
+
+.dd-ocrhead {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+// ---------------------------------------------------------------------------
+// Share links
+// ---------------------------------------------------------------------------
+.dd-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dd-link {
+  padding: 9px 12px;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__slug {
+    font-size: 12px;
+    flex: 1;
+  }
+
+  &__meta {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 5px;
+  }
+}
+
+.dd-shareform {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+
+  &__field {
+    flex: 1;
+    min-width: 110px;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Activity
+// ---------------------------------------------------------------------------
+.dd-activity__body {
+  font-size: 12px;
+  margin-top: 2px;
+  line-height: 1.45;
+}
+
+// ---------------------------------------------------------------------------
+// Ask AI
+// ---------------------------------------------------------------------------
+.dd-aiactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dd-answer {
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.dd-entities {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+// Colouring comes from .dv-callout--warn.
+.dd-warn {
+  &__body {
+    font-size: 12.5px;
+    margin-top: 6px;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Versions
+// ---------------------------------------------------------------------------
+.dd-checkout {
+  margin-bottom: 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+
+  &__text {
+    display: inline;
+  }
+
+  &__action {
+    font-weight: 500;
+    margin-left: 4px;
+  }
+}
+
+.dd-versions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dd-version {
+  display: grid;
+  grid-template-columns: 44px 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+
+  &__chip {
+    font-weight: 600;
+    text-align: center;
+  }
+
+  &__main {
+    min-width: 0;
+  }
+
+  &__note {
+    font-size: 12.5px;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+
+  &__act {
+    font: 400 11px #{$mono};
+    text-align: right;
+  }
+
+  &__get {
+    font: 400 11px #{$mono};
+    color: var(--faint);
+    text-align: right;
+
+    &:hover {
+      color: var(--text);
+    }
+  }
+}
+
+.dd-diff {
+  margin-top: 10px;
+}
+
+// ---------------------------------------------------------------------------
+// Related
+// ---------------------------------------------------------------------------
+.dd-graph {
+  margin-top: 18px;
+  padding: 14px;
+  display: grid;
+  place-items: center;
+
+  &__link {
+    font-size: 11px;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Content (OCR text)
+// ---------------------------------------------------------------------------
+.dd-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 7px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--faint);
+  margin-bottom: 12px;
+
+  &__input {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+    font-size: 13px;
+  }
+}
+
+.dd-content {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: inherit;
+}

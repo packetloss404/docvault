@@ -1,73 +1,81 @@
-<div class="login-wrapper d-flex align-items-center justify-content-center min-vh-100">
-  <div class="card shadow-sm" style="width: 400px;">
-    <div class="card-body p-4">
-      <div class="text-center mb-4">
-        <h3 class="fw-bold">DocVault</h3>
-        <p class="text-muted">Sign in to your account</p>
+<div class="dv-auth">
+  <div class="dv-auth__col">
+    <div class="dv-auth__brand">
+      <div class="dv-auth__logo">V</div>
+      <div>
+        <div class="dv-auth__name">DocVault</div>
+        <div class="dv-meta">v{{ version }} · self-hosted</div>
+      </div>
+    </div>
+
+    <form class="dv-auth__card" (ngSubmit)="onSubmit()">
+      @if (errorMessage) {
+        <div class="dv-auth__error" role="alert">{{ errorMessage }}</div>
+      }
+
+      <div>
+        <label class="dv-field__label" for="username">username</label>
+        <input
+          type="text"
+          class="dv-input dv-input--mono"
+          id="username"
+          name="username"
+          autocomplete="username"
+          [(ngModel)]="username"
+          [disabled]="otpRequired"
+          required
+        />
       </div>
 
-      @if (errorMessage) {
-        <div class="alert alert-danger" role="alert">
-          {{ errorMessage }}
+      <div>
+        <label class="dv-field__label" for="password">password</label>
+        <input
+          type="password"
+          class="dv-input dv-input--mono"
+          id="password"
+          name="password"
+          autocomplete="current-password"
+          [(ngModel)]="password"
+          [disabled]="otpRequired"
+          required
+        />
+      </div>
+
+      @if (otpRequired) {
+        <div>
+          <span class="dv-field__label">authenticator code</span>
+          <div class="dv-otp-row" (paste)="onOtpPaste($event)">
+            @for (digit of otpDigits; track $index) {
+              <input
+                #otpBox
+                class="dv-otp"
+                [class.is-filled]="digit !== ''"
+                type="text"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                maxlength="1"
+                [attr.aria-label]="'Digit ' + ($index + 1)"
+                [value]="digit"
+                (input)="onOtpInput($index, $event)"
+                (keydown)="onOtpKeydown($index, $event)"
+              />
+            }
+          </div>
         </div>
       }
 
-      <form (ngSubmit)="onSubmit()">
-        <div class="mb-3">
-          <label for="username" class="form-label">Username</label>
-          <input
-            type="text"
-            class="form-control"
-            id="username"
-            [(ngModel)]="username"
-            name="username"
-            required
-            autofocus
-          />
-        </div>
-
-        <div class="mb-3">
-          <label for="password" class="form-label">Password</label>
-          <input
-            type="password"
-            class="form-control"
-            id="password"
-            [(ngModel)]="password"
-            name="password"
-            required
-          />
-        </div>
-
-        @if (otpRequired) {
-          <div class="mb-3">
-            <label for="otpCode" class="form-label">Authenticator code</label>
-            <input
-              type="text"
-              class="form-control"
-              id="otpCode"
-              [(ngModel)]="otpCode"
-              name="otpCode"
-              inputmode="numeric"
-              autocomplete="one-time-code"
-              required
-              autofocus
-            />
-          </div>
+      <button
+        type="submit"
+        class="dv-btn dv-btn--primary dv-btn--block"
+        [disabled]="loading || !username || !password || (otpRequired && otpCode.length < 6)"
+      >
+        @if (loading) {
+          <span class="dv-spinner"></span>
+          Signing in…
+        } @else {
+          {{ otpRequired ? 'Verify code →' : 'Sign in →' }}
         }
-
-        <button
-          type="submit"
-          class="btn btn-primary w-100"
-          [disabled]="loading || !username || !password || (otpRequired && !otpCode)"
-        >
-          @if (loading) {
-            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-            Signing in...
-          } @else {
-            {{ otpRequired ? 'Verify code' : 'Sign in' }}
-          }
-        </button>
-      </form>
-    </div>
+      </button>
+    </form>
   </div>
 </div>

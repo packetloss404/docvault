@@ -3,156 +3,144 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SecurityService } from '../../services/security.service';
 import { Group, Permission } from '../../models/security.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-admin-groups',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SubnavComponent],
+  styleUrl: './admin-groups.component.scss',
   template: `
-    <div class="container-fluid py-4">
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0"><i class="bi bi-collection me-2"></i>Group Management</h2>
-        <button class="btn btn-primary" (click)="startCreate()">
-          <i class="bi bi-plus-lg me-1"></i> New Group
-        </button>
-      </div>
-
-      @if (errorMessage()) {
-        <div class="alert alert-danger alert-dismissible">
-          {{ errorMessage() }}
-          <button type="button" class="btn-close" (click)="errorMessage.set('')"></button>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner dv-inner--wide">
+        <div class="dv-pagehead">
+          <h1 class="dv-h1 dv-h1--sm">Admin</h1>
+          <dv-subnav />
+          <button type="button" class="dv-btn dv-btn--primary dv-push" (click)="startCreate()">
+            + New group
+          </button>
         </div>
-      }
 
-      @if (successMessage()) {
-        <div class="alert alert-success alert-dismissible">
-          {{ successMessage() }}
-          <button type="button" class="btn-close" (click)="successMessage.set('')"></button>
-        </div>
-      }
-
-      <!-- Create / Edit Form -->
-      @if (showForm()) {
-        <div class="card mb-4 border-primary">
-          <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">{{ editing() ? 'Edit Group' : 'Create Group' }}</h5>
+        @if (errorMessage()) {
+          <div class="ag-banner ag-banner--error" role="alert">
+            <span>{{ errorMessage() }}</span>
+            <button
+              type="button"
+              class="ag-banner__close"
+              aria-label="Dismiss"
+              (click)="errorMessage.set('')"
+            >
+              ✕
+            </button>
           </div>
-          <div class="card-body">
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label">Group Name <span class="text-danger">*</span></label>
+        }
+
+        @if (successMessage()) {
+          <div class="ag-banner ag-banner--ok" role="status">
+            <span>{{ successMessage() }}</span>
+            <button
+              type="button"
+              class="ag-banner__close"
+              aria-label="Dismiss"
+              (click)="successMessage.set('')"
+            >
+              ✕
+            </button>
+          </div>
+        }
+
+        <!-- Create / Edit form -->
+        @if (showForm()) {
+          <div class="dv-card dv-card--pad dv-card--accent ag-form">
+            <div class="dv-card__title">{{ editing() ? 'Edit group' : 'New group' }}</div>
+
+            <div class="ag-form__row">
+              <div>
+                <label class="dv-field__label" for="ag-name">group name *</label>
                 <input
+                  id="ag-name"
                   type="text"
-                  class="form-control"
+                  class="dv-input"
                   [(ngModel)]="formName"
                   placeholder="e.g. Editors, Viewers, Admins"
                 />
               </div>
-              <div class="col-12">
-                <label class="form-label">Permissions</label>
-                @if (permissions().length === 0) {
-                  <p class="text-muted small mb-0">No permissions available.</p>
-                } @else {
-                  <div class="border rounded p-2" style="max-height: 250px; overflow-y: auto;">
-                    <div class="row g-1">
-                      @for (perm of permissions(); track perm.id) {
-                        <div class="col-md-4">
-                          <div class="form-check">
-                            <input
-                              class="form-check-input"
-                              type="checkbox"
-                              [id]="'perm-' + perm.id"
-                              [checked]="formPermissions.includes(perm.id)"
-                              (change)="togglePermission(perm.id, $event)"
-                            />
-                            <label class="form-check-label small" [for]="'perm-' + perm.id">
-                              {{ perm.name }}
-                            </label>
-                          </div>
-                        </div>
-                      }
-                    </div>
-                  </div>
-                }
-              </div>
             </div>
-            <div class="mt-3 d-flex gap-2">
+
+            <div class="ag-perms">
+              <span class="dv-field__label">permissions</span>
+              @if (permissions().length === 0) {
+                <span class="dv-meta">No permissions available.</span>
+              } @else {
+                <div class="dv-well ag-perms__box">
+                  @for (perm of permissions(); track perm.id) {
+                    <label class="ag-check" [for]="'perm-' + perm.id">
+                      <input
+                        class="dv-checkbox"
+                        type="checkbox"
+                        [id]="'perm-' + perm.id"
+                        [checked]="formPermissions.includes(perm.id)"
+                        (change)="togglePermission(perm.id, $event)"
+                      />
+                      <span>{{ perm.name }}</span>
+                    </label>
+                  }
+                </div>
+              }
+            </div>
+
+            <div class="ag-form__actions">
               <button
-                class="btn btn-primary"
+                type="button"
+                class="dv-btn dv-btn--primary dv-btn--md"
                 (click)="save()"
                 [disabled]="saving() || !formName.trim()"
               >
                 @if (saving()) {
-                  <span class="spinner-border spinner-border-sm me-1"></span>
+                  <span class="dv-spinner"></span>
                 }
-                {{ editing() ? 'Save Changes' : 'Create Group' }}
+                {{ editing() ? 'Save changes' : 'Create group' }}
               </button>
-              <button class="btn btn-outline-secondary" (click)="cancelForm()">Cancel</button>
+              <button type="button" class="dv-btn dv-btn--ghost dv-btn--md" (click)="cancelForm()">
+                Cancel
+              </button>
             </div>
           </div>
-        </div>
-      }
+        }
 
-      <!-- Groups Table -->
-      <div class="card">
-        <div class="card-header">
-          <h5 class="mb-0">Groups</h5>
-        </div>
-        <div class="card-body p-0">
-          @if (loading()) {
-            <div class="text-center py-5">
-              <div class="spinner-border text-primary"></div>
-              <p class="mt-2 text-muted">Loading groups…</p>
-            </div>
-          } @else if (groups().length === 0) {
-            <div class="text-center py-5 text-muted">
-              <i class="bi bi-collection fs-1 d-block mb-2"></i>
-              No groups defined yet.
-            </div>
-          } @else {
-            <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                  <tr>
-                    <th>Name</th>
-                    <th>Permissions</th>
-                    <th class="text-end">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (group of groups(); track group.id) {
-                    <tr>
-                      <td><strong>{{ group.name }}</strong></td>
-                      <td>
-                        @if (group.permissions.length === 0) {
-                          <span class="text-muted small">None</span>
-                        } @else {
-                          <span class="badge bg-info text-dark me-1">
-                            {{ group.permissions.length }} permission{{ group.permissions.length !== 1 ? 's' : '' }}
-                          </span>
-                        }
-                      </td>
-                      <td class="text-end">
-                        <button
-                          class="btn btn-sm btn-outline-primary me-1"
-                          (click)="startEdit(group)"
-                        >
-                          <i class="bi bi-pencil"></i>
-                        </button>
-                        <button
-                          class="btn btn-sm btn-outline-danger"
-                          (click)="deleteGroup(group)"
-                        >
-                          <i class="bi bi-trash"></i>
-                        </button>
-                      </td>
-                    </tr>
+        <!-- Groups -->
+        @if (loading()) {
+          <div class="dv-empty"><span class="dv-spinner"></span> Loading groups…</div>
+        } @else if (groups().length === 0) {
+          <div class="dv-empty">No groups defined yet.</div>
+        } @else {
+          <div class="ag-list">
+            @for (group of groups(); track group.id) {
+              <div class="dv-card dv-card--r10 ag-row">
+                <span class="ag-row__name">{{ group.name }}</span>
+                <span class="dv-chip dv-chip--well dv-push">
+                  @if (group.permissions.length === 0) {
+                    no permissions
+                  } @else {
+                    {{ group.permissions.length }} permission{{
+                      group.permissions.length !== 1 ? 's' : ''
+                    }}
                   }
-                </tbody>
-              </table>
-            </div>
-          }
-        </div>
+                </span>
+                <span class="ag-actions">
+                  <button type="button" class="ag-action" (click)="startEdit(group)">edit</button>
+                  <button
+                    type="button"
+                    class="ag-action ag-action--danger"
+                    (click)="deleteGroup(group)"
+                  >
+                    del
+                  </button>
+                </span>
+              </div>
+            }
+          </div>
+        }
       </div>
     </div>
   `,

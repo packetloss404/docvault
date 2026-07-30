@@ -1,0 +1,91 @@
+// OCR review queue: one-off geometry only. Colours come from tokens.
+
+.pagehead {
+  margin: 18px 0 18px;
+  gap: 14px;
+}
+
+.load-label {
+  margin-top: 10px;
+}
+
+.filters {
+  margin-bottom: 14px;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.form-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  align-self: end;
+  padding-bottom: 8px;
+
+  .dv-field__label {
+    margin-bottom: 0;
+  }
+}
+
+// The shared bulk bar is designed for the full-bleed documents table; inside a
+// measured screen it needs no side gutters.
+.bulkbar {
+  margin: 0 0 14px;
+}
+
+.list {
+  margin-bottom: 4px;
+}
+
+.is-reviewed {
+  background: var(--ok-dim);
+}
+
+.doc-link {
+  font: 400 12px "JetBrains Mono", ui-monospace, monospace;
+  color: var(--accent-text);
+}
+
+.row-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.conf {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &__pct {
+    font: 500 11px "JetBrains Mono", ui-monospace, monospace;
+  }
+}
+
+.correction {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.row-action {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: 600 12px "Space Grotesk", system-ui, sans-serif;
+  color: var(--accent-text);
+
+  &:hover {
+    color: var(--text);
+  }
+}

@@ -1,0 +1,30 @@
+// Layout only; every colour comes from a token via the Console primitives.
+.fb-screen {
+  display: grid;
+  place-items: center;
+}
+
+.fb-card {
+  max-width: 420px;
+  text-align: center;
+}
+
+.fb-code {
+  font: 500 44px "JetBrains Mono", ui-monospace, monospace;
+  color: var(--danger);
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+
+.fb-prose {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.fb-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}

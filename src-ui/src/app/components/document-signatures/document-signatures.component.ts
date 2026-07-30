@@ -7,77 +7,88 @@ import { Signature } from '../../models/security.model';
   selector: 'app-document-signatures',
   standalone: true,
   imports: [CommonModule],
+  styleUrl: './document-signatures.component.scss',
   template: `
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h6 class="mb-0"><i class="bi bi-pen me-1"></i> Signatures</h6>
-        <div>
-          <button class="btn btn-sm btn-outline-primary me-1" (click)="signDocument()" [disabled]="signing()">
+    <div class="dv-card dv-card--r10">
+      <div class="dv-card__head">
+        <span class="dv-card__title">Signatures</span>
+        <div class="ds-actions dv-push">
+          <button
+            type="button"
+            class="dv-btn dv-btn--accent dv-btn--sm"
+            (click)="signDocument()"
+            [disabled]="signing()"
+          >
             @if (signing()) {
-              <span class="spinner-border spinner-border-sm me-1"></span>
+              <span class="dv-spinner"></span>
             }
             Sign
           </button>
-          <button class="btn btn-sm btn-outline-success" (click)="verifyAll()" [disabled]="verifying()">
+          <button
+            type="button"
+            class="dv-btn dv-btn--ghost dv-btn--sm"
+            (click)="verifyAll()"
+            [disabled]="verifying()"
+          >
             @if (verifying()) {
-              <span class="spinner-border spinner-border-sm me-1"></span>
+              <span class="dv-spinner"></span>
             }
-            Verify All
+            Verify all
           </button>
         </div>
       </div>
-      <div class="card-body">
+
+      <div class="ds-body">
         @if (errorMessage()) {
-          <div class="alert alert-danger alert-dismissible py-2">
-            {{ errorMessage() }}
-            <button type="button" class="btn-close btn-close-sm" (click)="errorMessage.set('')"></button>
+          <div class="dv-banner dv-banner--error" role="alert">
+            <span>{{ errorMessage() }}</span>
+            <button
+              type="button"
+              class="dv-banner__close"
+              aria-label="Dismiss"
+              (click)="errorMessage.set('')"
+            >
+              ✕
+            </button>
           </div>
         }
 
         @if (successMessage()) {
-          <div class="alert alert-success alert-dismissible py-2">
-            {{ successMessage() }}
-            <button type="button" class="btn-close btn-close-sm" (click)="successMessage.set('')"></button>
+          <div class="dv-banner dv-banner--ok" role="status">
+            <span>{{ successMessage() }}</span>
+            <button
+              type="button"
+              class="dv-banner__close"
+              aria-label="Dismiss"
+              (click)="successMessage.set('')"
+            >
+              ✕
+            </button>
           </div>
         }
 
         @if (loading()) {
-          <div class="text-center py-3">
-            <div class="spinner-border spinner-border-sm"></div>
-          </div>
+          <div class="dv-empty"><span class="dv-spinner"></span></div>
         } @else if (signatures().length === 0) {
-          <p class="text-muted mb-0 small">No signatures on this document.</p>
+          <div class="dv-meta">No signatures on this document.</div>
         } @else {
-          <div class="list-group list-group-flush">
+          <div class="ds-list">
             @for (sig of signatures(); track sig.id) {
-              <div class="list-group-item px-0">
-                <div class="d-flex justify-content-between align-items-start">
-                  <div>
-                    <strong>{{ sig.signer_username }}</strong>
-                    <br />
-                    <small class="text-muted">
-                      Key: {{ sig.key_id }} &middot; {{ sig.algorithm }}
-                    </small>
-                    <br />
-                    <small class="text-muted">
-                      Signed: {{ formatDate(sig.created_at) }}
-                    </small>
-                  </div>
-                  <div>
-                    @if (sig.verified) {
-                      <span class="badge bg-success">
-                        <i class="bi bi-check-circle me-1"></i> Verified
-                      </span>
-                    } @else {
-                      <span class="badge bg-warning text-dark">
-                        <i class="bi bi-question-circle me-1"></i> Unverified
-                      </span>
-                    }
-                  </div>
+              <div class="ds-sig">
+                <div class="ds-sig__main">
+                  <div class="ds-sig__who">{{ sig.signer_username }}</div>
+                  <div class="dv-meta">{{ sig.key_id }} · {{ sig.algorithm }}</div>
+                  <div class="dv-meta">signed {{ formatDate(sig.created_at) }}</div>
+                  @if (sig.verified_at) {
+                    <div class="dv-meta dv-ok">verified {{ formatDate(sig.verified_at) }}</div>
+                  }
                 </div>
-                @if (sig.verified_at) {
-                  <small class="text-success">Verified at: {{ formatDate(sig.verified_at) }}</small>
-                }
+                <span
+                  class="dv-chip dv-chip--upper"
+                  [class.dv-chip--ok]="sig.verified"
+                  [class.dv-chip--warn]="!sig.verified"
+                  >{{ sig.verified ? 'verified' : 'unverified' }}</span
+                >
               </div>
             }
           </div>

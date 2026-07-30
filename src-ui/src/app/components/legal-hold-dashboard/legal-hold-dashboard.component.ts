@@ -4,216 +4,182 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { LegalHoldService } from '../../services/legal-hold.service';
 import { LegalHold } from '../../models/legal-hold.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-legal-hold-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, SubnavComponent],
+  styleUrl: './legal-hold-dashboard.component.scss',
   template: `
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h3 class="mb-0">Legal Holds</h3>
-      <button class="btn btn-primary" (click)="showCreateForm = true">
-        <i class="bi bi-plus-lg me-1"></i>New Hold
-      </button>
-    </div>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner dv-inner--wide">
+        <dv-subnav />
 
-    <!-- Stats -->
-    <div class="row mb-4">
-      <div class="col-md-3">
-        <div class="card text-center">
-          <div class="card-body">
-            <h5 class="card-title text-danger">{{ activeCount() }}</h5>
-            <p class="card-text text-muted small mb-0">Active Holds</p>
+        <!-- Stats -->
+        <div class="lh-stats">
+          <div class="dv-stat dv-stat--sm">
+            <div class="dv-stat__label">active holds</div>
+            <div class="dv-stat__row">
+              <span class="dv-stat__value dv-danger">{{ activeCount() }}</span>
+            </div>
+          </div>
+          <div class="dv-stat dv-stat--sm">
+            <div class="dv-stat__label">documents held</div>
+            <div class="dv-stat__row">
+              <span class="dv-stat__value">{{ totalDocumentsHeld() }}</span>
+            </div>
+          </div>
+          <div class="dv-stat dv-stat--sm">
+            <div class="dv-stat__label">draft holds</div>
+            <div class="dv-stat__row">
+              <span class="dv-stat__value dv-muted">{{ draftCount() }}</span>
+            </div>
+          </div>
+          <div class="dv-stat dv-stat--sm">
+            <div class="dv-stat__label">released</div>
+            <div class="dv-stat__row">
+              <span class="dv-stat__value dv-ok">{{ releasedCount() }}</span>
+            </div>
           </div>
         </div>
-      </div>
-      <div class="col-md-3">
-        <div class="card text-center">
-          <div class="card-body">
-            <h5 class="card-title text-primary">{{ totalDocumentsHeld() }}</h5>
-            <p class="card-text text-muted small mb-0">Documents Held</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="card text-center">
-          <div class="card-body">
-            <h5 class="card-title text-secondary">{{ draftCount() }}</h5>
-            <p class="card-text text-muted small mb-0">Draft Holds</p>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="card text-center">
-          <div class="card-body">
-            <h5 class="card-title text-success">{{ releasedCount() }}</h5>
-            <p class="card-text text-muted small mb-0">Released</p>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Filters -->
-    <div class="row mb-3">
-      <div class="col-auto">
-        <select
-          class="form-select form-select-sm"
-          [ngModel]="statusFilter()"
-          (ngModelChange)="onStatusFilterChange($event)"
-        >
-          <option value="">All Statuses</option>
-          <option value="draft">Draft</option>
-          <option value="active">Active</option>
-          <option value="released">Released</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Create Form Modal -->
-    @if (showCreateForm) {
-      <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <span>Create Legal Hold</span>
-          <button class="btn-close" (click)="showCreateForm = false"></button>
+        <div class="dv-section lh-section">
+          <span class="dv-eyebrow">legal holds</span>
+          <select
+            class="dv-select lh-filter dv-push"
+            aria-label="Filter by status"
+            [ngModel]="statusFilter()"
+            (ngModelChange)="onStatusFilterChange($event)"
+          >
+            <option value="">all statuses</option>
+            <option value="draft">draft</option>
+            <option value="active">active</option>
+            <option value="released">released</option>
+          </select>
+          <button
+            type="button"
+            class="dv-btn dv-btn--accent dv-btn--md"
+            (click)="showCreateForm = true"
+          >
+            + New hold
+          </button>
         </div>
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Name</label>
-              <input
-                type="text"
-                class="form-control"
-                [(ngModel)]="newHold.name"
-                placeholder="Hold name"
-              />
+
+        <!-- Create form -->
+        @if (showCreateForm) {
+          <div class="dv-card dv-card--pad lh-form">
+            <div class="dv-card__title lh-form__title">Create legal hold</div>
+
+            <div class="lh-grid">
+              <label class="lh-field">
+                <span class="dv-field__label">name</span>
+                <input
+                  type="text"
+                  class="dv-input dv-input--r7"
+                  placeholder="Hold name"
+                  [(ngModel)]="newHold.name"
+                />
+              </label>
+              <label class="lh-field">
+                <span class="dv-field__label">matter number</span>
+                <input
+                  type="text"
+                  class="dv-input dv-input--r7 dv-mono"
+                  placeholder="CASE-2024-001"
+                  [(ngModel)]="newHold.matter_number"
+                />
+              </label>
+              <label class="lh-field lh-field--full">
+                <span class="dv-field__label">description</span>
+                <textarea
+                  class="dv-input dv-input--r7"
+                  rows="3"
+                  placeholder="Description of the legal hold…"
+                  [(ngModel)]="newHold.description"
+                ></textarea>
+              </label>
             </div>
-            <div class="col-md-6">
-              <label class="form-label">Matter Number</label>
-              <input
-                type="text"
-                class="form-control"
-                [(ngModel)]="newHold.matter_number"
-                placeholder="e.g., CASE-2024-001"
-              />
-            </div>
-            <div class="col-12">
-              <label class="form-label">Description</label>
-              <textarea
-                class="form-control"
-                rows="3"
-                [(ngModel)]="newHold.description"
-                placeholder="Description of the legal hold..."
-              ></textarea>
-            </div>
-            <div class="col-12">
-              <button class="btn btn-primary me-2" (click)="createHold()">
-                Create Hold
+
+            <div class="lh-form__actions">
+              <button type="button" class="dv-btn dv-btn--primary dv-btn--md" (click)="createHold()">
+                Create hold
               </button>
               <button
-                class="btn btn-secondary"
+                type="button"
+                class="dv-btn dv-btn--ghost dv-btn--md"
                 (click)="showCreateForm = false"
               >
                 Cancel
               </button>
             </div>
           </div>
-        </div>
-      </div>
-    }
+        }
 
-    @if (loading()) {
-      <div class="d-flex justify-content-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    } @else if (filteredHolds().length === 0) {
-      <div class="text-center text-muted py-5">
-        <i class="bi bi-shield-lock fs-1"></i>
-        <p class="mt-2">No legal holds found.</p>
-      </div>
-    } @else {
-      <div class="table-responsive">
-        <table class="table table-hover align-middle">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Matter Number</th>
-              <th>Status</th>
-              <th>Documents</th>
-              <th>Custodians</th>
-              <th>Created</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+        @if (loading()) {
+          <div class="dv-empty"><span class="dv-spinner"></span> Loading…</div>
+        } @else if (filteredHolds().length === 0) {
+          <div class="dv-empty">No legal holds found.</div>
+        } @else {
+          <div class="lh-list">
             @for (hold of filteredHolds(); track hold.id) {
-              <tr>
-                <td>
-                  <a
-                    [routerLink]="['/legal-holds', hold.id]"
-                    class="text-decoration-none fw-semibold"
-                  >
-                    {{ hold.name }}
-                  </a>
-                </td>
-                <td>
-                  <code>{{ hold.matter_number }}</code>
-                </td>
-                <td>
-                  <span
-                    class="badge"
-                    [ngClass]="getStatusBadgeClass(hold.status)"
-                  >
+              <div class="dv-card dv-card--r10 lh-card">
+                <div class="lh-card__head">
+                  <a class="lh-card__name dv-clip" [routerLink]="['/legal-holds', hold.id]">{{
+                    hold.name
+                  }}</a>
+                  <span class="dv-chip dv-chip--upper" [ngClass]="getStatusBadgeClass(hold.status)">
                     {{ formatStatus(hold.status) }}
                   </span>
-                </td>
-                <td>
-                  <span class="badge bg-light text-dark">
-                    {{ hold.document_count }}
-                  </span>
-                </td>
-                <td>
-                  <span class="badge bg-light text-dark">
-                    {{ hold.custodian_count }}
-                  </span>
-                </td>
-                <td>{{ formatDate(hold.created_at) }}</td>
-                <td>
-                  <div class="btn-group btn-group-sm">
-                    <a
-                      class="btn btn-outline-secondary"
-                      [routerLink]="['/legal-holds', hold.id]"
-                      title="View Details"
-                    >
-                      <i class="bi bi-eye"></i>
-                    </a>
-                    @if (hold.status === 'draft') {
-                      <button
-                        class="btn btn-outline-danger"
-                        title="Activate"
-                        (click)="activateHold(hold)"
-                      >
-                        <i class="bi bi-play-fill"></i>
-                      </button>
-                    }
-                    @if (hold.status === 'active') {
-                      <button
-                        class="btn btn-outline-success"
-                        title="Release"
-                        (click)="releaseHold(hold)"
-                      >
-                        <i class="bi bi-unlock"></i>
-                      </button>
-                    }
+                  <span class="dv-chip dv-chip--well">{{ hold.matter_number }}</span>
+                  <span class="dv-meta dv-push">{{ sinceLabel(hold) }}</span>
+                </div>
+
+                <div class="lh-card__stats">
+                  <span>{{ hold.document_count }} docs preserved</span>
+                  <span>custodians: {{ hold.custodian_count }}</span>
+                  <span>{{ hold.criteria_count }} criteria</span>
+                </div>
+
+                @if (hold.description) {
+                  <div class="lh-card__note">{{ hold.description }}</div>
+                }
+                @if (hold.status === 'active') {
+                  <div class="lh-card__note dv-muted">
+                    mutations blocked with HTTP 409 while active
                   </div>
-                </td>
-              </tr>
+                }
+                @if (hold.status === 'released' && hold.release_reason) {
+                  <div class="lh-card__note dv-muted">released: {{ hold.release_reason }}</div>
+                }
+
+                <div class="lh-card__foot">
+                  <a class="dv-rowaction dv-rowaction--accent" [routerLink]="['/legal-holds', hold.id]">details →</a>
+                  @if (hold.status === 'draft') {
+                    <button
+                      type="button"
+                      class="dv-btn dv-btn--danger dv-btn--sm dv-push"
+                      (click)="activateHold(hold)"
+                    >
+                      Activate
+                    </button>
+                  }
+                  @if (hold.status === 'active') {
+                    <button
+                      type="button"
+                      class="dv-btn dv-btn--ghost dv-btn--sm dv-push"
+                      (click)="releaseHold(hold)"
+                    >
+                      Release
+                    </button>
+                  }
+                </div>
+              </div>
             }
-          </tbody>
-        </table>
+          </div>
+        }
       </div>
-    }
+    </div>
   `,
 })
 export class LegalHoldDashboardComponent implements OnInit {
@@ -279,14 +245,23 @@ export class LegalHoldDashboardComponent implements OnInit {
     this.loadHolds();
   }
 
-  getStatusBadgeClass(
-    status: LegalHold['status'],
-  ): Record<string, boolean> {
-    return {
-      'bg-secondary': status === 'draft',
-      'bg-danger': status === 'active',
-      'bg-success': status === 'released',
-    };
+  /** Console status chip modifier: an active hold is the dangerous state. */
+  getStatusBadgeClass(status: LegalHold['status']): string {
+    switch (status) {
+      case 'active':
+        return 'dv-chip--danger';
+      case 'draft':
+        return 'dv-chip--accent';
+      default:
+        return '';
+    }
+  }
+
+  /** Mono clock readout: the date that defines the hold's current state. */
+  sinceLabel(hold: LegalHold): string {
+    if (hold.released_at) return `released ${this.formatDate(hold.released_at)}`;
+    if (hold.activated_at) return `since ${this.formatDate(hold.activated_at)}`;
+    return `created ${this.formatDate(hold.created_at)}`;
   }
 
   formatStatus(status: string): string {

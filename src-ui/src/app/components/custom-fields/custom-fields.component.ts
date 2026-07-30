@@ -1,14 +1,15 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { OrganizationService } from '../../services/organization.service';
 import { CustomField, CustomFieldDataType } from '../../models/organization.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-custom-fields',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule, SubnavComponent],
   templateUrl: './custom-fields.component.html',
+  styleUrl: './custom-fields.component.scss',
 })
 export class CustomFieldsComponent implements OnInit {
   fields = signal<CustomField[]>([]);

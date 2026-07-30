@@ -11,153 +11,150 @@ import {
   selector: 'app-signature-request-detail',
   standalone: true,
   imports: [CommonModule, RouterModule],
+  styleUrl: './signature-request-detail.component.scss',
   template: `
-    @if (loading()) {
-      <div class="d-flex justify-content-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    } @else if (errorMsg()) {
-      <div class="alert alert-danger">{{ errorMsg() }}</div>
-    } @else if (request()) {
-      <!-- Header -->
-      <div class="d-flex justify-content-between align-items-start mb-4">
-        <div>
-          <a routerLink="/signature-requests" class="text-decoration-none small">
-            <i class="bi bi-arrow-left me-1"></i>Back to Requests
-          </a>
-          <h3 class="mt-1 mb-0">{{ request()!.title }}</h3>
-        </div>
-        <div class="btn-group">
-          @if (request()!.status === 'draft') {
-            <button class="btn btn-primary" (click)="send()">
-              <i class="bi bi-send me-1"></i>Send
-            </button>
-          }
-          @if (request()!.status === 'sent' || request()!.status === 'in_progress') {
-            <button class="btn btn-outline-warning" (click)="remind()">
-              <i class="bi bi-bell me-1"></i>Remind
-            </button>
-            <button class="btn btn-outline-danger" (click)="cancel()">
-              <i class="bi bi-x-circle me-1"></i>Cancel
-            </button>
-          }
-          @if (request()!.status === 'completed') {
-            <button class="btn btn-outline-success" (click)="downloadCertificate()">
-              <i class="bi bi-download me-1"></i>Download Certificate
-            </button>
-          }
-        </div>
-      </div>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner dv-inner--wide">
+        @if (loading()) {
+          <div class="dv-empty"><span class="dv-spinner"></span> Loading…</div>
+        } @else if (errorMsg()) {
+          <div class="dv-banner dv-banner--error srd-banner" role="alert">{{ errorMsg() }}</div>
+        } @else if (request()) {
+          <a class="dv-meta srd-back" routerLink="/signature-requests">← signature requests</a>
 
-      <!-- Details Card -->
-      <div class="card mb-4">
-        <div class="card-header">Request Details</div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-6">
-              <dl>
-                <dt>Status</dt>
-                <dd>
-                  <span class="badge" [ngClass]="getStatusBadgeClass(request()!.status)">
-                    {{ formatStatus(request()!.status) }}
-                  </span>
-                </dd>
-                <dt>Signing Order</dt>
-                <dd>{{ request()!.signing_order === 'sequential' ? 'Sequential' : 'Parallel' }}</dd>
-              </dl>
-            </div>
-            <div class="col-md-6">
-              <dl>
-                <dt>Expiration</dt>
-                <dd>{{ request()!.expiration ? formatDate(request()!.expiration!) : 'None' }}</dd>
-                <dt>Completed At</dt>
-                <dd>{{ request()!.completed_at ? formatDate(request()!.completed_at!) : '--' }}</dd>
-              </dl>
-            </div>
-          </div>
-          @if (request()!.message) {
-            <div>
-              <dt>Message</dt>
-              <dd class="text-muted" style="white-space: pre-wrap;">{{ request()!.message }}</dd>
-            </div>
-          }
-        </div>
-      </div>
+          <div class="dv-pagehead srd-head">
+            <h1 class="dv-h1 dv-h1--sm dv-clip">{{ request()!.title }}</h1>
+            <span
+              class="dv-chip dv-chip--upper"
+              [ngClass]="getStatusBadgeClass(request()!.status)"
+              >{{ formatStatus(request()!.status) }}</span
+            >
 
-      <!-- Signers Table -->
-      <div class="card mb-4">
-        <div class="card-header">Signers</div>
-        <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table table-hover mb-0">
-              <thead>
-                <tr>
-                  <th>Order</th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                  <th>Signed At</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (signer of request()!.signers; track signer.id) {
-                  <tr>
-                    <td>{{ signer.order }}</td>
-                    <td>{{ signer.name }}</td>
-                    <td>{{ signer.email }}</td>
-                    <td>{{ signer.role }}</td>
-                    <td>
-                      <span class="badge" [ngClass]="getSignerStatusClass(signer.status)">
-                        {{ formatStatus(signer.status) }}
-                      </span>
-                    </td>
-                    <td>{{ signer.signed_at ? formatDate(signer.signed_at) : '--' }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Audit Trail -->
-      <div class="card">
-        <div class="card-header">
-          <i class="bi bi-clock-history me-1"></i>Audit Trail
-        </div>
-        <div class="card-body">
-          @if (auditEvents().length === 0) {
-            <p class="text-muted mb-0">No audit events yet.</p>
-          } @else {
-            <ul class="list-unstyled mb-0">
-              @for (event of auditEvents(); track event.id) {
-                <li class="d-flex mb-3">
-                  <div class="me-3 text-muted" style="min-width: 140px; font-size: 0.85em;">
-                    {{ formatDateTime(event.timestamp) }}
-                  </div>
-                  <div>
-                    <strong>{{ formatEventType(event.event_type) }}</strong>
-                    @if (event.ip_address) {
-                      <span class="text-muted small ms-2">({{ event.ip_address }})</span>
-                    }
-                    @if (event.detail && objectKeys(event.detail).length > 0) {
-                      <div class="text-muted small">
-                        @for (key of objectKeys(event.detail); track key) {
-                          <span class="me-2">{{ key }}: {{ event.detail[key] }}</span>
-                        }
-                      </div>
-                    }
-                  </div>
-                </li>
+            <div class="srd-actions dv-push">
+              @if (request()!.status === 'draft') {
+                <button type="button" class="dv-btn dv-btn--primary dv-btn--md" (click)="send()">
+                  Send →
+                </button>
               }
-            </ul>
+              @if (request()!.status === 'sent' || request()!.status === 'in_progress') {
+                <button type="button" class="dv-btn dv-btn--warn dv-btn--md" (click)="remind()">
+                  Remind
+                </button>
+                <button type="button" class="dv-btn dv-btn--danger dv-btn--md" (click)="cancel()">
+                  Cancel
+                </button>
+              }
+              @if (request()!.status === 'completed') {
+                <button
+                  type="button"
+                  class="dv-btn dv-btn--accent dv-btn--md"
+                  (click)="downloadCertificate()"
+                >
+                  Download certificate
+                </button>
+              }
+            </div>
+          </div>
+
+          <!-- Request details -->
+          <div class="dv-card dv-card--pad srd-card">
+            <div class="dv-kv">
+              <span class="dv-kv__k">document</span>
+              <span
+                ><a class="dv-link dv-mono" [routerLink]="['/documents', request()!.document]"
+                  >#{{ request()!.document }}</a
+                ></span
+              >
+
+              <span class="dv-kv__k">signing order</span>
+              <span class="dv-mono">{{ request()!.signing_order }}</span>
+
+              <span class="dv-kv__k">expiration</span>
+              <span class="dv-mono">{{
+                request()!.expiration ? formatDate(request()!.expiration!) : 'none'
+              }}</span>
+
+              <span class="dv-kv__k">completed at</span>
+              <span class="dv-mono">{{
+                request()!.completed_at ? formatDate(request()!.completed_at!) : '—'
+              }}</span>
+
+              <span class="dv-kv__k">created</span>
+              <span class="dv-mono">{{ formatDate(request()!.created_at) }}</span>
+
+              @if (request()!.message) {
+                <span class="dv-kv__k">message</span>
+                <span class="srd-message">{{ request()!.message }}</span>
+              }
+            </div>
+          </div>
+
+          <!-- Signers -->
+          <div class="dv-section srd-section">
+            <span class="dv-eyebrow">signers</span>
+            <span class="dv-meta dv-push">{{ request()!.signers.length }}</span>
+          </div>
+
+          <div class="dv-thead dv-grid" style="--dv-cols: 34px 1fr 1.2fr 90px 96px 120px">
+            <span>#</span><span>name</span><span>email</span><span>role</span><span>status</span
+            ><span>signed</span>
+          </div>
+          @for (signer of request()!.signers; track signer.id) {
+            <div
+              class="dv-row dv-grid dv-row--static dv-row--tight"
+              style="--dv-cols: 34px 1fr 1.2fr 90px 96px 120px"
+            >
+              <span class="dv-mono dv-faint">{{ signer.order }}</span>
+              <span class="dv-clip srd-name">{{ signer.name }}</span>
+              <span class="dv-mono dv-muted dv-clip srd-email">{{ signer.email }}</span>
+              <span class="dv-mono dv-muted dv-clip">{{ signer.role }}</span>
+              <span
+                ><span class="dv-chip dv-chip--upper" [ngClass]="getSignerStatusClass(signer.status)"
+                  >{{ formatStatus(signer.status) }}</span
+                ></span
+              >
+              <span class="dv-ts">{{ signer.signed_at ? formatDate(signer.signed_at) : '—' }}</span>
+            </div>
           }
-        </div>
+          @if (request()!.signers.length === 0) {
+            <div class="dv-empty">No signers on this request.</div>
+          }
+
+          <!-- Audit trail -->
+          <div class="dv-section srd-section">
+            <span class="dv-eyebrow">audit trail</span>
+          </div>
+
+          <div class="dv-card dv-card--pad">
+            @if (auditEvents().length === 0) {
+              <div class="dv-meta">No audit events yet.</div>
+            } @else {
+              <div class="dv-timeline">
+                @for (event of auditEvents(); track event.id) {
+                  <div class="dv-timeline__item">
+                    <span class="dv-dot dv-timeline__dot" [ngClass]="eventDotClass(event.event_type)"></span>
+                    <div class="dv-timeline__body">
+                      <span class="srd-event">{{ formatEventType(event.event_type) }}</span>
+                      @if (event.ip_address) {
+                        <span class="dv-meta srd-ip">{{ event.ip_address }}</span>
+                      }
+                      @if (event.detail && objectKeys(event.detail).length > 0) {
+                        <div class="dv-meta srd-detail">
+                          @for (key of objectKeys(event.detail); track key) {
+                            <span>{{ key }}: {{ event.detail[key] }}</span>
+                          }
+                        </div>
+                      }
+                      <div class="dv-timeline__when">{{ formatDateTime(event.timestamp) }}</div>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
       </div>
-    }
+    </div>
   `,
 })
 export class SignatureRequestDetailComponent implements OnInit {
@@ -244,24 +241,45 @@ export class SignatureRequestDetailComponent implements OnInit {
     });
   }
 
-  getStatusBadgeClass(status: string): Record<string, boolean> {
-    return {
-      'bg-secondary': status === 'draft',
-      'bg-primary': status === 'sent',
-      'bg-warning text-dark': status === 'in_progress',
-      'bg-success': status === 'completed',
-      'bg-danger': status === 'cancelled',
-      'bg-dark': status === 'expired',
-    };
+  /** Console status chip modifier for a request status. */
+  getStatusBadgeClass(status: string): string {
+    switch (status) {
+      case 'sent':
+        return 'dv-chip--accent';
+      case 'in_progress':
+        return 'dv-chip--warn';
+      case 'completed':
+        return 'dv-chip--ok';
+      case 'cancelled':
+      case 'expired':
+        return 'dv-chip--danger';
+      default:
+        return '';
+    }
   }
 
-  getSignerStatusClass(status: string): Record<string, boolean> {
-    return {
-      'bg-secondary': status === 'pending',
-      'bg-info text-dark': status === 'viewed',
-      'bg-success': status === 'signed',
-      'bg-danger': status === 'declined',
-    };
+  getSignerStatusClass(status: string): string {
+    switch (status) {
+      case 'viewed':
+        return 'dv-chip--accent';
+      case 'signed':
+        return 'dv-chip--ok';
+      case 'declined':
+        return 'dv-chip--danger';
+      default:
+        return '';
+    }
+  }
+
+  /** Timeline dot colour by audit event class. */
+  eventDotClass(eventType: string): string {
+    const type = eventType.toLowerCase();
+    if (type.includes('signed') || type.includes('completed')) return 'dv-dot--ok';
+    if (type.includes('declined') || type.includes('cancel') || type.includes('expire'))
+      return 'dv-dot--danger';
+    if (type.includes('remind') || type.includes('sent')) return 'dv-dot--warn';
+    if (type.includes('viewed') || type.includes('created')) return 'dv-dot--accent';
+    return '';
   }
 
   formatStatus(status: string): string {

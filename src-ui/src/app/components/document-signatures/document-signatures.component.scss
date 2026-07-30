@@ -1,0 +1,44 @@
+// Panel-local geometry for the document signature list.
+
+.ds-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.ds-body {
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ds-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ds-sig {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &__main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__who {
+    font-size: 13px;
+    font-weight: 600;
+  }
+}

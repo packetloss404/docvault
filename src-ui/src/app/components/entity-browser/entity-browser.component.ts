@@ -4,237 +4,255 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { EntityService } from '../../services/entity.service';
 import { EntityAggregate, EntityCooccurrence, EntityType } from '../../models/entity.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-entity-browser',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, SubnavComponent],
   template: `
-    <h2 class="mb-4">Entity Browser</h2>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner dv-inner--wide">
+        <dv-subnav />
 
-    <div class="row">
-      <!-- Left Sidebar: Entity Type Filters -->
-      <div class="col-md-3">
-        <div class="card">
-          <div class="card-header">
-            <h6 class="mb-0">Entity Types</h6>
-          </div>
-          <div class="card-body">
-            @for (et of entityTypes(); track et.id) {
-              <div class="form-check mb-2">
-                <input
-                  class="form-check-input"
-                  type="checkbox"
-                  [id]="'et-' + et.id"
-                  [checked]="selectedTypes().has(et.name)"
-                  (change)="toggleType(et.name)"
-                />
-                <label class="form-check-label d-flex align-items-center gap-2" [for]="'et-' + et.id">
-                  <span
-                    class="badge"
-                    [style.background]="et.color"
-                    [style.color]="getContrastColor(et.color)"
-                  >
-                    <i class="bi" [ngClass]="et.icon || 'bi-tag'"></i>
-                    {{ et.label || et.name }}
-                  </span>
-                </label>
-              </div>
-            } @empty {
-              <p class="text-muted small">No entity types configured.</p>
-            }
-          </div>
+        <!-- Kind filter chips -->
+        <div class="dv-navchips eb-kinds">
+          <button
+            type="button"
+            class="dv-navchip"
+            [class.is-active]="selectedTypes().size === 0"
+            (click)="clearTypes()"
+          >
+            all
+          </button>
+          @for (et of entityTypes(); track et.id) {
+            <button
+              type="button"
+              class="dv-navchip"
+              [class.is-active]="selectedTypes().has(et.name)"
+              [attr.aria-pressed]="selectedTypes().has(et.name)"
+              (click)="toggleType(et.name)"
+            >
+              {{ et.label || et.name }}
+            </button>
+          }
         </div>
 
-        <!-- Search -->
-        <div class="card mt-3">
-          <div class="card-body">
-            <label class="form-label">Search Entities</label>
-            <div class="input-group">
-              <input
-                type="text"
-                class="form-control"
-                [(ngModel)]="searchQuery"
-                (keyup.enter)="loadEntities()"
-                placeholder="Filter by value..."
-              />
-              <button class="btn btn-outline-secondary" (click)="loadEntities()">
-                <i class="bi bi-search"></i>
-              </button>
-            </div>
-          </div>
+        <div class="eb-search">
+          <input
+            type="text"
+            class="dv-input dv-input--r7"
+            [(ngModel)]="searchQuery"
+            (keyup.enter)="loadEntities()"
+            placeholder="Filter by value…"
+            aria-label="Filter entities by value"
+          />
+          <button type="button" class="dv-btn dv-btn--ghost dv-btn--sm" (click)="loadEntities()">
+            Search
+          </button>
         </div>
-      </div>
 
-      <!-- Main Content -->
-      <div class="col-md-9">
         @if (loading()) {
-          <div class="text-center py-5">
-            <div class="spinner-border" role="status">
-              <span class="visually-hidden">Loading...</span>
-            </div>
+          <div class="dv-empty">
+            <span class="dv-spinner"></span>
+            <span class="dv-sr">Loading…</span>
           </div>
+        } @else if (!selectedEntity()) {
+          <div class="dv-section eb-section">
+            <span class="dv-eyebrow">{{ totalCount() }} entities</span>
+          </div>
+
+          <div class="dv-thead dv-grid" style="--dv-cols: 90px minmax(0,1fr) 110px 110px">
+            <span>kind</span>
+            <span>value</span>
+            <span class="dv-num">docs</span>
+            <span></span>
+          </div>
+
+          @for (entity of entities(); track entity.value + entity.entity_type) {
+            <div
+              class="dv-row dv-grid eb-row"
+              style="--dv-cols: 90px minmax(0,1fr) 110px 110px"
+              role="button"
+              tabindex="0"
+              (click)="viewEntityDocuments(entity)"
+              (keyup.enter)="viewEntityDocuments(entity)"
+            >
+              <span
+                class="dv-chip dv-chip--upper eb-kind"
+                [class.dv-chip--accent]="chipToneFor(entity.entity_type) === 'accent'"
+                [class.dv-chip--warn]="chipToneFor(entity.entity_type) === 'warn'"
+                [class.dv-chip--ok]="chipToneFor(entity.entity_type) === 'ok'"
+                >{{ getTypeLabel(entity.entity_type) }}</span
+              >
+              <span class="dv-clip eb-value">{{ entity.value }}</span>
+              <span class="dv-mono dv-num dv-muted">{{ entity.document_count }} docs</span>
+              <span class="dv-meta dv-num">documents →</span>
+            </div>
+          } @empty {
+            <div class="dv-empty">No entities found matching the current filters.</div>
+          }
+
+          @if (totalCount() > pageSize) {
+            <nav class="dv-pager" aria-label="Entity pages">
+              <span
+                [class.is-disabled]="currentPage() === 1"
+                (click)="goToPage(currentPage() - 1)"
+                >prev</span
+              >
+              @for (p of pageNumbers(); track p) {
+                <span [class.is-current]="p === currentPage()" (click)="goToPage(p)">{{ p }}</span>
+              }
+              <span
+                [class.is-disabled]="currentPage() >= totalPages()"
+                (click)="goToPage(currentPage() + 1)"
+                >next</span
+              >
+            </nav>
+          }
         } @else {
-          <!-- Entity List -->
-          @if (!selectedEntity()) {
-            <div class="card">
-              <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="mb-0">Entities ({{ totalCount() }})</h6>
-              </div>
-              <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                  <thead>
-                    <tr>
-                      <th>Value</th>
-                      <th>Type</th>
-                      <th>Documents</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (entity of entities(); track entity.value + entity.entity_type) {
-                      <tr>
-                        <td class="fw-semibold">{{ entity.value }}</td>
-                        <td>
-                          <span
-                            class="badge"
-                            [style.background]="getTypeColor(entity.entity_type)"
-                            [style.color]="getContrastColor(getTypeColor(entity.entity_type))"
-                          >
-                            {{ getTypeLabel(entity.entity_type) }}
-                          </span>
-                        </td>
-                        <td>
-                          <span class="badge bg-secondary">{{ entity.document_count }}</span>
-                        </td>
-                        <td class="text-end">
-                          <button
-                            class="btn btn-sm btn-outline-primary"
-                            (click)="viewEntityDocuments(entity)"
-                          >
-                            <i class="bi bi-eye me-1"></i>View Documents
-                          </button>
-                        </td>
-                      </tr>
-                    } @empty {
-                      <tr>
-                        <td colspan="4" class="text-center text-muted py-4">
-                          No entities found matching the current filters.
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-            </div>
+          <!-- Entity detail -->
+          <div class="dv-crumb eb-crumb">
+            <button
+              type="button"
+              class="dv-crumb__up"
+              aria-label="Back to entities"
+              (click)="clearSelection()"
+            >
+              ←
+            </button>
+            <span>documents containing</span>
+            <span
+              class="dv-chip dv-chip--upper"
+              [class.dv-chip--accent]="chipToneFor(selectedEntity()!.entity_type) === 'accent'"
+              [class.dv-chip--warn]="chipToneFor(selectedEntity()!.entity_type) === 'warn'"
+              [class.dv-chip--ok]="chipToneFor(selectedEntity()!.entity_type) === 'ok'"
+              >{{ getTypeLabel(selectedEntity()!.entity_type) }}</span
+            >
+            <span class="eb-value">{{ selectedEntity()!.value }}</span>
+          </div>
 
-            <!-- Pagination -->
-            @if (totalCount() > pageSize) {
-              <nav class="d-flex justify-content-center mt-3">
-                <ul class="pagination">
-                  <li class="page-item" [class.disabled]="currentPage() === 1">
-                    <button class="page-link" (click)="goToPage(currentPage() - 1)">&laquo;</button>
-                  </li>
-                  @for (p of pageNumbers(); track p) {
-                    <li class="page-item" [class.active]="p === currentPage()">
-                      <button class="page-link" (click)="goToPage(p)">{{ p }}</button>
-                    </li>
-                  }
-                  <li class="page-item" [class.disabled]="currentPage() >= totalPages()">
-                    <button class="page-link" (click)="goToPage(currentPage() + 1)">&raquo;</button>
-                  </li>
-                </ul>
-              </nav>
-            }
-          } @else {
-            <!-- Entity Documents View -->
-            <div class="card">
-              <div class="card-header d-flex justify-content-between align-items-center">
-                <div>
-                  <button class="btn btn-sm btn-outline-secondary me-2" (click)="clearSelection()">
-                    <i class="bi bi-arrow-left"></i>
-                  </button>
-                  Documents containing
+          <div class="dv-thead dv-grid" style="--dv-cols: 90px minmax(0,1fr) 90px">
+            <span>doc id</span>
+            <span>title</span>
+            <span class="dv-num">open</span>
+          </div>
+
+          @for (doc of entityDocuments(); track doc.document_id) {
+            <a
+              class="dv-row dv-grid"
+              style="--dv-cols: 90px minmax(0,1fr) 90px"
+              [routerLink]="['/documents', doc.document_id]"
+            >
+              <span class="dv-mono dv-faint">#{{ doc.document_id }}</span>
+              <span class="dv-clip eb-value">{{ doc.title }}</span>
+              <span class="dv-meta dv-num dv-accent">open →</span>
+            </a>
+          } @empty {
+            <div class="dv-empty">No documents found.</div>
+          }
+
+          @if (cooccurrence().length > 0) {
+            <div class="dv-section eb-section">
+              <span class="dv-card__title">Co-occurring entities</span>
+            </div>
+            <div class="eb-cooc">
+              @for (
+                item of cooccurrence();
+                track item.entity.value + item.entity.entity_type
+              ) {
+                <div class="dv-card dv-card--r9 eb-cooc__item">
                   <span
-                    class="badge ms-1"
-                    [style.background]="getTypeColor(selectedEntity()!.entity_type)"
-                    [style.color]="getContrastColor(getTypeColor(selectedEntity()!.entity_type))"
+                    class="dv-chip dv-chip--upper"
+                    [class.dv-chip--accent]="chipToneFor(item.entity.entity_type) === 'accent'"
+                    [class.dv-chip--warn]="chipToneFor(item.entity.entity_type) === 'warn'"
+                    [class.dv-chip--ok]="chipToneFor(item.entity.entity_type) === 'ok'"
+                    >{{ getTypeLabel(item.entity.entity_type) }}</span
                   >
-                    {{ selectedEntity()!.entity_type }}
-                  </span>
-                  <strong class="ms-1">{{ selectedEntity()!.value }}</strong>
+                  <span class="dv-clip eb-value">{{ item.entity.value }}</span>
+                  <span class="dv-meta dv-push">×{{ item.count }}</span>
                 </div>
-              </div>
-              <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                  <thead>
-                    <tr>
-                      <th>Document ID</th>
-                      <th>Title</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (doc of entityDocuments(); track doc.document_id) {
-                      <tr>
-                        <td>#{{ doc.document_id }}</td>
-                        <td>{{ doc.title }}</td>
-                        <td class="text-end">
-                          <a [routerLink]="['/documents', doc.document_id]" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-file-earmark-text me-1"></i>Open
-                          </a>
-                        </td>
-                      </tr>
-                    } @empty {
-                      <tr>
-                        <td colspan="3" class="text-center text-muted py-4">No documents found.</td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
+              }
             </div>
-
-            <!-- Co-occurrence Section -->
-            @if (cooccurrence().length > 0) {
-              <div class="card mt-3">
-                <div class="card-header">
-                  <h6 class="mb-0">
-                    <i class="bi bi-diagram-3 me-1"></i>Related Entities (Co-occurrence)
-                  </h6>
-                </div>
-                <div class="card-body p-2">
-                  <div class="row g-2">
-                    @for (item of cooccurrence(); track item.entity.value + item.entity.entity_type) {
-                      <div class="col-md-4">
-                        <div class="card h-100 border-secondary">
-                          <div class="card-body py-2 px-3">
-                            <div class="d-flex justify-content-between align-items-center">
-                              <div>
-                                <span
-                                  class="badge mb-1"
-                                  [style.background]="getTypeColor(item.entity.entity_type)"
-                                  [style.color]="getContrastColor(getTypeColor(item.entity.entity_type))"
-                                >
-                                  {{ getTypeLabel(item.entity.entity_type) }}
-                                </span>
-                                <div class="fw-semibold small">{{ item.entity.value }}</div>
-                              </div>
-                              <span class="badge bg-primary rounded-pill ms-2">{{ item.count }}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    }
-                  </div>
-                </div>
-              </div>
-            }
           }
         }
       </div>
     </div>
   `,
+  styles: [
+    `
+      :host {
+        display: contents;
+      }
+
+      dv-subnav {
+        display: block;
+        margin-bottom: 16px;
+      }
+
+      .eb-kinds {
+        margin-bottom: 12px;
+      }
+
+      .eb-search {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        max-width: 420px;
+        margin-bottom: 14px;
+
+        .dv-input {
+          flex: 1;
+          min-width: 0;
+        }
+      }
+
+      .eb-section {
+        align-items: center;
+      }
+
+      .eb-row {
+        cursor: pointer;
+      }
+
+      .eb-kind {
+        text-align: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .eb-value {
+        font-size: 13.5px;
+        font-weight: 500;
+        color: var(--text);
+      }
+
+      .eb-crumb {
+        padding: 0 0 12px;
+        border-bottom: none;
+        flex-wrap: wrap;
+      }
+
+      .eb-cooc {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 10px;
+
+        &__item {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          padding: 10px 13px;
+          min-width: 0;
+        }
+      }
+
+      .dv-pager .is-disabled {
+        opacity: 0.4;
+        cursor: default;
+      }
+    `,
+  ],
 })
 export class EntityBrowserComponent implements OnInit {
   entityTypes = signal<EntityType[]>([]);
@@ -312,21 +330,39 @@ export class EntityBrowserComponent implements OnInit {
     this.loadEntities();
   }
 
-  getTypeColor(typeName: string): string {
-    return this.typeMap[typeName]?.color || '#6c757d';
+  /** Clears the kind filter — the "all" chip. */
+  clearTypes(): void {
+    if (this.selectedTypes().size === 0) return;
+    this.selectedTypes.set(new Set<string>());
+    this.currentPage.set(1);
+    this.loadEntities();
   }
 
   getTypeLabel(typeName: string): string {
     return this.typeMap[typeName]?.label || typeName;
   }
 
-  getContrastColor(hexColor: string): string {
-    if (!hexColor || !hexColor.startsWith('#')) return '#ffffff';
-    const r = parseInt(hexColor.slice(1, 3), 16);
-    const g = parseInt(hexColor.slice(3, 5), 16);
-    const b = parseInt(hexColor.slice(5, 7), 16);
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.5 ? '#000000' : '#ffffff';
+  /**
+   * Console tone for an entity kind. The backend stores a free-form hex colour
+   * per entity type, but the design system only allows tokens, so kinds map onto
+   * the status/accent tones instead: orgs accent, people warn, amounts ok,
+   * everything else neutral.
+   */
+  chipToneFor(typeName: string): 'accent' | 'warn' | 'ok' | 'neutral' {
+    const name = (typeName || '').toLowerCase();
+    if (name.includes('org') || name.includes('company')) return 'accent';
+    if (name.includes('person') || name.includes('people') || name.includes('name')) {
+      return 'warn';
+    }
+    if (
+      name.includes('money') ||
+      name.includes('amount') ||
+      name.includes('currency') ||
+      name.includes('total')
+    ) {
+      return 'ok';
+    }
+    return 'neutral';
   }
 
   viewEntityDocuments(entity: EntityAggregate): void {

@@ -1,0 +1,107 @@
+// Screen-local geometry for the portal cards and the create/edit form.
+// `_console.scss` has no responsive form grid or colour-swatch input.
+
+.pa-section {
+  margin-top: 20px;
+}
+
+.pa-form {
+  margin-bottom: 16px;
+
+  &__title {
+    margin-bottom: 14px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+}
+
+.pa-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.pa-field {
+  display: block;
+  min-width: 0;
+
+  &--full {
+    grid-column: 1 / -1;
+  }
+}
+
+.pa-switches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+}
+
+// Native colour picker, restyled to sit on a panel surface.
+.pa-color {
+  width: 100%;
+  height: 36px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 3px;
+  cursor: pointer;
+}
+
+.pa-cards {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.pa-card {
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  &__name {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  &__slug {
+    display: block;
+    font-size: 11.5px;
+    color: var(--accent-text);
+    margin-top: 7px;
+  }
+
+  &__stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 12px;
+    font: 400 11px "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--faint);
+  }
+
+  &__foot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 14px;
+  }
+}
+
+.pa-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.pa-banner {
+  margin-top: 14px;
+}

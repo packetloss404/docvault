@@ -1,0 +1,80 @@
+// Public shared-document view. Uses the login screen's `.dv-auth` frame; the
+// document card is wider than the 380px credential column.
+.dv-auth .ps__col--wide {
+  width: 720px;
+}
+
+.ps__state {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.ps__card {
+  text-align: center;
+  align-items: center;
+}
+
+.ps__badge {
+  align-self: flex-start;
+}
+
+.ps__msg {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.ps__error {
+  background: var(--danger-dim);
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: var(--danger);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.ps__doc {
+  flex-direction: row;
+  gap: 22px;
+}
+
+.ps__preview {
+  flex-shrink: 0;
+}
+
+.dv-auth .ps__page {
+  width: 200px;
+  max-width: none;
+}
+
+.ps__detail {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ps__title {
+  overflow-wrap: anywhere;
+}
+
+.ps__kv {
+  grid-template-columns: 90px 1fr;
+}
+
+.ps__download {
+  align-self: flex-start;
+}
+
+@media (max-width: 720px) {
+  .ps__doc {
+    flex-direction: column;
+  }
+
+  .dv-auth .ps__page {
+    width: 100%;
+  }
+}

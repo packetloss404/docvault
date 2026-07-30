@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
 import { of } from 'rxjs';
@@ -6,34 +6,55 @@ import { vi, describe, beforeEach, it, expect } from 'vitest';
 
 import { LayoutComponent } from './layout.component';
 import { AuthService } from '../../services/auth.service';
-import { SearchService } from '../../services/search.service';
 import { NotificationService } from '../../services/notification.service';
 import { PreferencesService } from '../../services/preferences.service';
+import { ShellStatsService } from '../../services/shell-stats.service';
+import { UploadService } from '../../services/upload.service';
+import { RAIL } from '../../nav';
 
 function buildAuthService() {
   return {
-    currentUser: signal<null | { is_staff?: boolean; is_superuser?: boolean }>(null),
+    currentUser: signal<null | {
+      username?: string;
+      is_staff?: boolean;
+      is_superuser?: boolean;
+    }>(null),
     getProfile: vi.fn(() => of({})),
     logout: vi.fn(() => of(void 0)),
   };
 }
 
-function buildSearchService() {
-  return {
-    getSidebarViews: vi.fn(() => of([])),
-  };
-}
-
 function buildNotificationService() {
-  return {
-    getUnreadCount: vi.fn(() => of({ count: 0 })),
-  };
+  return { getUnreadCount: vi.fn(() => of({ count: 3 })) };
 }
 
 function buildPreferencesService() {
   return {
-    getPreferences: vi.fn(() => of({ theme: 'light' })),
+    getPreferences: vi.fn(() => of({ theme: 'dark' })),
     updatePreferences: vi.fn(() => of({})),
+  };
+}
+
+function buildStatsService() {
+  return {
+    refresh: vi.fn(),
+    ocrLabel: () => 'ocr idle',
+    ocrBusy: () => false,
+    documentsLabel: () => '12 docs',
+    storageLabel: () => null,
+  };
+}
+
+function buildUploadService() {
+  return {
+    pick: vi.fn(),
+    upload: vi.fn(),
+    setDragActive: vi.fn(),
+    clearMessage: vi.fn(),
+    uploading: () => false,
+    dragActive: () => false,
+    message: () => '',
+    error: () => false,
   };
 }
 
@@ -41,34 +62,37 @@ describe('LayoutComponent', () => {
   let fixture: ComponentFixture<LayoutComponent>;
   let component: LayoutComponent;
   let authSvc: ReturnType<typeof buildAuthService>;
-  let searchSvc: ReturnType<typeof buildSearchService>;
   let notifSvc: ReturnType<typeof buildNotificationService>;
-  let prefsSvc: ReturnType<typeof buildPreferencesService>;
+  let statsSvc: ReturnType<typeof buildStatsService>;
+  let uploadSvc: ReturnType<typeof buildUploadService>;
 
   beforeEach(async () => {
-    // Clear sidebar section state so each test starts fresh
-    localStorage.removeItem('dv_sidebar_sections');
+    localStorage.clear();
 
     authSvc = buildAuthService();
-    searchSvc = buildSearchService();
     notifSvc = buildNotificationService();
-    prefsSvc = buildPreferencesService();
+    statsSvc = buildStatsService();
+    uploadSvc = buildUploadService();
 
-    // Mock window.matchMedia which is not available in jsdom
-    vi.stubGlobal('matchMedia', vi.fn().mockReturnValue({
-      matches: false,
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-    }));
+    // jsdom has no matchMedia; ThemeService needs it at construction.
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }),
+    );
 
     await TestBed.configureTestingModule({
       imports: [LayoutComponent],
       providers: [
         provideRouter([]),
         { provide: AuthService, useValue: authSvc },
-        { provide: SearchService, useValue: searchSvc },
         { provide: NotificationService, useValue: notifSvc },
-        { provide: PreferencesService, useValue: prefsSvc },
+        { provide: PreferencesService, useValue: buildPreferencesService() },
+        { provide: ShellStatsService, useValue: statsSvc },
+        { provide: UploadService, useValue: uploadSvc },
       ],
     }).compileComponents();
 
@@ -81,147 +105,152 @@ describe('LayoutComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  // --- sidebar toggle ---
+  // --- rail ---
 
-  it('should start with sidebar expanded', () => {
-    expect(component.sidebarCollapsed).toBe(false);
-  });
-
-  it('should toggle sidebar collapsed state', () => {
-    component.toggleSidebar();
-    expect(component.sidebarCollapsed).toBe(true);
-
-    component.toggleSidebar();
-    expect(component.sidebarCollapsed).toBe(false);
-  });
-
-  // --- section collapse / expand ---
-
-  it('should report unknown sections as open by default', () => {
-    expect(component.isSectionOpen('documents')).toBe(true);
-    expect(component.isSectionOpen('tags')).toBe(true);
-  });
-
-  it('should toggle a section to closed', () => {
-    component.toggleSection('documents');
-    expect(component.isSectionOpen('documents')).toBe(false);
-  });
-
-  it('should toggle a section back to open', () => {
-    component.toggleSection('documents');
-    component.toggleSection('documents');
-    expect(component.isSectionOpen('documents')).toBe(true);
-  });
-
-  it('should persist section state to localStorage', () => {
-    component.toggleSection('tags');
-    const stored = JSON.parse(localStorage.getItem('dv_sidebar_sections')!);
-    expect(stored['tags']).toBe(false);
-  });
-
-  // --- theme switching ---
-
-  it('should default currentTheme to system', () => {
-    // theme is loaded from preferences which returns 'light'
-    expect(['system', 'light', 'dark']).toContain(component.currentTheme());
-  });
-
-  it('should update currentTheme when setTheme is called', () => {
-    component.setTheme('dark');
-    expect(component.currentTheme()).toBe('dark');
-    expect(prefsSvc.updatePreferences).toHaveBeenCalledWith({ theme: 'dark' });
-  });
-
-  it('should set theme to light and call updatePreferences', () => {
-    component.setTheme('light');
-    expect(component.currentTheme()).toBe('light');
-    expect(prefsSvc.updatePreferences).toHaveBeenCalledWith({ theme: 'light' });
-  });
-
-  it('getThemeIcon should return correct icon for light', () => {
-    component.setTheme('light');
-    expect(component.getThemeIcon()).toBe('bi-sun-fill');
-  });
-
-  it('getThemeIcon should return correct icon for dark', () => {
-    component.setTheme('dark');
-    expect(component.getThemeIcon()).toBe('bi-moon-fill');
-  });
-
-  it('getThemeIcon should return correct icon for system', () => {
-    component.setTheme('system');
-    expect(component.getThemeIcon()).toBe('bi-circle-half');
-  });
-
-  // --- isAdmin ---
-
-  it('isAdmin should return false when no user is set', () => {
-    authSvc.currentUser.set(null);
-    expect(component.isAdmin()).toBe(false);
-  });
-
-  it('isAdmin should return true for is_staff user', () => {
-    authSvc.currentUser.set({ is_staff: true });
-    expect(component.isAdmin()).toBe(true);
-  });
-
-  it('isAdmin should return true for is_superuser user', () => {
-    authSvc.currentUser.set({ is_superuser: true });
-    expect(component.isAdmin()).toBe(true);
-  });
-
-  it('isAdmin should return false for regular user', () => {
+  it('hides staff-only rail items from regular users', () => {
     authSvc.currentUser.set({ is_staff: false, is_superuser: false });
-    expect(component.isAdmin()).toBe(false);
+    const keys = component.railItems().map((item) => item.key);
+    expect(keys).not.toContain('admin');
+    expect(keys).not.toContain('comp');
   });
 
-  // --- globalSearchOpen toggle via Ctrl+K ---
+  it('shows staff-only rail items to staff', () => {
+    authSvc.currentUser.set({ is_staff: true });
+    const keys = component.railItems().map((item) => item.key);
+    expect(keys).toContain('admin');
+    expect(keys).toContain('comp');
+  });
 
-  it('should open global search overlay on Ctrl+K', () => {
-    expect(component.globalSearchOpen()).toBe(false);
-    const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true });
+  it('shows staff-only rail items to superusers', () => {
+    authSvc.currentUser.set({ is_superuser: true });
+    expect(component.railItems().map((i) => i.key)).toContain('admin');
+  });
+
+  it('exposes every non-staff rail item to anonymous state', () => {
+    const expected = RAIL.filter((item) => !item.staffOnly).length;
+    expect(component.railItems().length).toBe(expected);
+  });
+
+  it('marks the dashboard active at the root url', () => {
+    const dash = RAIL.find((item) => item.key === 'dash')!;
+    // The test router starts at '/'.
+    expect(component.isActive(dash)).toBe(true);
+  });
+
+  it('does not mark documents active at the root url', () => {
+    const docs = RAIL.find((item) => item.key === 'docs')!;
+    expect(component.isActive(docs)).toBe(false);
+  });
+
+  // --- avatar initials ---
+
+  it('falls back to a placeholder when no user is loaded', () => {
+    authSvc.currentUser.set(null);
+    expect(component.initials()).toBe('··');
+  });
+
+  it('derives two initials from a single-word username', () => {
+    authSvc.currentUser.set({ username: 'jordan' });
+    expect(component.initials()).toBe('jo');
+  });
+
+  it('derives initials across a separator', () => {
+    authSvc.currentUser.set({ username: 'jordan.reed' });
+    expect(component.initials()).toBe('jr');
+  });
+
+  // --- command palette ---
+
+  it('opens the palette on Ctrl+K', () => {
+    expect(component.paletteOpen()).toBe(false);
+    component.onGlobalKeydown(
+      new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }),
+    );
+    expect(component.paletteOpen()).toBe(true);
+  });
+
+  it('opens the palette on Cmd+K', () => {
+    component.onGlobalKeydown(
+      new KeyboardEvent('keydown', { key: 'k', metaKey: true }),
+    );
+    expect(component.paletteOpen()).toBe(true);
+  });
+
+  it('closes the palette on a second Ctrl+K', () => {
+    component.paletteOpen.set(true);
+    component.onGlobalKeydown(
+      new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }),
+    );
+    expect(component.paletteOpen()).toBe(false);
+  });
+
+  it('closes the palette on Escape', () => {
+    component.paletteOpen.set(true);
+    component.onGlobalKeydown(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(component.paletteOpen()).toBe(false);
+  });
+
+  it('ignores unrelated shortcuts', () => {
+    component.onGlobalKeydown(
+      new KeyboardEvent('keydown', { key: 'a', ctrlKey: true }),
+    );
+    expect(component.paletteOpen()).toBe(false);
+  });
+
+  // --- upload shortcut ---
+
+  it('triggers a file pick on Shift+U', () => {
+    component.onGlobalKeydown(
+      new KeyboardEvent('keydown', { key: 'U', shiftKey: true }),
+    );
+    expect(uploadSvc.pick).toHaveBeenCalled();
+  });
+
+  it('does not hijack Shift+U while typing in a field', () => {
+    const input = document.createElement('input');
+    const event = new KeyboardEvent('keydown', { key: 'U', shiftKey: true });
+    Object.defineProperty(event, 'target', { value: input });
     component.onGlobalKeydown(event);
-    expect(component.globalSearchOpen()).toBe(true);
+    expect(uploadSvc.pick).not.toHaveBeenCalled();
   });
 
-  it('should close global search overlay on second Ctrl+K', () => {
-    component.globalSearchOpen.set(true);
-    const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true });
-    component.onGlobalKeydown(event);
-    expect(component.globalSearchOpen()).toBe(false);
+  // --- drop-anywhere ingest ---
+
+  it('uploads files dropped onto the shell', () => {
+    const file = new File(['x'], 'a.pdf');
+    const event = new Event('drop') as DragEvent;
+    Object.defineProperty(event, 'dataTransfer', {
+      value: { files: [file], types: ['Files'] },
+    });
+    component.onDrop(event);
+    expect(uploadSvc.upload).toHaveBeenCalled();
   });
 
-  it('should not toggle global search for unrelated keys', () => {
-    const event = new KeyboardEvent('keydown', { key: 'a', ctrlKey: true });
-    component.onGlobalKeydown(event);
-    expect(component.globalSearchOpen()).toBe(false);
+  it('ignores a drop with no files', () => {
+    const event = new Event('drop') as DragEvent;
+    Object.defineProperty(event, 'dataTransfer', {
+      value: { files: [], types: [] },
+    });
+    component.onDrop(event);
+    expect(uploadSvc.upload).not.toHaveBeenCalled();
   });
 
-  // --- ngOnInit side effects ---
+  // --- init side effects ---
 
-  it('should call getProfile on init', () => {
+  it('loads the profile on init', () => {
     expect(authSvc.getProfile).toHaveBeenCalled();
   });
 
-  it('should call getSidebarViews on init', () => {
-    expect(searchSvc.getSidebarViews).toHaveBeenCalled();
-  });
-
-  it('should call getUnreadCount on init', () => {
+  it('loads the unread count on init', () => {
     expect(notifSvc.getUnreadCount).toHaveBeenCalled();
+    expect(component.unreadCount()).toBe(3);
   });
 
-  // --- onSearch ---
-
-  it('should not navigate when search query is empty', () => {
-    component.searchQuery.set('');
-    // just ensure no error is thrown
-    expect(() => component.onSearch()).not.toThrow();
+  it('refreshes shell stats on init', () => {
+    expect(statsSvc.refresh).toHaveBeenCalled();
   });
 
-  // --- ngOnDestroy ---
-
-  it('should clean up poll subscription on destroy', () => {
+  it('cleans up the poll subscription on destroy', () => {
     expect(() => component.ngOnDestroy()).not.toThrow();
   });
 });

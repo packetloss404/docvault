@@ -17,132 +17,112 @@ import { Annotation } from '../../models/annotation.model';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="card h-100">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <span>
-          <i class="bi bi-chat-left-text me-1"></i>
-          Annotations
-          @if (annotations().length > 0) {
-            <span class="badge bg-primary ms-1">{{ annotations().length }}</span>
-          }
-        </span>
-        @if (currentPage) {
-          <span class="badge bg-secondary">Page {{ currentPage }}</span>
-        }
-      </div>
-
-      <div class="card-body overflow-auto p-0" style="max-height: 600px;">
-        @if (loading()) {
-          <div class="d-flex justify-content-center py-4">
-            <div class="spinner-border spinner-border-sm text-primary" role="status">
-              <span class="visually-hidden">Loading...</span>
+    <div class="ap">
+      @if (loading()) {
+        <div class="dv-empty ap__empty">
+          <span class="dv-spinner"></span>
+          <span class="dv-sr">Loading annotations…</span>
+        </div>
+      } @else if (annotations().length === 0) {
+        <div class="dv-empty ap__empty">No annotations on this page.</div>
+      } @else {
+        @for (annotation of annotations(); track annotation.id) {
+          <div
+            class="dv-card dv-card--r9 ap__item"
+            [class.is-selected]="selectedAnnotationId() === annotation.id"
+            (click)="onAnnotationClick(annotation)"
+          >
+            <div class="ap__meta">
+              <span
+                class="ap__swatch"
+                [style.background]="annotation.color"
+                [style.opacity]="annotation.opacity"
+                aria-hidden="true"
+              ></span>
+              <span class="ap__author">{{ annotation.author_name }}</span>
+              <span class="dv-chip dv-chip--upper ap__kind">{{
+                typeLabel(annotation.annotation_type)
+              }}</span>
+              @if (annotation.is_private) {
+                <span class="dv-chip dv-chip--upper dv-chip--warn">private</span>
+              }
+              <button
+                type="button"
+                class="ap__del dv-push"
+                title="Delete annotation"
+                (click)="deleteAnnotation(annotation, $event)"
+              >
+                <span aria-hidden="true">✕</span>
+                <span class="dv-sr">Delete annotation</span>
+              </button>
             </div>
-          </div>
-        } @else if (annotations().length === 0) {
-          <div class="text-center text-muted py-4">
-            <i class="bi bi-chat-left fs-3"></i>
-            <p class="small mt-1 mb-0">No annotations on this page.</p>
-          </div>
-        } @else {
-          @for (annotation of annotations(); track annotation.id) {
-            <div
-              class="border-bottom p-3 annotation-item"
-              [class.bg-light]="selectedAnnotationId() === annotation.id"
-              style="cursor: pointer;"
-              (click)="onAnnotationClick(annotation)"
-            >
-              <!-- Header -->
-              <div class="d-flex justify-content-between align-items-start mb-1">
-                <div class="d-flex align-items-center gap-1">
-                  <i class="bi" [ngClass]="getTypeIcon(annotation.annotation_type)"></i>
-                  <span class="fw-semibold small">{{ annotation.author_name }}</span>
-                  @if (annotation.is_private) {
-                    <span class="badge bg-warning text-dark" style="font-size: 0.65em;">Private</span>
-                  }
-                </div>
-                <div class="d-flex align-items-center gap-1">
-                  <span
-                    class="d-inline-block rounded-circle border"
-                    [style.background]="annotation.color"
-                    [style.opacity]="annotation.opacity"
-                    style="width: 12px; height: 12px;"
-                  ></span>
-                  <button
-                    class="btn btn-sm p-0 text-danger"
-                    title="Delete annotation"
-                    (click)="deleteAnnotation(annotation, $event)"
-                  >
-                    <i class="bi bi-trash" style="font-size: 0.8em;"></i>
-                  </button>
-                </div>
-              </div>
 
-              <!-- Timestamp -->
-              <div class="text-muted" style="font-size: 0.75em;">
-                {{ formatDate(annotation.created_at) }}
-              </div>
+            <div class="dv-meta ap__when">{{ formatDate(annotation.created_at) }}</div>
 
-              <!-- Content preview -->
-              @if (annotation.content) {
-                <p class="small mb-1 mt-1 text-truncate">{{ annotation.content }}</p>
-              }
+            @if (annotation.content) {
+              <div class="ap__text">{{ annotation.content }}</div>
+            }
 
-              <!-- Reply count / expand toggle -->
-              @if (annotation.reply_count > 0) {
-                <button
-                  class="btn btn-sm btn-link p-0 text-decoration-none small"
-                  (click)="toggleReplies(annotation, $event)"
-                >
-                  <i class="bi" [ngClass]="expandedAnnotation() === annotation.id ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
-                  {{ annotation.reply_count }} {{ annotation.reply_count === 1 ? 'reply' : 'replies' }}
-                </button>
-              }
+            @if (annotation.reply_count > 0) {
+              <button
+                type="button"
+                class="dv-link ap__toggle"
+                (click)="toggleReplies(annotation, $event)"
+              >
+                {{ expandedAnnotation() === annotation.id ? '▾' : '▸' }}
+                {{ annotation.reply_count }}
+                {{ annotation.reply_count === 1 ? 'reply' : 'replies' }}
+              </button>
+            }
 
-              <!-- Expanded replies -->
-              @if (expandedAnnotation() === annotation.id) {
-                <div class="mt-2 ps-3 border-start">
-                  @for (reply of annotation.replies; track reply.id) {
-                    <div class="mb-2">
-                      <div class="d-flex justify-content-between">
-                        <span class="fw-semibold" style="font-size: 0.8em;">{{ reply.author_name }}</span>
-                        <span class="text-muted" style="font-size: 0.7em;">{{ formatDate(reply.created_at) }}</span>
-                      </div>
-                      <p class="small mb-0">{{ reply.text }}</p>
+            @if (expandedAnnotation() === annotation.id) {
+              <div class="ap__replies">
+                @for (reply of annotation.replies; track reply.id) {
+                  <div class="ap__reply">
+                    <div class="ap__replymeta">
+                      <span class="ap__replyauthor">{{ reply.author_name }}</span>
+                      <span class="dv-meta dv-push">{{
+                        formatDate(reply.created_at)
+                      }}</span>
                     </div>
-                  }
-                </div>
-              }
-
-              <!-- Add reply input -->
-              @if (expandedAnnotation() === annotation.id || annotation.reply_count === 0) {
-                <div class="mt-2">
-                  <div class="input-group input-group-sm">
-                    <input
-                      type="text"
-                      class="form-control"
-                      placeholder="Add a reply..."
-                      [ngModel]="replyTexts()[annotation.id] || ''"
-                      (ngModelChange)="setReplyText(annotation.id, $event)"
-                      (keyup.enter)="submitReply(annotation)"
-                      (click)="$event.stopPropagation()"
-                    />
-                    <button
-                      class="btn btn-outline-primary"
-                      type="button"
-                      [disabled]="!replyTexts()[annotation.id]"
-                      (click)="submitReply(annotation); $event.stopPropagation()"
-                    >
-                      <i class="bi bi-send"></i>
-                    </button>
+                    <div class="ap__text">{{ reply.text }}</div>
                   </div>
-                </div>
-              }
-            </div>
-          }
+                }
+              </div>
+            }
+
+            @if (
+              expandedAnnotation() === annotation.id || annotation.reply_count === 0
+            ) {
+              <div class="ap__compose">
+                <input
+                  type="text"
+                  class="dv-input dv-input--r7"
+                  placeholder="Reply…"
+                  aria-label="Add a reply"
+                  [ngModel]="replyTexts()[annotation.id] || ''"
+                  (ngModelChange)="setReplyText(annotation.id, $event)"
+                  (keyup.enter)="submitReply(annotation)"
+                  (click)="$event.stopPropagation()"
+                />
+                <button
+                  type="button"
+                  class="dv-btn dv-btn--ghost ap__send"
+                  title="Post reply"
+                  [disabled]="!replyTexts()[annotation.id]"
+                  (click)="submitReply(annotation); $event.stopPropagation()"
+                >
+                  <span aria-hidden="true">↵</span>
+                  <span class="dv-sr">Post reply</span>
+                </button>
+              </div>
+            }
+          </div>
         }
-      </div>
+      }
     </div>
   `,
+  styleUrl: './annotation-panel.component.scss',
 })
 export class AnnotationPanelComponent implements OnChanges {
   @Input() documentId = 0;
@@ -237,18 +217,34 @@ export class AnnotationPanelComponent implements OnChanges {
       });
   }
 
+  /** Text glyph standing in for an annotation type (Console uses no icon font). */
   getTypeIcon(type: string): string {
-    const icons: Record<string, string> = {
-      highlight: 'bi-highlighter',
-      underline: 'bi-type-underline',
-      strikethrough: 'bi-type-strikethrough',
-      sticky_note: 'bi-sticky',
-      freehand: 'bi-pencil',
-      rectangle: 'bi-square',
-      text_box: 'bi-fonts',
-      rubber_stamp: 'bi-stamp',
+    const glyphs: Record<string, string> = {
+      highlight: '▮',
+      underline: '﹍',
+      strikethrough: '⌦',
+      sticky_note: '📌',
+      freehand: '✎',
+      rectangle: '▢',
+      text_box: 'T',
+      rubber_stamp: '⧉',
     };
-    return icons[type] || 'bi-chat-left';
+    return glyphs[type] || '•';
+  }
+
+  /** Short mono-chip label for an annotation type. */
+  typeLabel(type: string): string {
+    const labels: Record<string, string> = {
+      highlight: 'highlight',
+      underline: 'underline',
+      strikethrough: 'strike',
+      sticky_note: 'note',
+      freehand: 'draw',
+      rectangle: 'box',
+      text_box: 'text',
+      rubber_stamp: 'stamp',
+    };
+    return labels[type] || type.replace(/_/g, ' ');
   }
 
   formatDate(dateString: string): string {

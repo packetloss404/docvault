@@ -1,0 +1,183 @@
+// Public signing flow. Login-style frame widened so the fields sit beside the
+// page checklist; collapses to one column on narrow viewports.
+.dv-auth .psg__col {
+  width: 900px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  &--narrow {
+    width: 420px;
+  }
+}
+
+.psg__state {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.psg__badge {
+  align-self: flex-start;
+}
+
+.psg__msg {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.psg__brief {
+  gap: 14px;
+}
+
+.psg__kv {
+  grid-template-columns: 110px 1fr;
+}
+
+.psg__role {
+  margin-left: 6px;
+}
+
+.psg__note {
+  padding: 14px 16px;
+}
+
+.psg__declined {
+  gap: 10px;
+}
+
+.psg__split {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.psg__pages {
+  width: 260px;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.psg__pagegrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.psg__page {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 400 11px "JetBrains Mono", ui-monospace, monospace;
+  border-radius: 6px;
+  padding: 4px 9px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &.is-viewed {
+    background: var(--ok-dim);
+    border-color: var(--ok);
+    color: var(--ok);
+  }
+}
+
+.psg__fields {
+  flex: 1;
+  min-width: 0;
+  gap: 16px;
+}
+
+.psg__field {
+  border-left: 2px solid var(--accent-line);
+  padding-left: 12px;
+}
+
+.psg__page-ref {
+  margin-left: 6px;
+  color: var(--faint);
+  text-transform: none;
+}
+
+.psg__check {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.psg__checklabel {
+  font-size: 13px;
+  color: var(--text);
+}
+
+// Signature capture target: dashed like a dropzone, click to apply.
+.psg__sign {
+  width: 100%;
+  min-height: 78px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  background: var(--bg2);
+  font-family: inherit;
+}
+
+.psg__signature {
+  font: 400 22px "Space Grotesk", system-ui, sans-serif;
+  font-style: italic;
+  color: var(--text);
+}
+
+.psg__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.psg__sub {
+  flex: 1;
+  min-width: 180px;
+}
+
+.psg__decline {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.psg__reason {
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.psg__error {
+  background: var(--danger-dim);
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: var(--danger);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+  .psg__split {
+    flex-direction: column;
+  }
+
+  .psg__pages {
+    width: 100%;
+  }
+}

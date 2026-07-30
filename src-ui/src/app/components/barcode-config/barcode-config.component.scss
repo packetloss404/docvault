@@ -1,0 +1,99 @@
+// Barcode & ASN screen: one-off geometry only. Colours come from tokens.
+
+.pagehead {
+  margin: 18px 0 20px;
+}
+
+.load-label {
+  margin-top: 10px;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stat-lines,
+.map-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 13px;
+}
+
+.card-note {
+  margin-top: 14px;
+}
+
+.state {
+  font: 400 11px "JetBrains Mono", ui-monospace, monospace;
+  color: var(--faint);
+
+  &--on {
+    color: var(--ok);
+  }
+}
+
+.bulk-form {
+  margin-top: 13px;
+}
+
+.bulk-input {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.bulk-submit {
+  margin-top: 12px;
+}
+
+.row-action {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: 400 11px "JetBrains Mono", ui-monospace, monospace;
+  color: var(--faint);
+
+  &:hover:not(:disabled) {
+    color: var(--text);
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+// Status notice (no `.dv-alert` primitive exists yet).
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+
+  &--ok {
+    background: var(--ok-dim);
+    border-color: var(--ok);
+    color: var(--ok);
+  }
+
+  &--bad {
+    background: var(--danger-dim);
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+}

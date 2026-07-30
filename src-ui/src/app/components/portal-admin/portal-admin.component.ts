@@ -4,212 +4,213 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { PortalService } from '../../services/portal.service';
 import { PortalConfig } from '../../models/portal.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-portal-admin',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, SubnavComponent],
+  styleUrl: './portal-admin.component.scss',
   template: `
-    <div class="container-fluid">
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="mb-0"><i class="bi bi-door-open me-2"></i>Contributor Portals</h4>
-        <button class="btn btn-primary btn-sm" (click)="showForm.set(!showForm())">
-          <i class="bi" [ngClass]="showForm() ? 'bi-x' : 'bi-plus'"></i>
-          {{ showForm() ? 'Cancel' : 'Create Portal' }}
-        </button>
-      </div>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner dv-inner--wide">
+        <dv-subnav />
 
-      <!-- Create/Edit Form -->
-      @if (showForm()) {
-        <div class="card mb-4">
-          <div class="card-header">
-            {{ editingPortal() ? 'Edit Portal' : 'New Portal' }}
-          </div>
-          <div class="card-body">
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label">Name</label>
+        <div class="dv-section pa-section">
+          <span class="dv-eyebrow">contributor portals</span>
+          <button
+            type="button"
+            class="dv-btn dv-btn--accent dv-btn--md dv-push"
+            (click)="showForm.set(!showForm())"
+          >
+            {{ showForm() ? 'Cancel' : '+ New portal' }}
+          </button>
+        </div>
+
+        <!-- Create / edit form -->
+        @if (showForm()) {
+          <div class="dv-card dv-card--pad pa-form">
+            <div class="dv-card__title pa-form__title">
+              {{ editingPortal() ? 'Edit portal' : 'New portal' }}
+            </div>
+
+            <div class="pa-grid">
+              <label class="pa-field">
+                <span class="dv-field__label">name</span>
                 <input
                   type="text"
-                  class="form-control form-control-sm"
+                  class="dv-input dv-input--r7"
                   [ngModel]="formName()"
                   (ngModelChange)="formName.set($event)"
                 />
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Slug</label>
+              </label>
+
+              <label class="pa-field">
+                <span class="dv-field__label">slug</span>
                 <input
                   type="text"
-                  class="form-control form-control-sm"
+                  class="dv-input dv-input--r7 dv-mono"
+                  placeholder="auto-generated if blank"
                   [ngModel]="formSlug()"
                   (ngModelChange)="formSlug.set($event)"
-                  placeholder="auto-generated if blank"
                 />
-              </div>
-              <div class="col-12">
-                <label class="form-label">Welcome Text</label>
+              </label>
+
+              <label class="pa-field pa-field--full">
+                <span class="dv-field__label">welcome text</span>
                 <textarea
-                  class="form-control form-control-sm"
+                  class="dv-input dv-input--r7"
                   rows="3"
                   [ngModel]="formWelcomeText()"
                   (ngModelChange)="formWelcomeText.set($event)"
                 ></textarea>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Primary Color</label>
+              </label>
+
+              <label class="pa-field">
+                <span class="dv-field__label">brand colour</span>
                 <input
                   type="color"
-                  class="form-control form-control-sm form-control-color"
+                  class="pa-color"
                   [ngModel]="formPrimaryColor()"
                   (ngModelChange)="formPrimaryColor.set($event)"
                 />
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Max File Size (MB)</label>
+              </label>
+
+              <label class="pa-field">
+                <span class="dv-field__label">max file size (mb)</span>
                 <input
                   type="number"
-                  class="form-control form-control-sm"
+                  class="dv-input dv-input--r7 dv-mono"
                   [ngModel]="formMaxFileSize()"
                   (ngModelChange)="formMaxFileSize.set($event)"
                 />
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">Default Document Type ID</label>
+              </label>
+
+              <label class="pa-field">
+                <span class="dv-field__label">default document type id</span>
                 <input
                   type="number"
-                  class="form-control form-control-sm"
+                  class="dv-input dv-input--r7 dv-mono"
+                  placeholder="optional"
                   [ngModel]="formDefaultDocType()"
                   (ngModelChange)="formDefaultDocType.set($event)"
-                  placeholder="Optional"
                 />
-              </div>
-              <div class="col-md-4">
-                <div class="form-check mt-4">
+              </label>
+
+              <div class="pa-field pa-field--full pa-switches">
+                <label class="dv-checkbox-label">
                   <input
-                    class="form-check-input"
                     type="checkbox"
-                    id="reqEmail"
+                    class="dv-checkbox"
                     [ngModel]="formRequireEmail()"
                     (ngModelChange)="formRequireEmail.set($event)"
                   />
-                  <label class="form-check-label" for="reqEmail">Require Email</label>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="form-check mt-4">
+                  <span>require email</span>
+                </label>
+                <label class="dv-checkbox-label">
                   <input
-                    class="form-check-input"
                     type="checkbox"
-                    id="reqName"
+                    class="dv-checkbox"
                     [ngModel]="formRequireName()"
                     (ngModelChange)="formRequireName.set($event)"
                   />
-                  <label class="form-check-label" for="reqName">Require Name</label>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="form-check mt-4">
+                  <span>require name</span>
+                </label>
+                <label class="dv-checkbox-label">
                   <input
-                    class="form-check-input"
                     type="checkbox"
-                    id="isActive"
+                    class="dv-checkbox"
                     [ngModel]="formIsActive()"
                     (ngModelChange)="formIsActive.set($event)"
                   />
-                  <label class="form-check-label" for="isActive">Active</label>
-                </div>
+                  <span>live</span>
+                </label>
               </div>
             </div>
+
             @if (formError()) {
-              <div class="alert alert-danger mt-3 mb-0 py-2 small">{{ formError() }}</div>
+              <div class="dv-banner dv-banner--error pa-banner" role="alert">{{ formError() }}</div>
             }
-            <div class="mt-3">
-              <button class="btn btn-primary btn-sm" (click)="savePortal()" [disabled]="!formName()">
-                <i class="bi bi-check me-1"></i>{{ editingPortal() ? 'Update' : 'Create' }}
+
+            <div class="pa-form__actions">
+              <button
+                type="button"
+                class="dv-btn dv-btn--primary dv-btn--md"
+                (click)="savePortal()"
+                [disabled]="!formName()"
+              >
+                {{ editingPortal() ? 'Update' : 'Create' }}
               </button>
-              <button class="btn btn-outline-secondary btn-sm ms-2" (click)="cancelForm()">Cancel</button>
+              <button type="button" class="dv-btn dv-btn--ghost dv-btn--md" (click)="cancelForm()">
+                Cancel
+              </button>
             </div>
           </div>
-        </div>
-      }
+        }
 
-      <!-- Portal List -->
-      @if (loading()) {
-        <div class="text-center py-4">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
+        <!-- Portal cards -->
+        @if (loading()) {
+          <div class="dv-empty"><span class="dv-spinner"></span> Loading…</div>
+        } @else if (portals().length === 0) {
+          <div class="dv-empty">No contributor portals configured yet.</div>
+        } @else {
+          <div class="pa-cards">
+            @for (portal of portals(); track portal.id) {
+              <div class="dv-card dv-card--pad pa-card">
+                <div class="pa-card__head">
+                  <span
+                    class="pa-swatch"
+                    [style.background]="portal.primary_color"
+                    aria-hidden="true"
+                  ></span>
+                  <span class="pa-card__name dv-clip">{{ portal.name }}</span>
+                  <span
+                    class="dv-meta dv-push"
+                    [class.dv-ok]="portal.is_active"
+                    [class.dv-faint]="!portal.is_active"
+                    >{{ portal.is_active ? '● live' : '○ paused' }}</span
+                  >
+                </div>
+
+                <a
+                  class="pa-card__slug dv-mono"
+                  [href]="'/portal/' + portal.slug"
+                  target="_blank"
+                  rel="noopener"
+                  title="Open public portal"
+                  >/portal/{{ portal.slug }} ⧉</a
+                >
+
+                <div class="pa-card__stats">
+                  <span>max {{ portal.max_file_size_mb }} MB</span>
+                  <span>{{ portal.require_email ? 'email required' : 'no email required' }}</span>
+                  @if (portal.require_name) {
+                    <span>name required</span>
+                  }
+                </div>
+
+                <div class="pa-card__foot">
+                  <span class="dv-meta">created {{ portal.created_at | date: 'short' }}</span>
+                  <button
+                    type="button"
+                    class="dv-btn dv-btn--ghost dv-btn--sm dv-push"
+                    (click)="editPortal(portal)"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    class="dv-btn dv-btn--danger dv-btn--sm"
+                    (click)="deletePortal(portal)"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            }
           </div>
-        </div>
-      } @else if (portals().length === 0) {
-        <div class="text-center text-muted py-4">
-          <i class="bi bi-door-open fs-1"></i>
-          <p class="mt-2">No contributor portals configured yet.</p>
-        </div>
-      } @else {
-        <div class="table-responsive">
-          <table class="table table-hover align-middle">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Slug</th>
-                <th>Active</th>
-                <th>Created</th>
-                <th class="text-end">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (portal of portals(); track portal.id) {
-                <tr>
-                  <td>
-                    <span
-                      class="d-inline-block rounded-circle me-2"
-                      [style.width.px]="12"
-                      [style.height.px]="12"
-                      [style.background]="portal.primary_color"
-                    ></span>
-                    {{ portal.name }}
-                  </td>
-                  <td><code>{{ portal.slug }}</code></td>
-                  <td>
-                    <span
-                      class="badge"
-                      [class.bg-success]="portal.is_active"
-                      [class.bg-secondary]="!portal.is_active"
-                    >
-                      {{ portal.is_active ? 'Active' : 'Inactive' }}
-                    </span>
-                  </td>
-                  <td>{{ portal.created_at | date: 'short' }}</td>
-                  <td class="text-end">
-                    <a
-                      [href]="'/portal/' + portal.slug"
-                      target="_blank"
-                      class="btn btn-outline-info btn-sm me-1"
-                      title="Open public portal"
-                    >
-                      <i class="bi bi-box-arrow-up-right"></i>
-                    </a>
-                    <button
-                      class="btn btn-outline-primary btn-sm me-1"
-                      (click)="editPortal(portal)"
-                      title="Edit"
-                    >
-                      <i class="bi bi-pencil"></i>
-                    </button>
-                    <button
-                      class="btn btn-outline-danger btn-sm"
-                      (click)="deletePortal(portal)"
-                      title="Delete"
-                    >
-                      <i class="bi bi-trash"></i>
-                    </button>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
+        }
+      </div>
     </div>
   `,
 })

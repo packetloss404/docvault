@@ -1,189 +1,182 @@
-<h3 class="mb-3">Search Results</h3>
+<div class="dv-screen dv-screen--tight">
+  <div class="dv-inner dv-inner--wide">
+    <dv-subnav />
 
-<!-- Search Bar -->
-<div class="input-group mb-3">
-  <input
-    type="text"
-    class="form-control"
-    placeholder="Search documents... (e.g., tag:invoice, correspondent:acme)"
-    [ngModel]="query()"
-    (ngModelChange)="query.set($event)"
-    (keyup.enter)="onSearch()"
-  />
-  <button class="btn btn-primary" (click)="onSearch()">
-    <i class="bi bi-search"></i> Search
-  </button>
-</div>
-
-<!-- Filter Builder -->
-<app-search-filter-builder
-  (filtersChange)="onFiltersChange($event)"
-></app-search-filter-builder>
-
-@if (loading()) {
-  <div class="text-center py-5">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Searching...</span>
+    <!-- Query bar -->
+    <div class="sr-querybar">
+      <div class="sr-querybar__box">
+        <span class="sr-querybar__caret">&gt;</span>
+        <input
+          type="text"
+          class="dv-input dv-input--bare sr-querybar__input"
+          placeholder="tag:invoice correspondent:acme …"
+          aria-label="Search documents"
+          [ngModel]="query()"
+          (ngModelChange)="query.set($event)"
+          (keyup.enter)="onSearch()"
+        />
+      </div>
+      <button type="button" class="dv-btn dv-btn--primary" (click)="onSearch()">
+        Search
+      </button>
     </div>
-  </div>
-} @else {
-  <div class="row">
-    <!-- Results -->
-    <div class="col-md-9">
-      @if (totalCount() > 0) {
-        <p class="text-muted mb-3">
-          {{ totalCount() }} result{{ totalCount() !== 1 ? 's' : '' }} found
-        </p>
-      }
 
-      @for (result of results(); track result.id; let idx = $index) {
-        <div class="card mb-2">
-          <div class="card-body py-2 px-3">
-            <div class="d-flex justify-content-between align-items-start">
-              <div>
-                <a
-                  [routerLink]="['/documents', result.id]"
-                  class="text-decoration-none"
-                  (click)="trackResultClick(result, idx + 1)"
-                  (auxclick)="trackResultClick(result, idx + 1)"
-                >
-                  <h6 class="mb-1">
-                    @if (result.highlights?.title) {
-                      <span [innerHTML]="result.highlights!.title![0]"></span>
-                    } @else {
-                      {{ result.title }}
-                    }
-                  </h6>
-                </a>
-                <small class="text-muted">
-                  @if (result.document_type) {
-                    <span class="badge bg-secondary me-1">{{
-                      result.document_type
-                    }}</span>
-                  }
-                  @if (result.correspondent) {
-                    <span class="me-2">{{ result.correspondent }}</span>
-                  }
-                  @if (result.created) {
-                    {{ result.created | date : 'mediumDate' }}
-                  }
-                </small>
-                @if (result.highlights?.content) {
-                  <p class="mb-0 mt-1 small text-muted">
-                    <span [innerHTML]="result.highlights!.content![0]"></span>
-                  </p>
+    <!-- Result readout -->
+    @if (!loading() && query()) {
+      <div class="sr-readout dv-mono">
+        <span>{{ totalCount() }} result{{ totalCount() !== 1 ? 's' : '' }}</span>
+        @if (elapsedMs() !== null) {
+          <span class="sr-readout__sep">·</span>
+          <span>{{ elapsedMs() }} ms</span>
+        }
+      </div>
+    }
+
+    <!-- Filter builder -->
+    <app-search-filter-builder (filtersChange)="onFiltersChange($event)" />
+
+    @if (loading()) {
+      <div class="dv-empty">
+        <span class="dv-spinner"></span>
+        <span class="dv-sr">Searching…</span>
+      </div>
+    } @else {
+      <div class="sr-body" [class.sr-body--full]="!hasFacets()">
+        <div class="sr-main">
+          @for (result of results(); track result.id; let idx = $index) {
+            <a
+              class="dv-card dv-card--r10 sr-result"
+              [routerLink]="['/documents', result.id]"
+              (click)="trackResultClick(result, idx + 1)"
+              (auxclick)="trackResultClick(result, idx + 1)"
+            >
+              <div class="sr-result__head">
+                @if (result.highlights?.title) {
+                  <span
+                    class="sr-result__title dv-snippet"
+                    [innerHTML]="result.highlights!.title![0]"
+                  ></span>
+                } @else {
+                  <span class="sr-result__title">{{ result.title }}</span>
                 }
-                @if (result.tags && result.tags.length > 0) {
-                  <div class="mt-1">
-                    @for (tag of result.tags; track tag) {
-                      <span class="badge bg-info me-1">{{ tag }}</span>
-                    }
+                @if (result.document_type) {
+                  <span class="dv-chip">{{ result.document_type }}</span>
+                }
+                <span class="dv-meta dv-push">
+                  score {{ result.score | number : '1.1-1' }}
+                </span>
+              </div>
+
+              @if (result.highlights?.content) {
+                <div
+                  class="dv-snippet sr-result__snippet"
+                  [innerHTML]="result.highlights!.content![0]"
+                ></div>
+              }
+
+              @if (result.tags && result.tags.length > 0) {
+                <div class="sr-result__tags">
+                  @for (tag of result.tags; track tag) {
+                    <span class="dv-chip dv-chip--outline">{{ tag }}</span>
+                  }
+                </div>
+              }
+
+              <div class="dv-meta sr-result__foot">
+                @if (result.correspondent) {
+                  <span>{{ result.correspondent }}</span>
+                }
+                @if (result.correspondent && result.created) {
+                  <span>·</span>
+                }
+                @if (result.created) {
+                  <span>{{ result.created | date : 'mediumDate' }}</span>
+                }
+              </div>
+            </a>
+          } @empty {
+            @if (query()) {
+              <div class="dv-empty">No results for “{{ query() }}”.</div>
+            } @else {
+              <div class="dv-empty">
+                Type a query and press
+                <span class="dv-kbd">↵</span>
+                to search.
+              </div>
+            }
+          }
+
+          <!-- Pagination -->
+          @if (totalPages() > 1) {
+            <nav class="dv-pager" aria-label="Result pages">
+              <span
+                [class.is-disabled]="currentPage() <= 1"
+                (click)="goToPage(currentPage() - 1)"
+                >prev</span
+              >
+              @for (p of [].constructor(totalPages()); track $index) {
+                <span
+                  [class.is-current]="$index + 1 === currentPage()"
+                  (click)="goToPage($index + 1)"
+                  >{{ $index + 1 }}</span
+                >
+              }
+              <span
+                [class.is-disabled]="currentPage() >= totalPages()"
+                (click)="goToPage(currentPage() + 1)"
+                >next</span
+              >
+            </nav>
+          }
+        </div>
+
+        <!-- Facets -->
+        @if (hasFacets()) {
+          <aside class="sr-facets">
+            @if (facets().tags && facets().tags!.length > 0) {
+              <div class="dv-card dv-card--r10">
+                <div class="dv-card__head">
+                  <span class="dv-card__title">Tags</span>
+                </div>
+                @for (bucket of facets().tags; track bucket.key) {
+                  <div class="dv-listrow sr-facet">
+                    <span class="dv-clip">{{ bucket.key }}</span>
+                    <span class="dv-meta dv-push">{{ bucket.count }}</span>
                   </div>
                 }
               </div>
-              <small class="text-muted">{{ result.score | number : '1.1-1' }}</small>
-            </div>
-          </div>
-        </div>
-      } @empty {
-        @if (query()) {
-          <div class="text-center py-5 text-muted">
-            <i class="bi bi-search" style="font-size: 3rem;"></i>
-            <p class="mt-2">No results found for "{{ query() }}"</p>
-          </div>
+            }
+
+            @if (facets().document_types && facets().document_types!.length > 0) {
+              <div class="dv-card dv-card--r10">
+                <div class="dv-card__head">
+                  <span class="dv-card__title">Types</span>
+                </div>
+                @for (bucket of facets().document_types; track bucket.key) {
+                  <div class="dv-listrow sr-facet">
+                    <span class="dv-clip dv-mono">id {{ bucket.key }}</span>
+                    <span class="dv-meta dv-push">{{ bucket.count }}</span>
+                  </div>
+                }
+              </div>
+            }
+
+            @if (facets().entities && facets().entities!.length > 0) {
+              <div class="dv-card dv-card--r10">
+                <div class="dv-card__head">
+                  <span class="dv-card__title">Entities</span>
+                </div>
+                @for (bucket of facets().entities; track bucket.key) {
+                  <div class="dv-listrow sr-facet">
+                    <span class="dv-clip">{{ bucket.key }}</span>
+                    <span class="dv-meta dv-push">{{ bucket.count }}</span>
+                  </div>
+                }
+              </div>
+            }
+          </aside>
         }
-      }
-
-      <!-- Pagination -->
-      @if (totalPages() > 1) {
-        <nav class="mt-3">
-          <ul class="pagination pagination-sm justify-content-center">
-            <li
-              class="page-item"
-              [class.disabled]="currentPage() <= 1"
-            >
-              <a
-                class="page-link"
-                (click)="goToPage(currentPage() - 1)"
-                role="button"
-                >Previous</a
-              >
-            </li>
-            @for (p of [].constructor(totalPages()); track $index) {
-              <li
-                class="page-item"
-                [class.active]="$index + 1 === currentPage()"
-              >
-                <a class="page-link" (click)="goToPage($index + 1)" role="button">
-                  {{ $index + 1 }}
-                </a>
-              </li>
-            }
-            <li
-              class="page-item"
-              [class.disabled]="currentPage() >= totalPages()"
-            >
-              <a
-                class="page-link"
-                (click)="goToPage(currentPage() + 1)"
-                role="button"
-                >Next</a
-              >
-            </li>
-          </ul>
-        </nav>
-      }
-    </div>
-
-    <!-- Facets Sidebar -->
-    <div class="col-md-3">
-      @if (facets().tags && facets().tags!.length > 0) {
-        <div class="card mb-3">
-          <div class="card-header py-2">
-            <h6 class="mb-0">Tags</h6>
-          </div>
-          <div class="list-group list-group-flush">
-            @for (bucket of facets().tags; track bucket.key) {
-              <span class="list-group-item d-flex justify-content-between py-1 small">
-                {{ bucket.key }}
-                <span class="badge bg-secondary">{{ bucket.count }}</span>
-              </span>
-            }
-          </div>
-        </div>
-      }
-
-      @if (facets().document_types && facets().document_types!.length > 0) {
-        <div class="card mb-3">
-          <div class="card-header py-2">
-            <h6 class="mb-0">Types</h6>
-          </div>
-          <div class="list-group list-group-flush">
-            @for (bucket of facets().document_types; track bucket.key) {
-              <span class="list-group-item d-flex justify-content-between py-1 small">
-                ID {{ bucket.key }}
-                <span class="badge bg-secondary">{{ bucket.count }}</span>
-              </span>
-            }
-          </div>
-        </div>
-      }
-
-      @if (facets().entities && facets().entities!.length > 0) {
-        <div class="card mb-3">
-          <div class="card-header py-2">
-            <h6 class="mb-0">Entities</h6>
-          </div>
-          <div class="list-group list-group-flush">
-            @for (bucket of facets().entities; track bucket.key) {
-              <span class="list-group-item d-flex justify-content-between py-1 small">
-                {{ bucket.key }}
-                <span class="badge bg-info text-dark">{{ bucket.count }}</span>
-              </span>
-            }
-          </div>
-        </div>
-      }
-    </div>
+      </div>
+    }
   </div>
-}
+</div>

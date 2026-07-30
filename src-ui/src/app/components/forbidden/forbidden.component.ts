@@ -5,18 +5,19 @@ import { RouterModule } from '@angular/router';
   selector: 'app-forbidden',
   standalone: true,
   imports: [RouterModule],
+  styleUrl: './forbidden.component.scss',
   template: `
-    <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 60vh;">
-      <div class="text-center">
-        <h1 class="display-1 fw-bold text-danger">403</h1>
-        <h2 class="mb-3">Access Denied</h2>
-        <p class="text-muted mb-4">
-          You do not have permission to access this page.<br />
-          This area is restricted to administrators only.
+    <div class="dv-screen fb-screen">
+      <div class="fb-card">
+        <div class="fb-code">403</div>
+        <h1 class="dv-h1 dv-h1--sm">Access denied</h1>
+        <p class="fb-prose">
+          You do not have permission to open this screen. Administration is restricted to staff
+          accounts.
         </p>
-        <a routerLink="/" class="btn btn-primary">
-          <i class="bi bi-house me-2"></i>Back to Dashboard
-        </a>
+        <div class="fb-actions">
+          <a class="dv-btn dv-btn--primary" routerLink="/">← Back to dashboard</a>
+        </div>
       </div>
     </div>
   `,

@@ -1,0 +1,62 @@
+// Correspondents screen: one-off geometry only. Colours come from tokens.
+
+.tabstrip-action {
+  // Sits on the tab strip, lifted clear of the underline like the prototype.
+  margin-bottom: 8px;
+}
+
+.form-card {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.corr-list {
+  margin-top: 16px;
+}
+
+.corr-name {
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.corr-count {
+  font: 400 12px "JetBrains Mono", ui-monospace, monospace;
+  color: var(--muted);
+}
+
+.corr-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.row-action {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: 400 11px "JetBrains Mono", ui-monospace, monospace;
+  color: var(--faint);
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &--danger:hover {
+    color: var(--danger);
+  }
+}

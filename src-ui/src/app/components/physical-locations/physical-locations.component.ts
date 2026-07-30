@@ -4,197 +4,206 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { PhysicalRecordService } from '../../services/physical-record.service';
 import { PhysicalLocation } from '../../models/physical-record.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-physical-locations',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, SubnavComponent],
+  styleUrl: './physical-locations.component.scss',
   template: `
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h3 class="mb-0">Physical Locations</h3>
-      <button class="btn btn-primary" (click)="showForm = true; resetForm()">
-        <i class="bi bi-plus-lg me-1"></i>Add Location
-      </button>
-    </div>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner dv-inner--wide">
+        <dv-subnav />
 
-    <!-- Create/Edit Form -->
-    @if (showForm) {
-      <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <span>{{ editingId ? 'Edit' : 'Add' }} Location</span>
-          <button class="btn-close" (click)="showForm = false"></button>
+        <div class="dv-section pl-section">
+          <span class="dv-eyebrow">physical locations</span>
+          <button
+            type="button"
+            class="dv-btn dv-btn--accent dv-btn--md dv-push"
+            (click)="showForm = true; resetForm()"
+          >
+            + Add location
+          </button>
         </div>
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-md-4">
-              <label class="form-label">Name</label>
-              <input
-                type="text"
-                class="form-control"
-                [(ngModel)]="formData.name"
-                placeholder="Location name"
-              />
+
+        <!-- Create / edit form -->
+        @if (showForm) {
+          <div class="dv-card dv-card--pad pl-form">
+            <div class="dv-card__title pl-form__title">
+              {{ editingId ? 'Edit' : 'Add' }} location
             </div>
-            <div class="col-md-3">
-              <label class="form-label">Type</label>
-              <select class="form-select" [(ngModel)]="formData.location_type">
-                <option value="building">Building</option>
-                <option value="room">Room</option>
-                <option value="cabinet">Cabinet</option>
-                <option value="shelf">Shelf</option>
-                <option value="box">Box</option>
-              </select>
+
+            <div class="pl-grid">
+              <label class="pl-field">
+                <span class="dv-field__label">name</span>
+                <input
+                  type="text"
+                  class="dv-input dv-input--r7"
+                  placeholder="Location name"
+                  [(ngModel)]="formData.name"
+                />
+              </label>
+
+              <label class="pl-field">
+                <span class="dv-field__label">type</span>
+                <select class="dv-select dv-input--r7" [(ngModel)]="formData.location_type">
+                  <option value="building">building</option>
+                  <option value="room">room</option>
+                  <option value="cabinet">cabinet</option>
+                  <option value="shelf">shelf</option>
+                  <option value="box">box</option>
+                </select>
+              </label>
+
+              <label class="pl-field">
+                <span class="dv-field__label">parent</span>
+                <select class="dv-select dv-input--r7" [(ngModel)]="formData.parent">
+                  <option [ngValue]="null">— no parent —</option>
+                  @for (loc of flatLocations(); track loc.id) {
+                    <option [ngValue]="loc.id">{{ loc.name }} ({{ loc.location_type }})</option>
+                  }
+                </select>
+              </label>
+
+              <label class="pl-field">
+                <span class="dv-field__label">capacity</span>
+                <input
+                  type="number"
+                  class="dv-input dv-input--r7 dv-mono"
+                  placeholder="Max items"
+                  [(ngModel)]="formData.capacity"
+                />
+              </label>
+
+              <label class="pl-field">
+                <span class="dv-field__label">barcode</span>
+                <input
+                  type="text"
+                  class="dv-input dv-input--r7 dv-mono"
+                  placeholder="optional"
+                  [(ngModel)]="formData.barcode"
+                />
+              </label>
+
+              <label class="pl-field pl-field--full">
+                <span class="dv-field__label">notes</span>
+                <input
+                  type="text"
+                  class="dv-input dv-input--r7"
+                  placeholder="optional"
+                  [(ngModel)]="formData.notes"
+                />
+              </label>
             </div>
-            <div class="col-md-3">
-              <label class="form-label">Parent</label>
-              <select class="form-select" [(ngModel)]="formData.parent">
-                <option [ngValue]="null">-- No Parent --</option>
-                @for (loc of flatLocations(); track loc.id) {
-                  <option [ngValue]="loc.id">{{ loc.name }} ({{ loc.location_type }})</option>
-                }
-              </select>
-            </div>
-            <div class="col-md-2">
-              <label class="form-label">Capacity</label>
-              <input
-                type="number"
-                class="form-control"
-                [(ngModel)]="formData.capacity"
-                placeholder="Max items"
-              />
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Barcode</label>
-              <input
-                type="text"
-                class="form-control"
-                [(ngModel)]="formData.barcode"
-                placeholder="Barcode (optional)"
-              />
-            </div>
-            <div class="col-md-8">
-              <label class="form-label">Notes</label>
-              <input
-                type="text"
-                class="form-control"
-                [(ngModel)]="formData.notes"
-                placeholder="Notes (optional)"
-              />
-            </div>
-            <div class="col-12">
-              <button class="btn btn-primary me-2" (click)="saveLocation()">
+
+            <div class="pl-form__actions">
+              <button
+                type="button"
+                class="dv-btn dv-btn--primary dv-btn--md"
+                (click)="saveLocation()"
+              >
                 {{ editingId ? 'Update' : 'Create' }}
               </button>
-              <button class="btn btn-secondary" (click)="showForm = false">
+              <button type="button" class="dv-btn dv-btn--ghost dv-btn--md" (click)="showForm = false">
                 Cancel
               </button>
             </div>
           </div>
-        </div>
-      </div>
-    }
+        }
 
-    @if (loading()) {
-      <div class="d-flex justify-content-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    } @else if (tree().length === 0) {
-      <div class="text-center text-muted py-5">
-        <i class="bi bi-building fs-1"></i>
-        <p class="mt-2">No physical locations configured.</p>
-        <p class="small">Add your first location to start tracking physical records.</p>
-      </div>
-    } @else {
-      <div class="card">
-        <div class="card-body p-0">
-          <div class="list-group list-group-flush">
-            @for (node of tree(); track node.id) {
-              <ng-container>
-                <!-- Render tree recursively using depth-first flat list -->
-              </ng-container>
-            }
+        @if (loading()) {
+          <div class="dv-empty"><span class="dv-spinner"></span> Loading…</div>
+        } @else if (tree().length === 0) {
+          <div class="dv-empty">
+            No physical locations configured. Add your first location to start tracking physical
+            records.
+          </div>
+        } @else {
+          <div class="pl-tree">
             @for (item of flatTree(); track item.location.id) {
               <div
-                class="list-group-item d-flex justify-content-between align-items-center"
-                [style.padding-left.px]="20 + item.depth * 28"
-                [class.text-muted]="!item.location.is_active"
+                class="dv-row dv-row--static dv-row--tight pl-row"
+                [class.pl-row--off]="!item.location.is_active"
+                [style.margin-left.px]="item.depth * 24"
               >
-                <div class="d-flex align-items-center">
-                  @if (item.location.children_count > 0) {
-                    <button
-                      class="btn btn-sm btn-link p-0 me-2"
-                      (click)="toggleExpand(item.location.id)"
-                    >
-                      <i
-                        class="bi"
-                        [ngClass]="expandedIds().has(item.location.id) ? 'bi-chevron-down' : 'bi-chevron-right'"
-                      ></i>
-                    </button>
-                  } @else {
-                    <span class="me-4"></span>
-                  }
-                  <i class="bi me-2" [ngClass]="getTypeIcon(item.location.location_type)"></i>
-                  <span [class.text-decoration-line-through]="!item.location.is_active">
-                    {{ item.location.name }}
-                  </span>
-                  <span class="badge bg-light text-dark ms-2">{{ item.location.location_type }}</span>
-                  @if (item.location.barcode) {
-                    <span class="badge bg-info text-dark ms-1">
-                      <i class="bi bi-upc-scan me-1"></i>{{ item.location.barcode }}
-                    </span>
-                  }
-                </div>
-                <div class="d-flex align-items-center gap-2">
+                @if (item.location.children_count > 0) {
+                  <button
+                    type="button"
+                    class="pl-twisty"
+                    [attr.aria-expanded]="expandedIds().has(item.location.id)"
+                    [attr.aria-label]="
+                      (expandedIds().has(item.location.id) ? 'Collapse ' : 'Expand ') +
+                      item.location.name
+                    "
+                    (click)="toggleExpand(item.location.id)"
+                  >
+                    {{ expandedIds().has(item.location.id) ? '▾' : '▸' }}
+                  </button>
+                } @else {
+                  <span class="pl-twisty" aria-hidden="true"></span>
+                }
+
+                <span class="dv-meta pl-kind">{{ typeLabel(item.location.location_type) }}</span>
+                <span class="pl-name">{{ item.location.name }}</span>
+
+                @if (item.location.barcode) {
+                  <span class="dv-chip dv-chip--well">{{ item.location.barcode }}</span>
+                }
+                @if (!item.location.is_active) {
+                  <span class="dv-chip dv-chip--upper">inactive</span>
+                }
+
+                <span class="dv-push pl-count dv-mono">
                   @if (item.location.capacity) {
-                    <div style="width: 100px;">
-                      <div class="progress" style="height: 8px;">
-                        <div
-                          class="progress-bar"
-                          [ngClass]="getCapacityBarClass(item.location)"
-                          role="progressbar"
-                          [style.width.%]="getCapacityPercent(item.location)"
-                        ></div>
-                      </div>
-                      <small class="text-muted">
-                        {{ item.location.current_count }}/{{ item.location.capacity }}
-                      </small>
-                    </div>
+                    {{ item.location.current_count }}/{{ item.location.capacity }}
+                  } @else {
+                    {{ item.location.current_count }}
                   }
-                  <div class="btn-group btn-group-sm">
-                    <button
-                      class="btn btn-outline-secondary"
-                      title="Edit"
-                      (click)="editLocation(item.location)"
-                    >
-                      <i class="bi bi-pencil"></i>
-                    </button>
-                    <button
-                      class="btn btn-outline-secondary"
-                      [title]="item.location.is_active ? 'Deactivate' : 'Activate'"
-                      (click)="toggleActive(item.location)"
-                    >
-                      <i
-                        class="bi"
-                        [ngClass]="item.location.is_active ? 'bi-eye-slash' : 'bi-eye'"
-                      ></i>
-                    </button>
-                    <button
-                      class="btn btn-outline-secondary"
-                      title="Add Child"
-                      (click)="addChild(item.location)"
-                    >
-                      <i class="bi bi-plus"></i>
-                    </button>
-                  </div>
-                </div>
+                </span>
+
+                @if (item.location.capacity) {
+                  <span class="dv-bar dv-bar--sm pl-bar">
+                    <span
+                      class="dv-bar__fill"
+                      [ngClass]="getCapacityBarClass(item.location)"
+                      [style.width.%]="getCapacityPercent(item.location)"
+                    ></span>
+                  </span>
+                }
+
+                <span class="pl-actions">
+                  <button
+                    type="button"
+                    class="dv-rowaction dv-rowaction--accent pl-action"
+                    title="Edit"
+                    (click)="editLocation(item.location)"
+                  >
+                    edit
+                  </button>
+                  <button
+                    type="button"
+                    class="dv-rowaction dv-rowaction--accent pl-action"
+                    [title]="item.location.is_active ? 'Deactivate' : 'Activate'"
+                    (click)="toggleActive(item.location)"
+                  >
+                    {{ item.location.is_active ? 'hide' : 'show' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="dv-rowaction dv-rowaction--accent pl-action"
+                    title="Add child location"
+                    (click)="addChild(item.location)"
+                  >
+                    + child
+                  </button>
+                </span>
               </div>
             }
           </div>
-        </div>
+        }
       </div>
-    }
+    </div>
   `,
 })
 export class PhysicalLocationsComponent implements OnInit {
@@ -283,20 +292,15 @@ export class PhysicalLocationsComponent implements OnInit {
     this.expandedIds.set(ids);
   }
 
-  getTypeIcon(type: string): string {
+  /** Mono kind label, as the location tree in the design uses instead of icons. */
+  typeLabel(type: string): string {
     switch (type) {
       case 'building':
-        return 'bi-building';
-      case 'room':
-        return 'bi-door-open';
+        return 'bldg';
       case 'cabinet':
-        return 'bi-archive';
-      case 'shelf':
-        return 'bi-bookshelf';
-      case 'box':
-        return 'bi-box';
+        return 'cab';
       default:
-        return 'bi-geo-alt';
+        return type;
     }
   }
 
@@ -305,13 +309,12 @@ export class PhysicalLocationsComponent implements OnInit {
     return Math.min(100, (location.current_count / location.capacity) * 100);
   }
 
-  getCapacityBarClass(location: PhysicalLocation): Record<string, boolean> {
+  /** Console meter fill modifier for how full a location is. */
+  getCapacityBarClass(location: PhysicalLocation): string {
     const pct = this.getCapacityPercent(location);
-    return {
-      'bg-success': pct < 70,
-      'bg-warning': pct >= 70 && pct < 90,
-      'bg-danger': pct >= 90,
-    };
+    if (pct >= 90) return 'dv-bar__fill--danger';
+    if (pct >= 70) return 'dv-bar__fill--warn';
+    return 'dv-bar__fill--ok';
   }
 
   resetForm(): void {

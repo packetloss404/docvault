@@ -1,162 +1,188 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { ZoneOCRService } from '../../services/zone-ocr.service';
 import { ZoneOCRTemplate } from '../../models/zone-ocr.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-zone-ocr-templates',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [DatePipe, FormsModule, RouterLink, SubnavComponent],
+  styleUrl: './zone-ocr-templates.component.scss',
   template: `
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2>Zone OCR Templates</h2>
-      <button class="btn btn-primary" (click)="showForm = !showForm">
-        <i class="bi bi-plus-lg me-1"></i>
-        {{ showForm ? 'Cancel' : 'New Template' }}
-      </button>
-    </div>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner dv-inner--wide">
+        <dv-subnav />
 
-    @if (showForm) {
-      <div class="card mb-4">
-        <div class="card-body">
-          <h5 class="card-title">{{ editingId ? 'Edit' : 'Create' }} Template</h5>
-          <form (ngSubmit)="onSave()">
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label class="form-label">Name</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  [(ngModel)]="formName"
-                  name="name"
-                  required
-                />
-              </div>
-              <div class="col-md-3">
-                <label class="form-label">Page Number</label>
-                <input
-                  type="number"
-                  class="form-control"
-                  [(ngModel)]="formPageNumber"
-                  name="pageNumber"
-                  min="1"
-                />
-              </div>
-              <div class="col-md-3 d-flex align-items-end">
-                <div class="form-check form-switch">
+        <div class="dv-pagehead pagehead">
+          <h1 class="dv-h1 dv-h1--sm">Zone OCR templates</h1>
+          <button
+            type="button"
+            class="dv-btn dv-btn--accent dv-btn--sm dv-push"
+            (click)="showForm = !showForm"
+          >
+            {{ showForm ? 'Cancel' : '+ New template' }}
+          </button>
+        </div>
+
+        @if (showForm) {
+          <div class="dv-card dv-card--pad form-card">
+            <div class="dv-card__title">{{ editingId ? 'Edit template' : 'New template' }}</div>
+
+            <form (ngSubmit)="onSave()">
+              <div class="form-grid">
+                <div>
+                  <label class="dv-field__label" for="zt-name">name</label>
                   <input
-                    class="form-check-input"
-                    type="checkbox"
-                    [(ngModel)]="formIsActive"
-                    name="isActive"
-                    id="activeSwitch"
+                    id="zt-name"
+                    type="text"
+                    class="dv-input"
+                    [(ngModel)]="formName"
+                    name="name"
+                    required
                   />
-                  <label class="form-check-label" for="activeSwitch">Active</label>
+                </div>
+
+                <div>
+                  <label class="dv-field__label" for="zt-page">page number</label>
+                  <input
+                    id="zt-page"
+                    type="number"
+                    class="dv-input dv-input--mono"
+                    [(ngModel)]="formPageNumber"
+                    name="pageNumber"
+                    min="1"
+                  />
+                </div>
+
+                <div class="form-switch">
+                  <span class="dv-field__label">active</span>
+                  <button
+                    type="button"
+                    class="dv-toggle"
+                    [class.is-on]="formIsActive"
+                    [attr.aria-pressed]="formIsActive"
+                    aria-label="Active"
+                    (click)="formIsActive = !formIsActive"
+                  ></button>
+                </div>
+
+                <div class="form-grid__wide">
+                  <label class="dv-field__label" for="zt-desc">description</label>
+                  <textarea
+                    id="zt-desc"
+                    class="dv-input form-textarea"
+                    [(ngModel)]="formDescription"
+                    name="description"
+                    rows="2"
+                  ></textarea>
                 </div>
               </div>
-              <div class="col-12">
-                <label class="form-label">Description</label>
-                <textarea
-                  class="form-control"
-                  [(ngModel)]="formDescription"
-                  name="description"
-                  rows="2"
-                ></textarea>
-              </div>
-              <div class="col-12">
-                <button type="submit" class="btn btn-success me-2" [disabled]="saving()">
-                  <i class="bi bi-check-lg me-1"></i>{{ editingId ? 'Update' : 'Create' }}
-                </button>
-                <button type="button" class="btn btn-secondary" (click)="cancelEdit()">Cancel</button>
-              </div>
-            </div>
-          </form>
-        </div>
-      </div>
-    }
 
-    @if (loading()) {
-      <div class="text-center py-5">
-        <div class="spinner-border" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    } @else {
-      <div class="table-responsive">
-        <table class="table table-hover align-middle">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Description</th>
-              <th>Page</th>
-              <th>Fields</th>
-              <th>Status</th>
-              <th>Created</th>
-              <th class="text-end">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+              <div class="form-actions">
+                <button
+                  type="submit"
+                  class="dv-btn dv-btn--primary dv-btn--sm"
+                  [disabled]="saving()"
+                >
+                  {{ editingId ? 'Update' : 'Create' }}
+                </button>
+                <button
+                  type="button"
+                  class="dv-btn dv-btn--ghost dv-btn--sm"
+                  (click)="cancelEdit()"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        }
+
+        @if (loading()) {
+          <div class="dv-empty">
+            <span class="dv-spinner"></span>
+            <div class="load-label">Loading templates…</div>
+          </div>
+        } @else {
+          <div class="dv-section">
+            <span class="dv-eyebrow">zone templates</span>
+          </div>
+
+          <div class="list">
+            <div class="dv-thead dv-grid" style="--dv-cols: 1fr 1.1fr 80px 96px 96px 118px 84px">
+              <span>name</span>
+              <span>description</span>
+              <span>page</span>
+              <span>zones</span>
+              <span>state</span>
+              <span class="dv-num">created</span>
+              <span></span>
+            </div>
+
             @for (template of templates(); track template.id) {
-              <tr>
-                <td>
-                  <a [routerLink]="['/zone-ocr', template.id]" class="fw-semibold text-decoration-none">
-                    {{ template.name }}
-                  </a>
-                </td>
-                <td class="text-muted">{{ template.description | slice:0:60 }}{{ template.description.length > 60 ? '...' : '' }}</td>
-                <td>{{ template.page_number }}</td>
-                <td>
-                  <span class="badge bg-secondary">{{ template.field_count }}</span>
-                </td>
-                <td>
-                  @if (template.is_active) {
-                    <span class="badge bg-success">Active</span>
-                  } @else {
-                    <span class="badge bg-warning text-dark">Inactive</span>
-                  }
-                </td>
-                <td>{{ template.created_at | date:'shortDate' }}</td>
-                <td class="text-end">
-                  <button class="btn btn-sm btn-outline-primary me-1" (click)="onEdit(template)" title="Edit">
-                    <i class="bi bi-pencil"></i>
+              <div
+                class="dv-row dv-row--static dv-grid"
+                style="--dv-cols: 1fr 1.1fr 80px 96px 96px 118px 84px"
+              >
+                <a class="row-name dv-clip" [routerLink]="['/zone-ocr', template.id]">
+                  {{ template.name }}
+                </a>
+                <span class="dv-muted dv-clip">
+                  {{ template.description || '—' }}
+                </span>
+                <span class="dv-ts">p{{ template.page_number }}</span>
+                <span class="dv-ts">{{ template.field_count }} zones</span>
+                <span class="row-state" [class.row-state--on]="template.is_active">
+                  {{ template.is_active ? '● active' : '○ inactive' }}
+                </span>
+                <span class="dv-ts dv-num">{{ template.created_at | date: 'yyyy-MM-dd' }}</span>
+                <span class="row-actions">
+                  <button type="button" class="row-action" (click)="onEdit(template)">edit</button>
+                  <button
+                    type="button"
+                    class="row-action row-action--danger"
+                    (click)="onDelete(template)"
+                  >
+                    del
                   </button>
-                  <button class="btn btn-sm btn-outline-danger" (click)="onDelete(template)" title="Delete">
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </td>
-              </tr>
+                </span>
+              </div>
             } @empty {
-              <tr>
-                <td colspan="7" class="text-center text-muted py-4">
-                  No Zone OCR templates found. Create one to get started.
-                </td>
-              </tr>
+              <div class="dv-empty">
+                No Zone OCR templates yet. Create one to get started.
+              </div>
             }
-          </tbody>
-        </table>
+          </div>
+        }
       </div>
-    }
+    </div>
 
     @if (deleteConfirm) {
-      <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">Confirm Delete</h5>
-              <button type="button" class="btn-close" (click)="deleteConfirm = null"></button>
-            </div>
-            <div class="modal-body">
-              <p>Are you sure you want to delete template <strong>{{ deleteConfirm.name }}</strong>?</p>
-              <p class="text-muted">This will also delete all associated fields and results.</p>
-            </div>
-            <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" (click)="deleteConfirm = null">Cancel</button>
-              <button type="button" class="btn btn-danger" (click)="confirmDelete()">
-                <i class="bi bi-trash me-1"></i>Delete
-              </button>
-            </div>
+      <div class="dv-overlay" (click)="deleteConfirm = null">
+        <div class="dv-card dv-card--r14 dv-card--pad confirm" (click)="$event.stopPropagation()">
+          <div class="dv-h2">Delete template</div>
+          <p class="confirm__body">
+            Delete <span class="dv-mono">{{ deleteConfirm.name }}</span>? This also deletes all
+            associated fields and extraction results.
+          </p>
+          <div class="form-actions">
+            <button
+              type="button"
+              class="dv-btn dv-btn--ghost dv-btn--sm"
+              (click)="deleteConfirm = null"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="dv-btn dv-btn--danger dv-btn--sm"
+              (click)="confirmDelete()"
+            >
+              Delete
+            </button>
           </div>
         </div>
       </div>
