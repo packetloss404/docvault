@@ -32,6 +32,9 @@ project. This file records the resulting contract so screens stay consistent.
    per-accent for contrast; `--accent` is for fills only.
 3. **Prefer a `.dv-*` primitive over a new rule.** Add to `_console.scss` only
    when a pattern recurs; one-off geometry belongs in the component's `.scss`.
+   Utilities are declared at the end of `_console.scss` so they win on equal
+   specificity — keep it that way, and keep anything that sets `color` (such as
+   `.dv-link`) above the colour helpers so `dv-link dv-danger` composes.
 4. **Mono is semantic**, not decorative: dates, IDs, counts, keyboard hints,
    filter expressions, table column headers, status readouts. Prose and headings
    are Space Grotesk.
@@ -80,7 +83,8 @@ its exact column spec at the call site:
 | `.dv-screen` (`--flush`, `--tight`) | screen scroll container + fade-up entrance |
 | `.dv-inner` (`--wide`, `--narrow`, `--feed`) | 920 / 1000 / 760 / 720px measure |
 | `.dv-card` (`--r9/r10/r12/r14`, `--pad`, `--pad-sm`, `--accent`, `--hover`) | panel surface |
-| `.dv-well` `.dv-dropzone` `.dv-callout` | sunken box / dashed target / accent notice |
+| `.dv-well` `.dv-dropzone` | sunken box / dashed drop target |
+| `.dv-callout` (`--danger`, `--warn`, `--ok`) | accent notice; variants for non-accent states |
 | `.dv-grid` `.dv-thead` `.dv-row` `.dv-listrow` | tables and lists |
 | `.dv-kv` `.dv-stat-line` | key/value grid, label→value line |
 | `.dv-stat` (`--sm`) | dashboard/analytics stat card |
@@ -88,7 +92,7 @@ its exact column spec at the call site:
 | `.dv-kbd` `.dv-badge` | keyboard hint, count badge |
 | `.dv-token` | removable filter token |
 | `.dv-navchip` `.dv-navchips` | cluster peer switch |
-| `.dv-tabs` `.dv-tab` (`.dv-tabs--compact`) | document-scoped underline tabs |
+| `.dv-tabs` `.dv-tab` (`--compact`, `--scroll`) | document-scoped underline tabs; `--scroll` when they outrun the width |
 | `.dv-btn` (`--primary/secondary/ghost/warn/danger/accent`, `--md/sm/block`) | buttons |
 | `.dv-input` (`--mono`, `--bare`, `--r7`) `.dv-select` `.dv-field__label` | forms |
 | `.dv-pill` (`--op`, `--value`) | filter-builder segments |
@@ -98,13 +102,53 @@ its exact column spec at the call site:
 | `.dv-split` `.dv-crumb` `.dv-zoom` `.dv-viewer` `.dv-page` `.dv-thumb` `.dv-note` | document preview |
 | `.dv-snippet` | search snippet (`<mark>` is styled inside it) |
 | `.dv-bulkbar` | pinned bulk-action bar |
+| `.dv-modal` (`--wide`, `__head/__body/__foot/__close`) | dialog card; nest inside `.dv-overlay` |
+| `.dv-banner` (`--ok/--warn/--error`, `__close`) | dismissible result of an action |
+| `.dv-checkbox` `.dv-checkbox-label` | real `<input type=checkbox>`, for handlers that read `event.target.checked` |
+| `.dv-rowaction` (`--accent`, `--danger`) | mono end-of-row action (`edit`, `revoke`) |
+| `.dv-formrow` | inline add/edit form: fields on a baseline with their button |
 | `.dv-overlay` `.dv-palette` | ⌘K command palette |
 | `.dv-auth` | login screen |
 | `.dv-pager` `.dv-empty` `.dv-spinner` `.dv-section` `.dv-divider` | odds and ends |
 
 Utilities: `.dv-mono` `.dv-eyebrow` `.dv-ts` `.dv-meta` `.dv-link` `.dv-push`
-(margin-left auto) `.dv-num` (right align) `.dv-clip` (ellipsis) and colour
-helpers `.dv-ok` `.dv-warn` `.dv-danger` `.dv-accent` `.dv-muted` `.dv-faint`.
+(margin-left auto) `.dv-num` (right align) `.dv-clip` (ellipsis) `.dv-sr`
+(screen-reader only) and colour helpers `.dv-ok` `.dv-warn` `.dv-danger`
+`.dv-accent` `.dv-muted` `.dv-faint`.
+
+## Testing
+
+`npx ng test --no-watch` runs the suite, and is fine on an idle machine.
+
+Under load the parallel vitest pool dies with `Error: Worker exited
+unexpectedly` partway through — resource exhaustion, not a test failure. The
+`VITEST_MAX_*` environment variables do not help, because the Angular builder
+owns the pool configuration. Point it at a single-fork config instead:
+
+The config has to sit in `src-ui/` — from elsewhere, `vitest/config` will not
+resolve against the project's `node_modules`.
+
+```ts
+// src-ui/vitest.single.config.ts (throwaway; do not commit)
+import { defineConfig } from 'vitest/config';
+export default defineConfig({
+  test: {
+    pool: 'forks',
+    poolOptions: { forks: { singleFork: true, minForks: 1, maxForks: 1 } },
+    fileParallelism: false,
+  },
+});
+```
+
+```
+npx ng test --no-watch --runner-config=./vitest.single.config.ts
+```
+
+**Always check the file count.** Vitest can fail to start a worker
+(`Failed to start forks worker for test files …`), skip those files, and still
+**exit 0** reporting the remainder as passed — a green run that silently covered
+less than the suite. The suite is 31 files; if a run reports fewer, it did not
+actually pass. This is worth a CI guard.
 
 ## Shell
 

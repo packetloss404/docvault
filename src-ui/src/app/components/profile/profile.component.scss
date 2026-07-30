@@ -1,0 +1,103 @@
+// Layout only; every colour comes from a token via the Console primitives.
+.pf-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.pf-head__name {
+  margin: 0;
+}
+
+.pf-grid {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: 340px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .pf-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pf-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pf-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 13px;
+}
+
+.pf-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.pf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 13px;
+}
+
+.pf-kv {
+  margin-top: 14px;
+}
+
+.pf-chips {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.pf-prose {
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.pf-link {
+  font: 400 12px "JetBrains Mono", ui-monospace, monospace;
+  color: var(--accent-text);
+}
+
+.pf-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 9px;
+  padding: 9px 12px;
+  font-size: 12.5px;
+  margin-top: 13px;
+
+  &--error {
+    background: var(--danger-dim);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+  }
+
+  &--ok {
+    background: var(--ok-dim);
+    border: 1px solid var(--ok);
+    color: var(--ok);
+  }
+}
+
+.pf-banner__close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font: 400 13px "JetBrains Mono", ui-monospace, monospace;
+  padding: 0;
+}

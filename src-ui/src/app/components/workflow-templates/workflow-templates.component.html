@@ -1,102 +1,97 @@
-<h2>Workflow Templates</h2>
+<div class="dv-screen dv-screen--tight">
+  <div class="dv-inner dv-inner--wide">
+    <div class="dv-pagehead">
+      <h1 class="dv-h1 dv-h1--sm">Workflows</h1>
+      <button
+        type="button"
+        class="dv-btn dv-btn--primary dv-push"
+        (click)="showCreate.set(!showCreate())"
+      >
+        + New template
+      </button>
+    </div>
 
-<div class="d-flex justify-content-between mb-3">
-  <p class="text-muted mb-0">Manage workflow templates for document lifecycle management.</p>
-  <button class="btn btn-primary btn-sm" (click)="showCreate.set(!showCreate())">
-    <i class="bi bi-plus-lg"></i> New Template
-  </button>
-</div>
-
-@if (showCreate()) {
-  <div class="card mb-3">
-    <div class="card-body">
-      <div class="row g-2 align-items-end">
-        <div class="col-md-5">
-          <label class="form-label">Label</label>
-          <input
-            type="text"
-            class="form-control form-control-sm"
-            [ngModel]="newLabel()"
-            (ngModelChange)="newLabel.set($event)"
-            placeholder="e.g. Invoice Approval"
-          />
-        </div>
-        <div class="col-md-3">
-          <div class="form-check mt-4">
+    @if (showCreate()) {
+      <div class="dv-card dv-card--pad dv-card--accent wt-form">
+        <div class="dv-card__title">New template</div>
+        <div class="wt-form__row">
+          <div class="wt-form__field">
+            <label class="dv-field__label" for="wt-label">label</label>
+            <input
+              id="wt-label"
+              type="text"
+              class="dv-input"
+              [ngModel]="newLabel()"
+              (ngModelChange)="newLabel.set($event)"
+              placeholder="e.g. Invoice Approval"
+            />
+          </div>
+          <label class="wt-check" for="autoLaunch">
             <input
               type="checkbox"
-              class="form-check-input"
+              class="dv-checkbox"
               id="autoLaunch"
               [ngModel]="newAutoLaunch()"
               (ngModelChange)="newAutoLaunch.set($event)"
             />
-            <label class="form-check-label" for="autoLaunch">Auto-launch</label>
+            auto-launch
+          </label>
+          <div class="wt-form__actions">
+            <button
+              type="button"
+              class="dv-btn dv-btn--primary dv-btn--md"
+              (click)="createTemplate()"
+              [disabled]="!newLabel()"
+            >
+              Create
+            </button>
+            <button
+              type="button"
+              class="dv-btn dv-btn--ghost dv-btn--md"
+              (click)="showCreate.set(false)"
+            >
+              Cancel
+            </button>
           </div>
         </div>
-        <div class="col-auto">
-          <button class="btn btn-primary btn-sm" (click)="createTemplate()" [disabled]="!newLabel()">
-            Create
-          </button>
-          <button class="btn btn-secondary btn-sm ms-1" (click)="showCreate.set(false)">
-            Cancel
-          </button>
-        </div>
       </div>
-    </div>
-  </div>
-}
+    }
 
-@if (loading()) {
-  <div class="text-center py-4">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Loading...</span>
-    </div>
-  </div>
-} @else if (templates().length === 0) {
-  <div class="text-center text-muted py-5">
-    <i class="bi bi-diagram-3" style="font-size: 3rem;"></i>
-    <p class="mt-2">No workflow templates yet. Create one to get started.</p>
-  </div>
-} @else {
-  <div class="table-responsive">
-    <table class="table table-hover">
-      <thead>
-        <tr>
-          <th>Label</th>
-          <th>Internal Name</th>
-          <th>Auto-launch</th>
-          <th>States</th>
-          <th>Transitions</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
+    @if (loading()) {
+      <div class="dv-empty"><span class="dv-spinner"></span> Loading templates…</div>
+    } @else if (templates().length === 0) {
+      <div class="dv-empty">No workflow templates yet. Create one to get started.</div>
+    } @else {
+      <div class="wt-grid">
         @for (t of templates(); track t.id) {
-          <tr>
-            <td>
-              <a [routerLink]="['/workflows', t.id]" class="fw-semibold">{{ t.label }}</a>
-            </td>
-            <td><code>{{ t.internal_name }}</code></td>
-            <td>
-              @if (t.auto_launch) {
-                <span class="badge bg-success">Yes</span>
-              } @else {
-                <span class="badge bg-secondary">No</span>
-              }
-            </td>
-            <td>{{ t.state_count }}</td>
-            <td>{{ t.transition_count }}</td>
-            <td class="text-end">
-              <button
-                class="btn btn-outline-danger btn-sm"
-                (click)="deleteTemplate(t.id, t.label)"
-              >
-                <i class="bi bi-trash"></i>
-              </button>
-            </td>
-          </tr>
+          <div class="dv-card dv-card--r12 dv-card--pad dv-card--hover wt-card">
+            <div class="wt-card__head">
+              <a class="wt-card__name" [routerLink]="['/workflows', t.id]">{{ t.label }}</a>
+              <span
+                class="dv-dot dv-dot--lg dv-push"
+                [class.dv-dot--ok]="t.auto_launch"
+              ></span>
+              <span class="dv-meta">{{ t.auto_launch ? 'auto-launch' : 'manual' }}</span>
+            </div>
+
+            <div class="wt-card__pipeline dv-chain">
+              <span class="dv-chip dv-chip--accent">{{ t.state_count }} states</span>
+              <span class="dv-chain__arrow">→</span>
+              <span class="dv-chip">{{ t.transition_count }} transitions</span>
+            </div>
+
+            <div class="wt-card__foot">
+              <span class="dv-mono">{{ t.internal_name }}</span>
+              <span class="dv-push">
+                <a class="wt-card__open" [routerLink]="['/workflows', t.id]">open →</a>
+                <button type="button" class="wt-card__del" (click)="deleteTemplate(t.id, t.label)">
+                  delete
+                </button>
+              </span>
+            </div>
+          </div>
         }
-      </tbody>
-    </table>
+      </div>
+    }
   </div>
-}
+</div>

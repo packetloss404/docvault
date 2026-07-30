@@ -287,48 +287,10 @@ $sans: "Space Grotesk", system-ui, -apple-system, sans-serif;
   color: var(--faint);
 }
 
-.dv-ok {
-  color: var(--ok);
-}
-.dv-warn {
-  color: var(--warn);
-}
-.dv-danger {
-  color: var(--danger);
-}
-.dv-accent {
-  color: var(--accent-text);
-}
-.dv-muted {
-  color: var(--muted);
-}
-.dv-faint {
-  color: var(--faint);
-}
-.dv-push {
-  margin-left: auto;
-}
-.dv-num {
-  text-align: right;
-}
-.dv-clip {
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.dv-link {
-  color: var(--accent-text);
-  cursor: pointer;
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-
-  &:hover {
-    color: var(--text);
-  }
-}
+// Colour and layout utilities are declared at the *end* of this file so they
+// win on equal specificity against the components above — otherwise
+// `class="dv-link dv-danger"` would render accent-coloured, because .dv-link
+// also sets `color`.
 
 // ---------------------------------------------------------------------------
 // Surfaces
@@ -409,6 +371,35 @@ $sans: "Space Grotesk", system-ui, -apple-system, sans-serif;
     color: var(--accent-text);
     text-transform: uppercase;
     letter-spacing: 0.08em;
+  }
+
+  // Non-accent notices: a legal hold that blocks mutations, a destructive
+  // confirmation, a degraded-service warning.
+  &--danger {
+    background: var(--danger-dim);
+    border-color: var(--danger);
+
+    .dv-callout__label {
+      color: var(--danger);
+    }
+  }
+
+  &--warn {
+    background: var(--warn-dim);
+    border-color: var(--warn);
+
+    .dv-callout__label {
+      color: var(--warn);
+    }
+  }
+
+  &--ok {
+    background: var(--ok-dim);
+    border-color: var(--ok);
+
+    .dv-callout__label {
+      color: var(--ok);
+    }
   }
 }
 
@@ -727,6 +718,21 @@ $sans: "Space Grotesk", system-ui, -apple-system, sans-serif;
   font-size: 12.5px;
 }
 
+// For panes with more tabs than width (the document detail panel). The strip
+// scrolls rather than wrapping, which would break the underline baseline.
+.dv-tabs--scroll {
+  overflow-x: auto;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dv-tab {
+    flex-shrink: 0;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Buttons
 // ---------------------------------------------------------------------------
@@ -848,6 +854,20 @@ $sans: "Space Grotesk", system-ui, -apple-system, sans-serif;
     border-color: var(--border2);
     font: 400 14px #{$mono};
     padding: 10px 13px;
+  }
+
+  // <textarea>
+  &--area {
+    resize: vertical;
+    line-height: 1.5;
+    min-height: 72px;
+  }
+
+  // <input type="color"> needs its own metrics or the swatch is inset oddly.
+  &--color {
+    padding: 3px;
+    height: 35px;
+    cursor: pointer;
   }
 
   &--bare {
@@ -1277,8 +1297,14 @@ $sans: "Space Grotesk", system-ui, -apple-system, sans-serif;
 // Bulk action bar
 // ---------------------------------------------------------------------------
 .dv-bulkbar {
+  // The default inset matches the full-bleed documents screen; inside a
+  // measured `.dv-inner` use `--inline`, which drops the horizontal gutter.
   margin: 0 24px 18px;
   flex-shrink: 0;
+
+  &--inline {
+    margin: 0 0 14px;
+  }
   background: var(--panel);
   border: 1px solid var(--accent-line);
   border-radius: 10px;
@@ -1476,6 +1502,265 @@ $sans: "Space Grotesk", system-ui, -apple-system, sans-serif;
   background: var(--border);
   border: none;
   margin: 0;
+}
+
+// ---------------------------------------------------------------------------
+// Dialogs
+// ---------------------------------------------------------------------------
+
+// Centred dialog card. Put it inside a `.dv-overlay` and stop click
+// propagation on it so a scrim click closes but a card click does not.
+.dv-modal {
+  width: 520px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 24vh);
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  animation: dvFadeUp 0.18s ease;
+
+  &--wide {
+    width: 720px;
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border);
+    font: 600 14px #{$sans};
+    flex-shrink: 0;
+  }
+
+  &__body {
+    padding: 18px 20px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+  }
+
+  &__foot {
+    display: flex;
+    gap: 8px;
+    padding: 13px 20px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  &__close {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--faint);
+    cursor: pointer;
+    font: 400 13px #{$mono};
+    padding: 0;
+
+    &:hover {
+      color: var(--text);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Inline status banner
+// ---------------------------------------------------------------------------
+
+// Dismissible strip for the result of an action. Distinct from `.dv-callout`,
+// which is a persistent annotation rather than a transient result.
+.dv-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 14px;
+  border-radius: 9px;
+  border: 1px solid var(--accent-line);
+  background: var(--accent-dim);
+  color: var(--text);
+  font-size: 13px;
+
+  &--ok {
+    border-color: var(--ok);
+    background: var(--ok-dim);
+  }
+
+  &--warn {
+    border-color: var(--warn);
+    background: var(--warn-dim);
+  }
+
+  &--error {
+    border-color: var(--danger);
+    background: var(--danger-dim);
+    color: var(--danger);
+  }
+
+  &__close {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: inherit;
+    opacity: 0.7;
+    cursor: pointer;
+    font: 400 12px #{$mono};
+    padding: 0;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Native checkbox
+// ---------------------------------------------------------------------------
+
+// `.dv-check` is a <button>, so it cannot back a handler that reads
+// `event.target.checked`. This tints a real <input type="checkbox"> instead.
+.dv-checkbox {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.dv-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+// ---------------------------------------------------------------------------
+// Row action
+// ---------------------------------------------------------------------------
+
+// The mono `edit` / `revoke` / `check in` affordance at the end of a table row.
+.dv-rowaction {
+  background: none;
+  border: none;
+  padding: 0;
+  font: 400 11px #{$mono};
+  color: var(--faint);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &--accent {
+    color: var(--accent-text);
+  }
+
+  &--danger {
+    color: var(--danger);
+
+    &:hover {
+      color: var(--danger);
+      text-decoration: underline;
+    }
+  }
+}
+
+// Inline add/edit form: fields on a baseline with their action button.
+.dv-formrow {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+// Responsive field grid for the edit forms.
+.dv-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+
+  // A field that should take the whole row (description, rule expression).
+  &__wide {
+    grid-column: 1 / -1;
+  }
+}
+
+// A labelled switch sitting on one baseline inside a form.
+.dv-switch-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  .dv-field__label {
+    margin-bottom: 0;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Utilities — declared last so they win against the components above.
+// Within this block, anything that sets `color` itself comes before the colour
+// helpers, so `class="dv-link dv-danger"` renders danger-coloured.
+// ---------------------------------------------------------------------------
+.dv-link {
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent-text);
+
+  &:hover {
+    color: var(--text);
+  }
+}
+
+.dv-ok {
+  color: var(--ok);
+}
+.dv-warn {
+  color: var(--warn);
+}
+.dv-danger {
+  color: var(--danger);
+}
+.dv-accent {
+  color: var(--accent-text);
+}
+.dv-muted {
+  color: var(--muted);
+}
+.dv-faint {
+  color: var(--faint);
+}
+.dv-push {
+  margin-left: auto;
+}
+.dv-num {
+  text-align: right;
+}
+.dv-clip {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Screen-reader-only label. Defined here rather than relying on Bootstrap's
+// .visually-hidden, so the shell keeps working once Bootstrap is dropped.
+.dv-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .dv-section {

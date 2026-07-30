@@ -1,0 +1,73 @@
+// Screen-local geometry for the signature request cards. Colour comes from the
+// Console tokens via the `.dv-*` primitives in the template.
+
+.sr-filter {
+  width: auto;
+  min-width: 150px;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  padding: 6px 12px;
+}
+
+.sr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.sr-card {
+  padding: 15px 18px;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &:hover {
+      color: var(--accent-text);
+    }
+  }
+
+  &__doc {
+    flex-shrink: 0;
+  }
+
+  &__foot {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+  }
+}
+
+.sr-chain {
+  flex: 1;
+  min-width: 0;
+}
+
+.sr-signer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  &__name {
+    font-size: 12px;
+    color: var(--muted);
+  }
+}
+
+.sr-mode {
+  flex-shrink: 0;
+}

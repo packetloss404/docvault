@@ -8,223 +8,184 @@ import {
   LegalHoldCustodian,
   LegalHoldDocument,
 } from '../../models/legal-hold.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-legal-hold-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule, SubnavComponent],
+  styleUrl: './legal-hold-detail.component.scss',
   template: `
-    @if (loading()) {
-      <div class="d-flex justify-content-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    } @else if (hold()) {
-      <!-- Header -->
-      <div class="d-flex justify-content-between align-items-start mb-4">
-        <div>
-          <a routerLink="/legal-holds" class="text-decoration-none small">
-            <i class="bi bi-arrow-left me-1"></i>Back to Legal Holds
-          </a>
-          <h3 class="mt-2 mb-1">{{ hold()!.name }}</h3>
-          <div class="d-flex align-items-center gap-2">
-            <span
-              class="badge"
-              [ngClass]="getStatusBadgeClass(hold()!.status)"
-            >
-              {{ formatStatus(hold()!.status) }}
-            </span>
-            <code class="text-muted">{{ hold()!.matter_number }}</code>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner dv-inner--wide">
+        <dv-subnav />
+
+        @if (loading()) {
+          <div class="dv-empty"><span class="dv-spinner"></span> Loading…</div>
+        } @else if (hold()) {
+          <a class="dv-meta lhd-back" routerLink="/legal-holds">← legal holds</a>
+
+          <div class="dv-pagehead lhd-head">
+            <h1 class="dv-h1 dv-h1--sm dv-clip">{{ hold()!.name }}</h1>
+            <span class="dv-chip dv-chip--upper" [ngClass]="getStatusBadgeClass(hold()!.status)">{{
+              formatStatus(hold()!.status)
+            }}</span>
+            <span class="dv-chip dv-chip--well">{{ hold()!.matter_number }}</span>
+
+            <div class="lhd-actions dv-push">
+              @if (hold()!.status === 'draft') {
+                <button type="button" class="dv-btn dv-btn--danger dv-btn--md" (click)="activate()">
+                  Activate hold
+                </button>
+              }
+              @if (hold()!.status === 'active') {
+                <button
+                  type="button"
+                  class="dv-btn dv-btn--warn dv-btn--md"
+                  (click)="notifyCustodians()"
+                >
+                  Notify custodians
+                </button>
+                <button type="button" class="dv-btn dv-btn--ghost dv-btn--md" (click)="release()">
+                  Release hold
+                </button>
+              }
+            </div>
           </div>
-        </div>
-        <div class="btn-group">
-          @if (hold()!.status === 'draft') {
-            <button class="btn btn-danger" (click)="activate()">
-              <i class="bi bi-play-fill me-1"></i>Activate Hold
-            </button>
-          }
+
           @if (hold()!.status === 'active') {
-            <button class="btn btn-warning" (click)="notifyCustodians()">
-              <i class="bi bi-bell me-1"></i>Notify Custodians
-            </button>
-            <button class="btn btn-success" (click)="release()">
-              <i class="bi bi-unlock me-1"></i>Release Hold
-            </button>
+            <div class="dv-callout lhd-callout">
+              <div class="dv-callout__label">preservation active</div>
+              <div class="lhd-callout__text">
+                Document mutations are blocked with HTTP 409 while this hold is active.
+              </div>
+            </div>
           }
-        </div>
-      </div>
 
-      <!-- Details Card -->
-      <div class="card mb-4">
-        <div class="card-header">Hold Details</div>
-        <div class="card-body">
-          <div class="row">
-            <div class="col-md-8">
-              <p class="mb-2">{{ hold()!.description || 'No description provided.' }}</p>
-            </div>
-            <div class="col-md-4">
-              <dl class="row mb-0">
-                <dt class="col-sm-6">Created</dt>
-                <dd class="col-sm-6">{{ formatDate(hold()!.created_at) }}</dd>
-                @if (hold()!.activated_at) {
-                  <dt class="col-sm-6">Activated</dt>
-                  <dd class="col-sm-6">{{ formatDate(hold()!.activated_at!) }}</dd>
-                }
-                @if (hold()!.released_at) {
-                  <dt class="col-sm-6">Released</dt>
-                  <dd class="col-sm-6">{{ formatDate(hold()!.released_at!) }}</dd>
-                }
-                @if (hold()!.release_reason) {
-                  <dt class="col-sm-6">Reason</dt>
-                  <dd class="col-sm-6">{{ hold()!.release_reason }}</dd>
-                }
-              </dl>
-            </div>
-          </div>
-        </div>
-      </div>
+          <!-- Details -->
+          <div class="dv-card dv-card--pad lhd-card">
+            <p class="lhd-desc">{{ hold()!.description || 'No description provided.' }}</p>
+            <div class="dv-kv">
+              <span class="dv-kv__k">created</span>
+              <span class="dv-mono">{{ formatDate(hold()!.created_at) }}</span>
 
-      <!-- Stats Row -->
-      <div class="row mb-4">
-        <div class="col-md-4">
-          <div class="card text-center">
-            <div class="card-body">
-              <h5 class="card-title">{{ hold()!.criteria_count }}</h5>
-              <p class="card-text text-muted small mb-0">Criteria</p>
+              @if (hold()!.activated_at) {
+                <span class="dv-kv__k">activated</span>
+                <span class="dv-mono">{{ formatDate(hold()!.activated_at!) }}</span>
+              }
+              @if (hold()!.released_at) {
+                <span class="dv-kv__k">released</span>
+                <span class="dv-mono">{{ formatDate(hold()!.released_at!) }}</span>
+              }
+              @if (hold()!.release_reason) {
+                <span class="dv-kv__k">reason</span>
+                <span>{{ hold()!.release_reason }}</span>
+              }
             </div>
           </div>
-        </div>
-        <div class="col-md-4">
-          <div class="card text-center">
-            <div class="card-body">
-              <h5 class="card-title">{{ documents().length }}</h5>
-              <p class="card-text text-muted small mb-0">Held Documents</p>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="card text-center">
-            <div class="card-body">
-              <h5 class="card-title">{{ custodians().length }}</h5>
-              <p class="card-text text-muted small mb-0">Custodians</p>
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Held Documents -->
-      <div class="card mb-4">
-        <div class="card-header">
-          Held Documents
-          <span class="badge bg-primary ms-2">{{ documents().length }}</span>
-        </div>
-        <div class="card-body p-0">
+          <!-- Stats -->
+          <div class="lhd-stats">
+            <div class="dv-stat dv-stat--sm">
+              <div class="dv-stat__label">criteria</div>
+              <div class="dv-stat__row">
+                <span class="dv-stat__value">{{ hold()!.criteria_count }}</span>
+              </div>
+            </div>
+            <div class="dv-stat dv-stat--sm">
+              <div class="dv-stat__label">held documents</div>
+              <div class="dv-stat__row">
+                <span class="dv-stat__value">{{ documents().length }}</span>
+              </div>
+            </div>
+            <div class="dv-stat dv-stat--sm">
+              <div class="dv-stat__label">custodians</div>
+              <div class="dv-stat__row">
+                <span class="dv-stat__value">{{ custodians().length }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Held documents -->
+          <div class="dv-section lhd-section">
+            <span class="dv-eyebrow">held documents</span>
+            <span class="dv-meta dv-push">{{ documents().length }}</span>
+          </div>
+
           @if (documents().length === 0) {
-            <div class="text-center text-muted py-4">
-              No documents under this hold.
-            </div>
+            <div class="dv-empty">No documents under this hold.</div>
           } @else {
-            <div class="table-responsive">
-              <table class="table table-hover mb-0">
-                <thead>
-                  <tr>
-                    <th>Document</th>
-                    <th>Held At</th>
-                    <th>Released At</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (doc of documents(); track doc.id) {
-                    <tr>
-                      <td>
-                        <a
-                          [routerLink]="['/documents', doc.document]"
-                          class="text-decoration-none"
-                        >
-                          {{ doc.document_title }}
-                        </a>
-                      </td>
-                      <td>{{ formatDate(doc.held_at) }}</td>
-                      <td>
-                        @if (doc.released_at) {
-                          {{ formatDate(doc.released_at) }}
-                        } @else {
-                          <span class="badge bg-danger">Held</span>
-                        }
-                      </td>
-                      <td>
-                        <a
-                          class="btn btn-sm btn-outline-secondary"
-                          [routerLink]="['/documents', doc.document]"
-                          title="View Document"
-                        >
-                          <i class="bi bi-eye"></i>
-                        </a>
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
+            <div class="dv-thead dv-grid" style="--dv-cols: 1fr 120px 150px; --dv-gap: 12px">
+              <span>document</span><span>held</span><span>released</span>
             </div>
+            @for (doc of documents(); track doc.id) {
+              <a
+                class="dv-row dv-grid"
+                style="--dv-cols: 1fr 120px 150px; --dv-gap: 12px"
+                [routerLink]="['/documents', doc.document]"
+                title="View document"
+              >
+                <span class="lhd-doc dv-clip">{{ doc.document_title }}</span>
+                <span class="dv-ts">{{ formatDate(doc.held_at) }}</span>
+                <span>
+                  @if (doc.released_at) {
+                    <span class="dv-ts">{{ formatDate(doc.released_at) }}</span>
+                  } @else {
+                    <span class="dv-chip dv-chip--upper dv-chip--danger">held</span>
+                  }
+                </span>
+              </a>
+            }
           }
-        </div>
-      </div>
 
-      <!-- Custodians -->
-      <div class="card mb-4">
-        <div class="card-header">
-          Custodians
-          <span class="badge bg-primary ms-2">{{ custodians().length }}</span>
-        </div>
-        <div class="card-body p-0">
+          <!-- Custodians -->
+          <div class="dv-section lhd-section">
+            <span class="dv-eyebrow">custodians</span>
+            <span class="dv-meta dv-push">{{ custodians().length }}</span>
+          </div>
+
           @if (custodians().length === 0) {
-            <div class="text-center text-muted py-4">
-              No custodians assigned to this hold.
-            </div>
+            <div class="dv-empty">No custodians assigned to this hold.</div>
           } @else {
-            <div class="table-responsive">
-              <table class="table table-hover mb-0">
-                <thead>
-                  <tr>
-                    <th>User</th>
-                    <th>Notified At</th>
-                    <th>Acknowledged</th>
-                    <th>Notes</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (custodian of custodians(); track custodian.id) {
-                    <tr>
-                      <td>{{ custodian.user_name }}</td>
-                      <td>
-                        @if (custodian.notified_at) {
-                          {{ formatDate(custodian.notified_at) }}
-                        } @else {
-                          <span class="text-muted">Not notified</span>
-                        }
-                      </td>
-                      <td>
-                        @if (custodian.acknowledged) {
-                          <span class="badge bg-success">
-                            <i class="bi bi-check-lg me-1"></i>
-                            {{ custodian.acknowledged_at ? formatDate(custodian.acknowledged_at) : 'Yes' }}
-                          </span>
-                        } @else {
-                          <span class="badge bg-warning text-dark">Pending</span>
-                        }
-                      </td>
-                      <td>{{ custodian.notes }}</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
+            <div
+              class="dv-thead dv-grid"
+              style="--dv-cols: 1fr 130px 150px 1fr; --dv-gap: 12px"
+            >
+              <span>user</span><span>notified</span><span>acknowledged</span><span>notes</span>
             </div>
+            @for (custodian of custodians(); track custodian.id) {
+              <div
+                class="dv-row dv-grid dv-row--static"
+                style="--dv-cols: 1fr 130px 150px 1fr; --dv-gap: 12px"
+              >
+                <span class="lhd-doc dv-clip">{{ custodian.user_name }}</span>
+                <span>
+                  @if (custodian.notified_at) {
+                    <span class="dv-ts">{{ formatDate(custodian.notified_at) }}</span>
+                  } @else {
+                    <span class="dv-meta">not notified</span>
+                  }
+                </span>
+                <span>
+                  @if (custodian.acknowledged) {
+                    <span class="dv-chip dv-chip--upper dv-chip--ok">{{
+                      custodian.acknowledged_at
+                        ? formatDate(custodian.acknowledged_at)
+                        : 'acknowledged'
+                    }}</span>
+                  } @else {
+                    <span class="dv-chip dv-chip--upper dv-chip--warn">pending</span>
+                  }
+                </span>
+                <span class="dv-muted dv-clip lhd-notes" [title]="custodian.notes">{{
+                  custodian.notes
+                }}</span>
+              </div>
+            }
           }
-        </div>
+        }
       </div>
-    }
+    </div>
   `,
 })
 export class LegalHoldDetailComponent implements OnInit {
@@ -273,14 +234,16 @@ export class LegalHoldDetailComponent implements OnInit {
     });
   }
 
-  getStatusBadgeClass(
-    status: LegalHold['status'],
-  ): Record<string, boolean> {
-    return {
-      'bg-secondary': status === 'draft',
-      'bg-danger': status === 'active',
-      'bg-success': status === 'released',
-    };
+  /** Console status chip modifier: an active hold is the dangerous state. */
+  getStatusBadgeClass(status: LegalHold['status']): string {
+    switch (status) {
+      case 'active':
+        return 'dv-chip--danger';
+      case 'draft':
+        return 'dv-chip--accent';
+      default:
+        return '';
+    }
   }
 
   formatStatus(status: string): string {

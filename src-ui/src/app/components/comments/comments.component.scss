@@ -1,0 +1,94 @@
+// Threaded notes inside the 400px document panel. Shared patterns live in
+// src/_console.scss; only the panel geometry is here.
+.cm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cm__head {
+  display: flex;
+  align-items: center;
+}
+
+.cm__item {
+  padding: 11px 13px;
+
+  // Reserved for a reply once the API exposes a parent comment.
+  &--reply {
+    margin-left: 20px;
+  }
+}
+
+.cm__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cm__author {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.cm__text {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-top: 8px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.cm__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.cm__act {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--faint);
+  font: 400 12px "JetBrains Mono", ui-monospace, monospace;
+  line-height: 1;
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &--danger:hover {
+    color: var(--danger);
+  }
+}
+
+.cm__edit {
+  margin-top: 8px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.cm__editactions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.cm__compose {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.cm__send {
+  padding: 0 14px;
+  font-size: 12px;
+  border-radius: 7px;
+  flex-shrink: 0;
+}
+
+.cm__empty {
+  padding: 18px 12px;
+}

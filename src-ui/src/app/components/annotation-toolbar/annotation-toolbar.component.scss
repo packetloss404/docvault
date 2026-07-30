@@ -1,0 +1,77 @@
+// Compact annotation toolbar that sits above the document preview.
+.at {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.at__tools {
+  display: flex;
+  gap: 4px;
+}
+
+.at__tool {
+  padding: 5px 9px;
+  min-width: 30px;
+  font-size: 12px;
+  line-height: 1;
+
+  &.is-active {
+    background: var(--accent-dim);
+    border-color: var(--accent-line);
+    color: var(--accent-text);
+  }
+}
+
+.at__sep {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.at__group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.at__color {
+  width: 26px;
+  height: 24px;
+  padding: 0;
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  cursor: pointer;
+
+  &::-webkit-color-swatch-wrapper {
+    padding: 2px;
+  }
+
+  &::-webkit-color-swatch {
+    border: none;
+    border-radius: 4px;
+  }
+}
+
+.at__range {
+  width: 76px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.at__pct {
+  width: 30px;
+  text-align: right;
+}
+
+.at__authors {
+  width: auto;
+  min-width: 118px;
+  font-size: 12px;
+  padding: 5px 9px;
+  cursor: pointer;
+  appearance: none;
+}

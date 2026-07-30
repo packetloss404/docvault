@@ -26,101 +26,75 @@ interface SimNode extends RelationshipGraphNode {
 }
 
 const NODE_RADIUS = 24;
-const EDGE_COLORS = [
-  '#0d6efd',
-  '#198754',
-  '#dc3545',
-  '#ffc107',
-  '#6f42c1',
-  '#0dcaf0',
-  '#fd7e14',
-  '#20c997',
-];
+// Edges are drawn in a single hairline token; the relation kind is spelled out
+// on the edge label and in the legend rather than encoded as a colour.
+const EDGE_STROKE = 'var(--border2)';
 
 @Component({
   selector: 'app-relationship-graph',
   standalone: true,
   imports: [CommonModule, RouterModule],
   template: `
-    <div class="container-fluid py-3">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0">
-          <i class="bi bi-share me-2"></i>Relationship Graph
-        </h4>
-        <div class="d-flex gap-2 align-items-center">
-          <span class="text-muted small">Depth:</span>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-pagehead rg__head">
+        <h1 class="dv-h1 dv-h1--sm">Relationship graph</h1>
+        <div class="rg__controls dv-push">
+          <span class="dv-eyebrow">depth</span>
           @for (d of [1, 2, 3]; track d) {
             <button
-              class="btn btn-sm"
-              [class.btn-primary]="depth() === d"
-              [class.btn-outline-primary]="depth() !== d"
+              type="button"
+              class="dv-navchip"
+              [class.is-active]="depth() === d"
+              [attr.aria-pressed]="depth() === d"
               (click)="setDepth(d)"
             >
               {{ d }}
             </button>
           }
           <a
+            class="dv-btn dv-btn--ghost dv-btn--sm rg__link"
             [routerLink]="['/documents', documentId, 'relationships']"
-            class="btn btn-outline-secondary btn-sm ms-2"
+            >list view</a
           >
-            <i class="bi bi-list-ul me-1"></i>List View
-          </a>
           <a
+            class="dv-btn dv-btn--ghost dv-btn--sm"
             [routerLink]="['/documents', documentId]"
-            class="btn btn-outline-secondary btn-sm"
+            >← document</a
           >
-            <i class="bi bi-arrow-left me-1"></i>Back to Document
-          </a>
         </div>
       </div>
 
       @if (loading()) {
-        <div class="text-center py-5">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
+        <div class="dv-empty">
+          <span class="dv-spinner"></span>
+          <span class="dv-sr">Loading graph…</span>
         </div>
       } @else if (error()) {
-        <div class="alert alert-danger">{{ error() }}</div>
+        <div class="dv-card dv-card--r10 rg__error" role="alert">{{ error() }}</div>
       } @else {
         <!-- Legend -->
-        @if (legendItems().length > 0) {
-          <div class="card mb-3">
-            <div class="card-body py-2 d-flex flex-wrap gap-3">
-              <span class="text-muted small me-2">Legend:</span>
+        <div class="dv-card dv-card--r10 rg__legend">
+          <span class="dv-eyebrow">legend</span>
+          <span class="rg__key">
+            <span class="rg__dot rg__dot--focus" aria-hidden="true"></span>
+            this document
+          </span>
+          <span class="rg__key">
+            <span class="rg__dot" aria-hidden="true"></span>
+            related document
+          </span>
+          @if (legendItems().length > 0) {
+            <span class="rg__kinds">
               @for (item of legendItems(); track item.label) {
-                <span class="d-flex align-items-center gap-1 small">
-                  <span
-                    class="d-inline-block rounded"
-                    [style.width.px]="14"
-                    [style.height.px]="14"
-                    [style.background]="item.color"
-                  ></span>
-                  {{ item.label }}
-                </span>
+                <span class="dv-chip dv-chip--upper">{{ item.label }}</span>
               }
-              <span class="d-flex align-items-center gap-1 small ms-3">
-                <span
-                  class="d-inline-block rounded-circle border border-2"
-                  style="width: 14px; height: 14px; background: var(--bs-primary);"
-                ></span>
-                Current Document
-              </span>
-              <span class="d-flex align-items-center gap-1 small">
-                <span
-                  class="d-inline-block rounded-circle border border-2"
-                  style="width: 14px; height: 14px; background: var(--bs-secondary);"
-                ></span>
-                Related Document
-              </span>
-            </div>
-          </div>
-        }
+            </span>
+          }
+        </div>
 
         <!-- SVG Graph -->
         <div
-          class="card"
-          style="overflow: hidden; cursor: grab;"
+          class="dv-well rg__canvas"
           (mousedown)="onBgMouseDown($event)"
           (mousemove)="onMouseMove($event)"
           (mouseup)="onMouseUp()"
@@ -128,12 +102,10 @@ const EDGE_COLORS = [
         >
           <svg
             #svgEl
+            class="rg__svg"
             [attr.width]="svgWidth"
             [attr.height]="svgHeight"
-            [attr.viewBox]="
-              '0 0 ' + svgWidth + ' ' + svgHeight
-            "
-            style="display: block;"
+            [attr.viewBox]="'0 0 ' + svgWidth + ' ' + svgHeight"
           >
             <!-- Edges -->
             @for (edge of simEdges(); track $index) {
@@ -143,19 +115,15 @@ const EDGE_COLORS = [
                 [attr.x2]="getNodeX(edge.target)"
                 [attr.y2]="getNodeY(edge.target)"
                 [attr.stroke]="getEdgeColor(edge.type)"
-                stroke-width="2"
-                stroke-opacity="0.6"
+                stroke-width="1.5"
               />
               <text
+                class="rg__edgelabel"
                 [attr.x]="(getNodeX(edge.source) + getNodeX(edge.target)) / 2"
                 [attr.y]="
                   (getNodeY(edge.source) + getNodeY(edge.target)) / 2 - 6
                 "
                 text-anchor="middle"
-                class="edge-label"
-                fill="currentColor"
-                font-size="10"
-                opacity="0.7"
               >
                 {{ edge.label }}
               </text>
@@ -164,35 +132,28 @@ const EDGE_COLORS = [
             <!-- Nodes -->
             @for (node of simNodes(); track node.id) {
               <g
+                class="rg__node"
                 [attr.transform]="'translate(' + node.x + ',' + node.y + ')'"
-                style="cursor: pointer;"
                 (mousedown)="onNodeMouseDown($event, node)"
                 (dblclick)="onNodeDoubleClick(node)"
               >
                 <circle
                   [attr.r]="nodeRadius"
-                  [attr.fill]="
-                    node.id === documentId
-                      ? 'var(--bs-primary)'
-                      : 'var(--bs-secondary)'
-                  "
-                  stroke="white"
-                  stroke-width="2"
+                  [class.rg__circle--focus]="node.id === documentId"
+                  class="rg__circle"
                 />
                 <text
+                  class="rg__id"
+                  [class.rg__id--focus]="node.id === documentId"
                   dy="4"
                   text-anchor="middle"
-                  fill="white"
-                  font-size="10"
-                  font-weight="bold"
                 >
                   {{ node.id }}
                 </text>
                 <text
+                  class="rg__label"
                   [attr.y]="nodeRadius + 14"
                   text-anchor="middle"
-                  fill="currentColor"
-                  font-size="11"
                 >
                   {{ truncate(node.title, 20) }}
                 </text>
@@ -200,13 +161,14 @@ const EDGE_COLORS = [
             }
           </svg>
         </div>
-        <p class="text-muted small mt-2">
-          <i class="bi bi-info-circle me-1"></i>Drag nodes to rearrange.
-          Double-click a node to navigate to that document.
-        </p>
+
+        <div class="dv-meta rg__hint">
+          drag nodes to rearrange · double-click a node to open that document
+        </div>
       }
     </div>
   `,
+  styleUrl: './relationship-graph.component.scss',
 })
 export class RelationshipGraphComponent
   implements OnInit, AfterViewInit, OnDestroy
@@ -293,16 +255,11 @@ export class RelationshipGraphComponent
       };
     });
 
-    // Build edge type color map
+    // Register every relation kind present so the legend can list them.
     this.edgeTypeColorMap.clear();
-    let colorIdx = 0;
     for (const edge of graph.edges) {
       if (!this.edgeTypeColorMap.has(edge.type)) {
-        this.edgeTypeColorMap.set(
-          edge.type,
-          EDGE_COLORS[colorIdx % EDGE_COLORS.length],
-        );
-        colorIdx++;
+        this.edgeTypeColorMap.set(edge.type, EDGE_STROKE);
       }
     }
 
@@ -414,7 +371,7 @@ export class RelationshipGraphComponent
   }
 
   getEdgeColor(type: string): string {
-    return this.edgeTypeColorMap.get(type) || '#6c757d';
+    return this.edgeTypeColorMap.get(type) || EDGE_STROKE;
   }
 
   truncate(text: string, max: number): string {

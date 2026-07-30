@@ -1,250 +1,313 @@
 @if (loading()) {
-  <div class="text-center py-5">
-    <div class="spinner-border text-primary" role="status">
-      <span class="visually-hidden">Loading...</span>
-    </div>
+  <div class="dv-screen dv-screen--tight">
+    <div class="dv-empty"><span class="dv-spinner"></span> Loading workflow…</div>
   </div>
 } @else if (template(); as t) {
-  <nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb">
-      <li class="breadcrumb-item"><a routerLink="/workflows">Workflows</a></li>
-      <li class="breadcrumb-item active">{{ t.label }}</li>
-    </ol>
-  </nav>
+  <div class="dv-screen dv-screen--tight">
+    <div class="dv-inner dv-inner--wide">
+      <div class="wd-crumb">
+        <a class="wd-crumb__up" routerLink="/workflows">workflows</a>
+        <span class="wd-crumb__sep">/</span>
+        <span>{{ t.internal_name }}</span>
+      </div>
 
-  <!-- Header -->
-  <div class="d-flex justify-content-between align-items-start mb-3">
-    @if (!editingLabel()) {
-      <div>
-        <h2>{{ t.label }}</h2>
-        <small class="text-muted">{{ t.internal_name }}</small>
-        @if (t.auto_launch) {
-          <span class="badge bg-success ms-2">Auto-launch</span>
+      <!-- Header -->
+      @if (!editingLabel()) {
+        <div class="dv-pagehead wd-head">
+          <h1 class="dv-h1 dv-h1--sm">{{ t.label }}</h1>
+          @if (t.auto_launch) {
+            <span class="dv-chip dv-chip--accent dv-chip--upper">auto-launch</span>
+          } @else {
+            <span class="dv-chip dv-chip--upper">manual</span>
+          }
+          <button
+            type="button"
+            class="dv-btn dv-btn--ghost dv-btn--md dv-push"
+            (click)="startEditLabel()"
+          >
+            Edit
+          </button>
+        </div>
+      } @else {
+        <div class="dv-card dv-card--pad dv-card--accent wd-editcard">
+          <div class="wd-form">
+            <div class="wd-form__field">
+              <label class="dv-field__label" for="wd-label">label</label>
+              <input
+                id="wd-label"
+                type="text"
+                class="dv-input"
+                [ngModel]="editLabel()"
+                (ngModelChange)="editLabel.set($event)"
+              />
+            </div>
+            <label class="wd-check" for="wd-auto">
+              <input
+                type="checkbox"
+                class="dv-checkbox"
+                id="wd-auto"
+                [ngModel]="editAutoLaunch()"
+                (ngModelChange)="editAutoLaunch.set($event)"
+              />
+              auto-launch
+            </label>
+            <div class="wd-form__actions">
+              <button type="button" class="dv-btn dv-btn--primary dv-btn--md" (click)="saveLabel()">
+                Save
+              </button>
+              <button
+                type="button"
+                class="dv-btn dv-btn--ghost dv-btn--md"
+                (click)="editingLabel.set(false)"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- State machine pipeline -->
+      @if (states().length > 0) {
+        <div class="dv-chain wd-chain">
+          @for (s of states(); track s.id; let last = $last) {
+            <span
+              class="dv-chip"
+              [class.dv-chip--accent]="s.initial"
+              [class.dv-chip--ok]="s.final"
+              >{{ s.label }}</span
+            >
+            @if (!last) {
+              <span class="dv-chain__arrow">→</span>
+            }
+          }
+        </div>
+      }
+
+      <!-- Tabs -->
+      <div class="dv-tabs wd-tabs">
+        <button
+          type="button"
+          class="dv-tab"
+          [class.is-active]="activeTab() === 'states'"
+          (click)="setTab('states')"
+        >
+          States ({{ states().length }})
+        </button>
+        <button
+          type="button"
+          class="dv-tab"
+          [class.is-active]="activeTab() === 'transitions'"
+          (click)="setTab('transitions')"
+        >
+          Transitions ({{ transitions().length }})
+        </button>
+      </div>
+
+      <!-- States -->
+      @if (activeTab() === 'states') {
+        <div class="dv-card dv-card--pad wd-addcard">
+          <div class="dv-card__title">Add state</div>
+          <div class="wd-form">
+            <div class="wd-form__field">
+              <label class="dv-field__label" for="wd-state-label">label</label>
+              <input
+                id="wd-state-label"
+                type="text"
+                class="dv-input"
+                [ngModel]="newStateLabel()"
+                (ngModelChange)="newStateLabel.set($event)"
+                placeholder="e.g. Draft"
+              />
+            </div>
+            <div class="wd-form__field wd-form__field--sm">
+              <label class="dv-field__label" for="wd-state-completion">completion %</label>
+              <input
+                id="wd-state-completion"
+                type="number"
+                class="dv-input dv-input--r7"
+                [ngModel]="newStateCompletion()"
+                (ngModelChange)="newStateCompletion.set($event)"
+                min="0"
+                max="100"
+              />
+            </div>
+            <label class="wd-check" for="stateInitial">
+              <input
+                type="checkbox"
+                class="dv-checkbox"
+                id="stateInitial"
+                [ngModel]="newStateInitial()"
+                (ngModelChange)="newStateInitial.set($event)"
+              />
+              initial
+            </label>
+            <label class="wd-check" for="stateFinal">
+              <input
+                type="checkbox"
+                class="dv-checkbox"
+                id="stateFinal"
+                [ngModel]="newStateFinal()"
+                (ngModelChange)="newStateFinal.set($event)"
+              />
+              final
+            </label>
+            <div class="wd-form__actions">
+              <button
+                type="button"
+                class="dv-btn dv-btn--accent dv-btn--md"
+                (click)="addState()"
+                [disabled]="!newStateLabel()"
+              >
+                + Add state
+              </button>
+            </div>
+          </div>
+        </div>
+
+        @if (states().length > 0) {
+          <div class="wd-table">
+            <div class="dv-thead dv-grid" style="--dv-cols: 1fr 90px 90px 110px 70px">
+              <span>label</span><span>initial</span><span>final</span>
+              <span class="dv-num">completion</span><span></span>
+            </div>
+            @for (s of states(); track s.id) {
+              <div
+                class="dv-row dv-row--static dv-row--tight dv-grid"
+                style="--dv-cols: 1fr 90px 90px 110px 70px"
+              >
+                <span class="dv-clip">{{ s.label }}</span>
+                <span class="dv-meta">
+                  @if (s.initial) {
+                    <span class="dv-accent">✓ initial</span>
+                  } @else {
+                    —
+                  }
+                </span>
+                <span class="dv-meta">
+                  @if (s.final) {
+                    <span class="dv-ok">✓ final</span>
+                  } @else {
+                    —
+                  }
+                </span>
+                <span class="dv-ts dv-num">{{ s.completion }}%</span>
+                <span class="wd-rowaction">
+                  <button type="button" class="wd-action wd-action--danger" (click)="deleteState(s.id)">
+                    del
+                  </button>
+                </span>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="dv-empty">No states defined yet.</div>
         }
-      </div>
-      <button class="btn btn-outline-primary btn-sm" (click)="startEditLabel()">
-        <i class="bi bi-pencil"></i> Edit
-      </button>
-    } @else {
-      <div class="row g-2 flex-grow-1 align-items-end">
-        <div class="col-md-5">
-          <label class="form-label">Label</label>
-          <input
-            type="text"
-            class="form-control form-control-sm"
-            [ngModel]="editLabel()"
-            (ngModelChange)="editLabel.set($event)"
-          />
-        </div>
-        <div class="col-md-3">
-          <div class="form-check mt-4">
-            <input
-              type="checkbox"
-              class="form-check-input"
-              [ngModel]="editAutoLaunch()"
-              (ngModelChange)="editAutoLaunch.set($event)"
-            />
-            <label class="form-check-label">Auto-launch</label>
+      }
+
+      <!-- Transitions -->
+      @if (activeTab() === 'transitions') {
+        <div class="dv-card dv-card--pad wd-addcard">
+          <div class="dv-card__title">Add transition</div>
+          <div class="wd-form">
+            <div class="wd-form__field">
+              <label class="dv-field__label" for="wd-trans-label">label</label>
+              <input
+                id="wd-trans-label"
+                type="text"
+                class="dv-input"
+                [ngModel]="newTransLabel()"
+                (ngModelChange)="newTransLabel.set($event)"
+                placeholder="e.g. Submit for review"
+              />
+            </div>
+            <div class="wd-form__field wd-form__field--sm">
+              <label class="dv-field__label" for="wd-trans-origin">from state</label>
+              <select
+                id="wd-trans-origin"
+                class="dv-select"
+                [ngModel]="newTransOrigin()"
+                (ngModelChange)="newTransOrigin.set($event)"
+              >
+                <option [ngValue]="null">Select…</option>
+                @for (s of states(); track s.id) {
+                  <option [ngValue]="s.id">{{ s.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="wd-form__field wd-form__field--sm">
+              <label class="dv-field__label" for="wd-trans-dest">to state</label>
+              <select
+                id="wd-trans-dest"
+                class="dv-select"
+                [ngModel]="newTransDest()"
+                (ngModelChange)="newTransDest.set($event)"
+              >
+                <option [ngValue]="null">Select…</option>
+                @for (s of states(); track s.id) {
+                  <option [ngValue]="s.id">{{ s.label }}</option>
+                }
+              </select>
+            </div>
+            <div class="wd-form__field wd-form__field--sm">
+              <label class="dv-field__label" for="wd-trans-cond">condition</label>
+              <input
+                id="wd-trans-cond"
+                type="text"
+                class="dv-input dv-input--r7"
+                [ngModel]="newTransCondition()"
+                (ngModelChange)="newTransCondition.set($event)"
+                placeholder="optional"
+              />
+            </div>
+            <div class="wd-form__actions">
+              <button
+                type="button"
+                class="dv-btn dv-btn--accent dv-btn--md"
+                (click)="addTransition()"
+                [disabled]="!newTransLabel() || !newTransOrigin() || !newTransDest()"
+              >
+                + Add transition
+              </button>
+            </div>
           </div>
         </div>
-        <div class="col-auto">
-          <button class="btn btn-primary btn-sm" (click)="saveLabel()">Save</button>
-          <button class="btn btn-secondary btn-sm ms-1" (click)="editingLabel.set(false)">Cancel</button>
-        </div>
-      </div>
-    }
+
+        @if (transitions().length > 0) {
+          <div class="wd-table">
+            <div class="dv-thead dv-grid" style="--dv-cols: 1fr 260px 1fr 70px">
+              <span>label</span><span>route</span><span>condition</span><span></span>
+            </div>
+            @for (tr of transitions(); track tr.id) {
+              <div
+                class="dv-row dv-row--static dv-row--tight dv-grid"
+                style="--dv-cols: 1fr 260px 1fr 70px"
+              >
+                <span class="dv-clip">{{ tr.label }}</span>
+                <span class="dv-chain">
+                  <span class="dv-chip">{{ tr.origin_state_label }}</span>
+                  <span class="dv-chain__arrow">→</span>
+                  <span class="dv-chip dv-chip--accent">{{ tr.destination_state_label }}</span>
+                </span>
+                <span class="dv-ts dv-clip">{{ tr.condition || '—' }}</span>
+                <span class="wd-rowaction">
+                  <button
+                    type="button"
+                    class="wd-action wd-action--danger"
+                    (click)="deleteTransition(tr.id)"
+                  >
+                    del
+                  </button>
+                </span>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="dv-empty">
+            No transitions defined yet. Add states first, then connect them.
+          </div>
+        }
+      }
+    </div>
   </div>
-
-  <!-- Tabs -->
-  <ul class="nav nav-tabs mb-3">
-    <li class="nav-item">
-      <a
-        class="nav-link"
-        [class.active]="activeTab() === 'states'"
-        (click)="setTab('states')"
-        role="button"
-      >States ({{ states().length }})</a>
-    </li>
-    <li class="nav-item">
-      <a
-        class="nav-link"
-        [class.active]="activeTab() === 'transitions'"
-        (click)="setTab('transitions')"
-        role="button"
-      >Transitions ({{ transitions().length }})</a>
-    </li>
-  </ul>
-
-  <!-- States Tab -->
-  @if (activeTab() === 'states') {
-    <div class="card mb-3">
-      <div class="card-header">Add State</div>
-      <div class="card-body">
-        <div class="row g-2 align-items-end">
-          <div class="col-md-3">
-            <label class="form-label">Label</label>
-            <input
-              type="text"
-              class="form-control form-control-sm"
-              [ngModel]="newStateLabel()"
-              (ngModelChange)="newStateLabel.set($event)"
-              placeholder="e.g. Draft"
-            />
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">Completion %</label>
-            <input
-              type="number"
-              class="form-control form-control-sm"
-              [ngModel]="newStateCompletion()"
-              (ngModelChange)="newStateCompletion.set($event)"
-              min="0" max="100"
-            />
-          </div>
-          <div class="col-auto">
-            <div class="form-check">
-              <input type="checkbox" class="form-check-input" id="stateInitial"
-                [ngModel]="newStateInitial()" (ngModelChange)="newStateInitial.set($event)" />
-              <label class="form-check-label" for="stateInitial">Initial</label>
-            </div>
-          </div>
-          <div class="col-auto">
-            <div class="form-check">
-              <input type="checkbox" class="form-check-input" id="stateFinal"
-                [ngModel]="newStateFinal()" (ngModelChange)="newStateFinal.set($event)" />
-              <label class="form-check-label" for="stateFinal">Final</label>
-            </div>
-          </div>
-          <div class="col-auto">
-            <button class="btn btn-primary btn-sm" (click)="addState()" [disabled]="!newStateLabel()">
-              Add State
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    @if (states().length > 0) {
-      <table class="table table-hover">
-        <thead>
-          <tr>
-            <th>Label</th>
-            <th>Initial</th>
-            <th>Final</th>
-            <th>Completion</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (s of states(); track s.id) {
-            <tr>
-              <td>{{ s.label }}</td>
-              <td>
-                @if (s.initial) { <span class="badge bg-primary">Initial</span> }
-              </td>
-              <td>
-                @if (s.final) { <span class="badge bg-success">Final</span> }
-              </td>
-              <td>{{ s.completion }}%</td>
-              <td class="text-end">
-                <button class="btn btn-outline-danger btn-sm" (click)="deleteState(s.id)">
-                  <i class="bi bi-trash"></i>
-                </button>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    } @else {
-      <p class="text-muted">No states defined yet.</p>
-    }
-  }
-
-  <!-- Transitions Tab -->
-  @if (activeTab() === 'transitions') {
-    <div class="card mb-3">
-      <div class="card-header">Add Transition</div>
-      <div class="card-body">
-        <div class="row g-2 align-items-end">
-          <div class="col-md-3">
-            <label class="form-label">Label</label>
-            <input
-              type="text"
-              class="form-control form-control-sm"
-              [ngModel]="newTransLabel()"
-              (ngModelChange)="newTransLabel.set($event)"
-              placeholder="e.g. Submit for Review"
-            />
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">From State</label>
-            <select class="form-select form-select-sm"
-              [ngModel]="newTransOrigin()" (ngModelChange)="newTransOrigin.set($event)">
-              <option [ngValue]="null">Select...</option>
-              @for (s of states(); track s.id) {
-                <option [ngValue]="s.id">{{ s.label }}</option>
-              }
-            </select>
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">To State</label>
-            <select class="form-select form-select-sm"
-              [ngModel]="newTransDest()" (ngModelChange)="newTransDest.set($event)">
-              <option [ngValue]="null">Select...</option>
-              @for (s of states(); track s.id) {
-                <option [ngValue]="s.id">{{ s.label }}</option>
-              }
-            </select>
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">Condition</label>
-            <input
-              type="text"
-              class="form-control form-control-sm"
-              [ngModel]="newTransCondition()"
-              (ngModelChange)="newTransCondition.set($event)"
-              placeholder="Optional"
-            />
-          </div>
-          <div class="col-auto">
-            <button class="btn btn-primary btn-sm" (click)="addTransition()"
-              [disabled]="!newTransLabel() || !newTransOrigin() || !newTransDest()">
-              Add Transition
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    @if (transitions().length > 0) {
-      <table class="table table-hover">
-        <thead>
-          <tr>
-            <th>Label</th>
-            <th>From</th>
-            <th>To</th>
-            <th>Condition</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (t of transitions(); track t.id) {
-            <tr>
-              <td>{{ t.label }}</td>
-              <td><span class="badge bg-secondary">{{ t.origin_state_label }}</span></td>
-              <td><span class="badge bg-secondary">{{ t.destination_state_label }}</span></td>
-              <td><code>{{ t.condition || '-' }}</code></td>
-              <td class="text-end">
-                <button class="btn btn-outline-danger btn-sm" (click)="deleteTransition(t.id)">
-                  <i class="bi bi-trash"></i>
-                </button>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    } @else {
-      <p class="text-muted">No transitions defined yet. Add states first, then create transitions.</p>
-    }
-  }
 }

@@ -11,137 +11,152 @@ import { PublicPortalInfo } from '../../models/portal.model';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    @if (loading()) {
-      <div class="d-flex justify-content-center align-items-center" style="min-height: 100vh;">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    } @else if (errorMsg()) {
-      <div class="d-flex justify-content-center align-items-center" style="min-height: 100vh;">
-        <div class="text-center">
-          <i class="bi bi-exclamation-triangle fs-1 text-warning"></i>
-          <p class="mt-2">{{ errorMsg() }}</p>
-        </div>
-      </div>
-    } @else if (portal()) {
-      <div style="min-height: 100vh; background: #f8f9fa;">
-        <!-- Header -->
-        <div
-          class="py-4 text-white"
-          [style.background]="portal()!.primary_color"
-        >
-          <div class="container text-center">
-            @if (portal()!.logo) {
-              <img
-                [src]="portal()!.logo!"
-                alt="Portal Logo"
-                style="max-height: 64px;"
-                class="mb-2"
-              />
-            }
-            <h2 class="mb-0">{{ portal()!.name }}</h2>
+    <div class="dv-auth">
+      <div class="dv-auth__col pp__col">
+        <div class="dv-auth__brand">
+          @if (portal()?.logo) {
+            <img class="pp__logo" [src]="portal()!.logo!" alt="" />
+          } @else {
+            <div class="dv-auth__logo">V</div>
+          }
+          <div>
+            <div class="dv-auth__name">{{ portal()?.name || 'DocVault' }}</div>
+            <div class="pp__sub">
+              @if (portal()) {
+                <!-- The portal's own brand colour, shown as a swatch rather
+                     than themed across the page. -->
+                <span
+                  class="dv-dot dv-dot--xl pp__swatch"
+                  [style.background]="portal()!.primary_color"
+                  [title]="portal()!.primary_color"
+                ></span>
+              }
+              <span class="dv-meta">document submission</span>
+            </div>
           </div>
         </div>
 
-        <div class="container py-4" style="max-width: 640px;">
-          <!-- Welcome Text -->
+        @if (loading()) {
+          <div class="dv-auth__card pp__state">
+            <span class="dv-spinner"></span>
+            <span class="dv-meta">loading portal…</span>
+          </div>
+        } @else if (errorMsg()) {
+          <div class="dv-auth__card" role="alert">
+            <span class="dv-chip dv-chip--upper dv-chip--warn pp__badge">unavailable</span>
+            <div class="pp__msg">{{ errorMsg() }}</div>
+          </div>
+        } @else if (portal()) {
           @if (portal()!.welcome_text) {
-            <div class="card mb-4">
-              <div class="card-body">
-                <p class="mb-0" style="white-space: pre-wrap;">{{ portal()!.welcome_text }}</p>
-              </div>
+            <div class="dv-auth__card">
+              <div class="pp__welcome">{{ portal()!.welcome_text }}</div>
             </div>
           }
 
-          <!-- Success Message -->
           @if (uploadSuccess()) {
-            <div class="alert alert-success">
-              <i class="bi bi-check-circle me-2"></i>
-              Your document has been uploaded successfully. Thank you!
+            <div class="dv-callout pp__done" role="status">
+              <div class="dv-callout__label">uploaded</div>
+              <div class="pp__msg">
+                Your document has been uploaded. Thank you.
+              </div>
             </div>
           } @else {
-            <!-- Upload Form -->
-            <div class="card">
-              <div class="card-header">
-                <i class="bi bi-cloud-upload me-1"></i>Upload Document
-              </div>
-              <div class="card-body">
-                @if (portal()!.require_name) {
-                  <div class="mb-3">
-                    <label class="form-label">Your Name <span class="text-danger">*</span></label>
-                    <input
-                      type="text"
-                      class="form-control"
-                      [ngModel]="submitterName()"
-                      (ngModelChange)="submitterName.set($event)"
-                    />
-                  </div>
-                }
-                @if (portal()!.require_email) {
-                  <div class="mb-3">
-                    <label class="form-label">Your Email <span class="text-danger">*</span></label>
-                    <input
-                      type="email"
-                      class="form-control"
-                      [ngModel]="submitterEmail()"
-                      (ngModelChange)="submitterEmail.set($event)"
-                    />
-                  </div>
-                }
-                <div class="mb-3">
-                  <label class="form-label">File <span class="text-danger">*</span></label>
+            <div class="dv-auth__card">
+              <span class="dv-eyebrow">upload document</span>
+
+              @if (portal()!.require_name) {
+                <div>
+                  <label class="dv-field__label" for="pp-name">
+                    your name <span class="dv-danger">*</span>
+                  </label>
+                  <input
+                    id="pp-name"
+                    type="text"
+                    class="dv-input"
+                    autocomplete="name"
+                    [ngModel]="submitterName()"
+                    (ngModelChange)="submitterName.set($event)"
+                  />
+                </div>
+              }
+
+              @if (portal()!.require_email) {
+                <div>
+                  <label class="dv-field__label" for="pp-email">
+                    your email <span class="dv-danger">*</span>
+                  </label>
+                  <input
+                    id="pp-email"
+                    type="email"
+                    class="dv-input"
+                    autocomplete="email"
+                    [ngModel]="submitterEmail()"
+                    (ngModelChange)="submitterEmail.set($event)"
+                  />
+                </div>
+              }
+
+              <div>
+                <span class="dv-field__label">
+                  file <span class="dv-danger">*</span>
+                </span>
+                <label class="dv-dropzone pp__drop">
                   <input
                     type="file"
-                    class="form-control"
+                    class="pp__file"
                     (change)="onFileSelected($event)"
                   />
-                  <div class="form-text">
-                    Maximum file size: {{ portal()!.max_file_size_mb }} MB
-                  </div>
-                </div>
-
-                @if (fileError()) {
-                  <div class="alert alert-danger py-2 small">{{ fileError() }}</div>
-                }
-
-                @if (uploading()) {
-                  <div class="progress mb-3" style="height: 24px;">
-                    <div
-                      class="progress-bar progress-bar-striped progress-bar-animated"
-                      role="progressbar"
-                      [style.width.%]="uploadProgress()"
-                    >
-                      {{ uploadProgress() }}%
-                    </div>
-                  </div>
-                }
-
-                @if (uploadError()) {
-                  <div class="alert alert-danger py-2">{{ uploadError() }}</div>
-                }
-
-                <button
-                  class="btn btn-primary w-100"
-                  [style.background]="portal()!.primary_color"
-                  [style.borderColor]="portal()!.primary_color"
-                  (click)="upload()"
-                  [disabled]="uploading() || !selectedFile()"
-                >
-                  @if (uploading()) {
-                    <span class="spinner-border spinner-border-sm me-1"></span>
-                    Uploading...
+                  @if (selectedFile()) {
+                    <span class="pp__filename dv-clip">{{
+                      selectedFile()!.name
+                    }}</span>
+                    <span class="dv-meta">choose a different file</span>
                   } @else {
-                    <i class="bi bi-cloud-upload me-1"></i>Upload
+                    <span>Drop a file here, or click to choose</span>
                   }
-                </button>
+                </label>
+                <div class="dv-meta pp__limit">
+                  max {{ portal()!.max_file_size_mb }} MB
+                </div>
               </div>
+
+              @if (fileError()) {
+                <div class="pp__error" role="alert">{{ fileError() }}</div>
+              }
+
+              @if (uploading()) {
+                <div>
+                  <div class="dv-bar">
+                    <div class="dv-bar__fill" [style.width.%]="uploadProgress()"></div>
+                  </div>
+                  <div class="dv-meta pp__pct">{{ uploadProgress() }}%</div>
+                </div>
+              }
+
+              @if (uploadError()) {
+                <div class="pp__error" role="alert">{{ uploadError() }}</div>
+              }
+
+              <button
+                type="button"
+                class="dv-btn dv-btn--primary dv-btn--block"
+                (click)="upload()"
+                [disabled]="uploading() || !selectedFile()"
+              >
+                @if (uploading()) {
+                  <span class="dv-spinner"></span>
+                  Uploading…
+                } @else {
+                  Upload →
+                }
+              </button>
             </div>
           }
-        </div>
+        }
       </div>
-    }
+    </div>
   `,
+  styleUrl: './public-portal.component.scss',
 })
 export class PublicPortalComponent implements OnInit {
   portal = signal<PublicPortalInfo | null>(null);

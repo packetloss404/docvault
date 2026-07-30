@@ -1,4 +1,4 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -10,11 +10,17 @@ import { Notification } from '../../models/notification.model';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './notifications.component.html',
+  styleUrl: './notifications.component.scss',
 })
 export class NotificationsComponent implements OnInit {
   notifications = signal<Notification[]>([]);
   showUnreadOnly = signal(false);
   loading = signal(false);
+
+  /** Unread rows in the current page — drives the mono readout in the head. */
+  readonly unreadCount = computed(
+    () => this.notifications().filter((n) => !n.read).length,
+  );
 
   constructor(private notificationService: NotificationService) {}
 
@@ -66,20 +72,18 @@ export class NotificationsComponent implements OnInit {
     });
   }
 
+  /** Console chip modifier for a category, applied alongside `.dv-chip`. */
   getEventBadgeClass(eventType: string): string {
-    if (eventType.startsWith('document.')) {
-      return 'bg-primary';
-    }
     if (eventType.startsWith('workflow.')) {
-      return 'bg-info text-dark';
+      return 'dv-chip--accent';
     }
     if (eventType.startsWith('quota.')) {
-      return 'bg-warning text-dark';
+      return 'dv-chip--warn';
     }
     if (eventType.startsWith('retention.')) {
-      return 'bg-danger';
+      return 'dv-chip--danger';
     }
-    return 'bg-secondary';
+    return 'dv-chip--well';
   }
 
   truncateBody(body: string, maxLength: number = 80): string {

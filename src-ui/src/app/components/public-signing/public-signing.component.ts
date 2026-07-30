@@ -13,130 +13,161 @@ import {
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    @if (loading()) {
-      <div class="d-flex justify-content-center align-items-center" style="min-height: 100vh;">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
+    <div class="dv-auth">
+      <div class="dv-auth__col psg__col" [class.psg__col--narrow]="!info()">
+        <div class="dv-auth__brand">
+          <div class="dv-auth__logo">V</div>
+          <div>
+            <div class="dv-auth__name">DocVault</div>
+            <div class="dv-meta">signing</div>
+          </div>
         </div>
-      </div>
-    } @else if (errorMsg()) {
-      <div class="d-flex justify-content-center align-items-center" style="min-height: 100vh;">
-        <div class="text-center">
-          <i class="bi bi-exclamation-triangle fs-1 text-warning"></i>
-          <p class="mt-2">{{ errorMsg() }}</p>
-        </div>
-      </div>
-    } @else if (completed()) {
-      <div class="d-flex justify-content-center align-items-center" style="min-height: 100vh;">
-        <div class="text-center">
-          <i class="bi bi-check-circle fs-1 text-success"></i>
-          <h4 class="mt-3">{{ completedMessage() }}</h4>
-        </div>
-      </div>
-    } @else if (info()) {
-      <div style="min-height: 100vh; background: #f8f9fa;">
-        <!-- Header -->
-        <nav class="navbar navbar-dark bg-primary px-3">
-          <span class="navbar-brand mb-0 h1">DocVault Signing</span>
-        </nav>
 
-        <div class="container py-4" style="max-width: 900px;">
-          <!-- Request Info -->
-          <div class="card mb-4">
-            <div class="card-body">
-              <h5>{{ info()!.request_title }}</h5>
-              <p class="text-muted mb-1">Document: {{ info()!.document_title }}</p>
-              <p class="mb-0">
-                Signing as: <strong>{{ info()!.signer_name }}</strong>
+        @if (loading()) {
+          <div class="dv-auth__card psg__state">
+            <span class="dv-spinner"></span>
+            <span class="dv-meta">loading signing request…</span>
+          </div>
+        } @else if (errorMsg()) {
+          <div class="dv-auth__card" role="alert">
+            <span class="dv-chip dv-chip--upper dv-chip--warn psg__badge">unavailable</span>
+            <div class="psg__msg">{{ errorMsg() }}</div>
+          </div>
+        } @else if (completed()) {
+          <div class="dv-auth__card" role="status">
+            <span class="dv-chip dv-chip--upper dv-chip--ok psg__badge">done</span>
+            <div class="dv-h2">{{ completedMessage() }}</div>
+          </div>
+        } @else if (info()) {
+          <div class="dv-auth__card psg__brief">
+            <h1 class="dv-h2">{{ info()!.request_title }}</h1>
+            <div class="dv-kv psg__kv">
+              <span class="dv-kv__k">document</span>
+              <span>{{ info()!.document_title }}</span>
+              <span class="dv-kv__k">signing as</span>
+              <span>
+                <strong>{{ info()!.signer_name }}</strong>
                 @if (info()!.signer_role) {
-                  <span class="text-muted">({{ info()!.signer_role }})</span>
+                  <span class="dv-meta psg__role">{{ info()!.signer_role }}</span>
                 }
-              </p>
+              </span>
             </div>
           </div>
 
           @if (info()!.status === 'signed') {
-            <div class="alert alert-success">
-              <i class="bi bi-check-circle me-1"></i>
-              You have already signed this document.
+            <div class="dv-callout psg__note" role="status">
+              <div class="dv-callout__label">already signed</div>
+              <div class="psg__msg">You have already signed this document.</div>
             </div>
           } @else if (info()!.status === 'declined') {
-            <div class="alert alert-danger">
-              <i class="bi bi-x-circle me-1"></i>
-              You have declined this signing request.
+            <div class="dv-auth__card psg__declined" role="status">
+              <span class="dv-chip dv-chip--upper dv-chip--danger psg__badge">declined</span>
+              <div class="psg__msg">You have declined this signing request.</div>
             </div>
           } @else {
-            <!-- Page Viewer -->
-            <div class="card mb-4">
-              <div class="card-header">
-                <i class="bi bi-file-earmark-text me-1"></i>Document Pages
-              </div>
-              <div class="card-body">
-                <div class="row g-2">
+            <div class="psg__split">
+              <!-- Document pages -->
+              <div class="dv-auth__card psg__pages">
+                <span class="dv-eyebrow">pages reviewed</span>
+                <div class="psg__pagegrid">
                   @for (pageNum of pageNumbers(); track pageNum) {
-                    <div class="col-auto">
-                      <button
-                        class="btn btn-sm"
-                        [ngClass]="{
-                          'btn-success': isPageViewed(pageNum),
-                          'btn-outline-secondary': !isPageViewed(pageNum)
-                        }"
-                        (click)="viewPage(pageNum)"
-                      >
-                        @if (isPageViewed(pageNum)) {
-                          <i class="bi bi-check me-1"></i>
-                        }
-                        Page {{ pageNum }}
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      class="psg__page"
+                      [class.is-viewed]="isPageViewed(pageNum)"
+                      [attr.aria-pressed]="isPageViewed(pageNum)"
+                      [title]="
+                        isPageViewed(pageNum)
+                          ? 'Page ' + pageNum + ' reviewed'
+                          : 'Mark page ' + pageNum + ' reviewed'
+                      "
+                      (click)="viewPage(pageNum)"
+                    >
+                      @if (isPageViewed(pageNum)) {
+                        <span aria-hidden="true">✓</span>
+                      }
+                      p.{{ pageNum }}
+                    </button>
                   }
                 </div>
+                <span class="dv-meta"
+                  >{{ viewedPages().length }} of {{ pageNumbers().length }}
+                  marked</span
+                >
               </div>
-            </div>
 
-            <!-- Signature Fields -->
-            <div class="card mb-4">
-              <div class="card-header">
-                <i class="bi bi-pen me-1"></i>Signature Fields
-              </div>
-              <div class="card-body">
+              <!-- Signature fields -->
+              <div class="dv-auth__card psg__fields">
+                <span class="dv-eyebrow">signature fields</span>
+
                 @for (field of info()!.fields; track field.id) {
-                  <div class="mb-3 p-3 border rounded" [style.border-left]="'4px solid #0d6efd !important'">
-                    <label class="form-label fw-semibold">
+                  <div class="psg__field">
+                    <span class="dv-field__label">
                       {{ formatFieldType(field.field_type) }}
                       @if (field.required) {
-                        <span class="text-danger">*</span>
+                        <span class="dv-danger">*</span>
                       }
-                      <span class="text-muted small ms-1">(Page {{ field.page }})</span>
-                    </label>
+                      <span class="psg__page-ref">p.{{ field.page }}</span>
+                    </span>
+
                     @if (field.field_type === 'checkbox') {
-                      <div class="form-check">
-                        <input
-                          type="checkbox"
-                          class="form-check-input"
-                          [checked]="fieldValues()[field.id] === 'true'"
-                          (change)="setFieldValue(field.id, $any($event.target).checked ? 'true' : 'false')"
-                        />
-                        <label class="form-check-label">I agree</label>
-                      </div>
-                    } @else if (field.field_type === 'signature' || field.field_type === 'initials') {
-                      <div
-                        class="border rounded p-4 text-center bg-light"
-                        style="cursor: pointer; min-height: 80px;"
-                        (click)="setFieldValue(field.id, field.field_type === 'signature' ? info()!.signer_name : getInitials())"
+                      <button
+                        type="button"
+                        class="psg__check"
+                        (click)="
+                          setFieldValue(
+                            field.id,
+                            fieldValues()[field.id] === 'true' ? 'false' : 'true'
+                          )
+                        "
+                        [attr.aria-pressed]="fieldValues()[field.id] === 'true'"
+                      >
+                        <span
+                          class="dv-check"
+                          [class.is-checked]="fieldValues()[field.id] === 'true'"
+                          aria-hidden="true"
+                        >
+                          @if (fieldValues()[field.id] === 'true') {
+                            ✓
+                          }
+                        </span>
+                        <span class="psg__checklabel">I agree</span>
+                      </button>
+                    } @else if (
+                      field.field_type === 'signature' ||
+                      field.field_type === 'initials'
+                    ) {
+                      <button
+                        type="button"
+                        class="dv-dropzone psg__sign"
+                        (click)="
+                          setFieldValue(
+                            field.id,
+                            field.field_type === 'signature'
+                              ? info()!.signer_name
+                              : getInitials()
+                          )
+                        "
                       >
                         @if (fieldValues()[field.id]) {
-                          <span class="fs-4" style="font-family: cursive;">
-                            {{ fieldValues()[field.id] }}
-                          </span>
+                          <span class="psg__signature">{{
+                            fieldValues()[field.id]
+                          }}</span>
                         } @else {
-                          <span class="text-muted">Click to {{ field.field_type === 'signature' ? 'sign' : 'initial' }}</span>
+                          <span
+                            >Click to
+                            {{
+                              field.field_type === 'signature'
+                                ? 'sign'
+                                : 'initial'
+                            }}</span
+                          >
                         }
-                      </div>
+                      </button>
                     } @else {
                       <input
                         type="text"
-                        class="form-control"
+                        class="dv-input"
                         [ngModel]="fieldValues()[field.id] || ''"
                         (ngModelChange)="setFieldValue(field.id, $event)"
                         [placeholder]="formatFieldType(field.field_type)"
@@ -144,71 +175,75 @@ import {
                     }
                   </div>
                 }
-              </div>
-            </div>
 
-            <!-- Actions -->
-            <div class="d-flex gap-2">
-              <button
-                class="btn btn-primary btn-lg flex-grow-1"
-                (click)="completeSign()"
-                [disabled]="submitting()"
-              >
-                @if (submitting()) {
-                  <span class="spinner-border spinner-border-sm me-1"></span>
-                  Signing...
-                } @else {
-                  <i class="bi bi-pen me-1"></i>Sign & Complete
+                @if (submitError()) {
+                  <div class="psg__error" role="alert">{{ submitError() }}</div>
                 }
-              </button>
-              <button
-                class="btn btn-outline-danger btn-lg"
-                (click)="showDecline.set(true)"
-                [disabled]="submitting()"
-              >
-                <i class="bi bi-x-circle me-1"></i>Decline
-              </button>
-            </div>
 
-            <!-- Decline Modal -->
-            @if (showDecline()) {
-              <div class="card mt-3 border-danger">
-                <div class="card-body">
-                  <h6>Decline Signing</h6>
-                  <textarea
-                    class="form-control mb-2"
-                    rows="3"
-                    placeholder="Please provide a reason for declining..."
-                    [ngModel]="declineReason()"
-                    (ngModelChange)="declineReason.set($event)"
-                  ></textarea>
-                  <div class="d-flex gap-2">
-                    <button
-                      class="btn btn-danger"
-                      (click)="decline()"
-                      [disabled]="submitting()"
-                    >
-                      Confirm Decline
-                    </button>
-                    <button
-                      class="btn btn-outline-secondary"
-                      (click)="showDecline.set(false)"
-                    >
-                      Cancel
-                    </button>
-                  </div>
+                <div class="psg__actions">
+                  <button
+                    type="button"
+                    class="dv-btn dv-btn--primary psg__sub"
+                    (click)="completeSign()"
+                    [disabled]="submitting()"
+                  >
+                    @if (submitting()) {
+                      <span class="dv-spinner"></span>
+                      Signing…
+                    } @else {
+                      Sign & complete →
+                    }
+                  </button>
+                  <button
+                    type="button"
+                    class="dv-btn dv-btn--danger"
+                    (click)="showDecline.set(true)"
+                    [disabled]="submitting()"
+                  >
+                    Decline
+                  </button>
                 </div>
-              </div>
-            }
 
-            @if (submitError()) {
-              <div class="alert alert-danger mt-3">{{ submitError() }}</div>
-            }
+                @if (showDecline()) {
+                  <div class="psg__decline">
+                    <span class="dv-field__label" id="psg-decline-label"
+                      >reason for declining</span
+                    >
+                    <textarea
+                      class="dv-input psg__reason"
+                      rows="3"
+                      aria-labelledby="psg-decline-label"
+                      placeholder="Please provide a reason…"
+                      [ngModel]="declineReason()"
+                      (ngModelChange)="declineReason.set($event)"
+                    ></textarea>
+                    <div class="psg__actions">
+                      <button
+                        type="button"
+                        class="dv-btn dv-btn--danger"
+                        (click)="decline()"
+                        [disabled]="submitting()"
+                      >
+                        Confirm decline
+                      </button>
+                      <button
+                        type="button"
+                        class="dv-btn dv-btn--ghost"
+                        (click)="showDecline.set(false)"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
           }
-        </div>
+        }
       </div>
-    }
+    </div>
   `,
+  styleUrl: './public-signing.component.scss',
 })
 export class PublicSigningComponent implements OnInit {
   info = signal<PublicSigningInfo | null>(null);

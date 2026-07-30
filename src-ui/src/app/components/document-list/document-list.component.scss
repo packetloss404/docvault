@@ -1,0 +1,206 @@
+// Geometry specific to the documents table. Shared patterns live in
+// src/_console.scss.
+
+.dl-tokens {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 16px 24px 0;
+  flex-shrink: 0;
+
+  &__right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+}
+
+.dl-addfilter {
+  background: none;
+  border: none;
+  color: var(--faint);
+  font: 400 12px "JetBrains Mono", monospace;
+  cursor: pointer;
+  padding: 5px 8px;
+
+  &:hover {
+    color: var(--text);
+  }
+}
+
+.dl-sort {
+  color: var(--faint);
+  font-size: 12px;
+
+  &__btn {
+    background: none;
+    border: none;
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+    padding: 0;
+  }
+}
+
+// Popover anchor for the filter and column panels.
+.dl-pop {
+  position: relative;
+
+  &__panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 20;
+    min-width: 240px;
+    padding: 12px 14px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+
+    &--right {
+      left: auto;
+      right: 0;
+      min-width: 180px;
+      gap: 2px;
+    }
+  }
+
+  &__label {
+    margin-top: 12px;
+  }
+
+  &__apply {
+    margin-top: 14px;
+    align-self: flex-start;
+  }
+}
+
+.dl-colrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 2px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.dl-notice {
+  margin: 12px 24px 0;
+  padding: 9px 14px;
+  border-radius: 9px;
+  background: var(--panel);
+  border: 1px solid var(--accent-line);
+  color: var(--text);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+
+  &--error {
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+}
+
+.dl-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 24px 0;
+  min-height: 0;
+}
+
+// Sortable column header: inherits .dv-thead's mono uppercase treatment.
+.dl-th {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+  text-align: inherit;
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &__glyph {
+    color: var(--accent-text);
+    margin-left: 4px;
+  }
+}
+
+.dl-title {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.dl-sub {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.dl-date {
+  text-align: right;
+  font: 400 12px "JetBrains Mono", monospace;
+  color: var(--faint);
+}
+
+.dl-tags {
+  display: flex;
+  gap: 5px;
+  overflow: hidden;
+}
+
+.dl-empty-action {
+  margin-top: 14px;
+}
+
+.dl-pager-gap {
+  cursor: default;
+}
+
+.dl-pager-off {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+// Inline bulk-action forms inside the bulk bar.
+.dl-bulkform {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex: 1;
+
+  &__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    max-height: 56px;
+    overflow-y: auto;
+  }
+
+  &__select {
+    max-width: 250px;
+  }
+
+  &__warn {
+    font-size: 12.5px;
+    font-weight: 500;
+  }
+}
+
+.dl-pick {
+  cursor: pointer;
+
+  &.is-picked {
+    background: var(--accent-dim);
+    border-color: var(--accent-line);
+    color: var(--accent-text);
+  }
+}

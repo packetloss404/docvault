@@ -1,0 +1,67 @@
+// Screen-local geometry for the audit log. The rows are mono end to end, so the
+// whole table opts into the mono face here rather than per cell.
+
+.al-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+
+  &--query {
+    align-items: flex-end;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+}
+
+.al-search {
+  max-width: 380px;
+}
+
+.al-query {
+  display: block;
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+  }
+}
+
+.al-select {
+  width: auto;
+  min-width: 150px;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+}
+
+.al-date {
+  width: auto;
+  min-width: 150px;
+  font-size: 12.5px;
+}
+
+.al-table {
+  margin-top: 16px;
+}
+
+.al-row {
+  font: 400 12px "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 8px 12px;
+  border-radius: 7px;
+}
+
+.al-count {
+  text-align: center;
+  padding: 10px 0 4px;
+}
+
+// Disabled pager step.
+.al-pager-off {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.al-banner {
+  margin-top: 18px;
+}

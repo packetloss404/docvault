@@ -1,205 +1,221 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { ZoneOCRService } from '../../services/zone-ocr.service';
 import {
   ZoneOCRResult,
   ZoneOCRTemplate,
 } from '../../models/zone-ocr.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-zone-ocr-review',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [FormsModule, RouterLink, SubnavComponent],
+  styleUrl: './zone-ocr-review.component.scss',
   template: `
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2>OCR Review Queue</h2>
-      @if (selectedIds().size > 0) {
-        <button class="btn btn-success" (click)="bulkAccept()">
-          <i class="bi bi-check-all me-1"></i>Accept Selected ({{ selectedIds().size }})
-        </button>
-      }
-    </div>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner dv-inner--wide">
+        <dv-subnav />
 
-    <!-- Filters -->
-    <div class="card mb-4">
-      <div class="card-body">
-        <div class="row g-3 align-items-end">
-          <div class="col-md-3">
-            <label class="form-label">Template</label>
-            <select class="form-select" [(ngModel)]="filterTemplate" (ngModelChange)="loadResults()">
-              <option [ngValue]="null">All Templates</option>
-              @for (t of templates(); track t.id) {
-                <option [ngValue]="t.id">{{ t.name }}</option>
-              }
-            </select>
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">Min Confidence</label>
-            <input
-              type="number"
-              class="form-control"
-              [(ngModel)]="filterMinConfidence"
-              (ngModelChange)="loadResults()"
-              min="0"
-              max="1"
-              step="0.05"
-              placeholder="0.0"
-            />
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">Max Confidence</label>
-            <input
-              type="number"
-              class="form-control"
-              [(ngModel)]="filterMaxConfidence"
-              (ngModelChange)="loadResults()"
-              min="0"
-              max="1"
-              step="0.05"
-              placeholder="1.0"
-            />
-          </div>
-          <div class="col-md-2">
-            <div class="form-check mt-4">
-              <input
-                class="form-check-input"
-                type="checkbox"
-                [(ngModel)]="filterUnreviewedOnly"
+        <div class="dv-pagehead pagehead">
+          <h1 class="dv-h1 dv-h1--sm">OCR review queue</h1>
+          <span class="dv-ts">{{ totalCount() }} results</span>
+        </div>
+
+        <!-- Filters -->
+        <div class="dv-card dv-card--pad filters">
+          <div class="filter-grid">
+            <div>
+              <label class="dv-field__label" for="zr-template">template</label>
+              <select
+                id="zr-template"
+                class="dv-select"
+                [(ngModel)]="filterTemplate"
                 (ngModelChange)="loadResults()"
-                id="unreviewedCheck"
+              >
+                <option [ngValue]="null">All templates</option>
+                @for (t of templates(); track t.id) {
+                  <option [ngValue]="t.id">{{ t.name }}</option>
+                }
+              </select>
+            </div>
+
+            <div>
+              <label class="dv-field__label" for="zr-min">min confidence</label>
+              <input
+                id="zr-min"
+                type="number"
+                class="dv-input dv-input--mono"
+                [(ngModel)]="filterMinConfidence"
+                (ngModelChange)="loadResults()"
+                min="0"
+                max="1"
+                step="0.05"
+                placeholder="0.00"
               />
-              <label class="form-check-label" for="unreviewedCheck">Unreviewed only</label>
+            </div>
+
+            <div>
+              <label class="dv-field__label" for="zr-max">max confidence</label>
+              <input
+                id="zr-max"
+                type="number"
+                class="dv-input dv-input--mono"
+                [(ngModel)]="filterMaxConfidence"
+                (ngModelChange)="loadResults()"
+                min="0"
+                max="1"
+                step="0.05"
+                placeholder="1.00"
+              />
+            </div>
+
+            <div class="form-switch">
+              <span class="dv-field__label">unreviewed only</span>
+              <button
+                type="button"
+                class="dv-toggle"
+                [class.is-on]="filterUnreviewedOnly"
+                [attr.aria-pressed]="filterUnreviewedOnly"
+                aria-label="Unreviewed only"
+                (click)="filterUnreviewedOnly = !filterUnreviewedOnly; loadResults()"
+              ></button>
             </div>
           </div>
-          <div class="col-md-3 text-end">
-            <span class="text-muted">{{ totalCount() }} results</span>
-          </div>
         </div>
-      </div>
-    </div>
 
-    @if (loading()) {
-      <div class="text-center py-5">
-        <div class="spinner-border" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    } @else {
-      <div class="table-responsive">
-        <table class="table table-hover align-middle">
-          <thead>
-            <tr>
-              <th style="width: 40px;">
-                <input
-                  class="form-check-input"
-                  type="checkbox"
-                  [checked]="allSelected()"
-                  (change)="toggleSelectAll()"
-                />
-              </th>
-              <th>Document</th>
-              <th>Template</th>
-              <th>Field</th>
-              <th>Extracted Value</th>
-              <th>Confidence</th>
-              <th>Corrected Value</th>
-              <th class="text-end">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+        @if (selectedIds().size > 0) {
+          <div class="dv-bulkbar bulkbar">
+            <span class="dv-bulkbar__count">{{ selectedIds().size }} selected</span>
+            <button type="button" class="dv-bulkbar__action" (click)="bulkAccept()">
+              ✓ Approve all
+            </button>
+            <button
+              type="button"
+              class="dv-bulkbar__action dv-push"
+              (click)="clearSelection()"
+            >
+              ✕ Clear
+            </button>
+          </div>
+        }
+
+        @if (loading()) {
+          <div class="dv-empty">
+            <span class="dv-spinner"></span>
+            <div class="load-label">Loading extraction results…</div>
+          </div>
+        } @else {
+          <div class="list">
+            <div
+              class="dv-thead dv-grid"
+              style="--dv-cols: 26px 90px 1fr 1fr 1.2fr 130px 1.1fr 86px"
+            >
+              <button
+                type="button"
+                class="dv-check"
+                [class.is-checked]="allSelected()"
+                aria-label="Select all"
+                (click)="toggleSelectAll()"
+              >
+                @if (allSelected()) {
+                  ✓
+                }
+              </button>
+              <span>document</span>
+              <span>template</span>
+              <span>field</span>
+              <span>extracted</span>
+              <span>confidence</span>
+              <span>correction</span>
+              <span></span>
+            </div>
+
             @for (result of results(); track result.id) {
-              <tr [class.table-success]="result.reviewed">
-                <td>
-                  <input
-                    class="form-check-input"
-                    type="checkbox"
-                    [checked]="selectedIds().has(result.id)"
-                    (change)="toggleSelect(result.id)"
-                  />
-                </td>
-                <td>
-                  <a [routerLink]="['/documents', result.document]" class="text-decoration-none">
-                    Doc #{{ result.document }}
-                  </a>
-                </td>
-                <td>{{ result.template_name }}</td>
-                <td class="fw-semibold">{{ result.field_name }}</td>
-                <td><code>{{ result.extracted_value }}</code></td>
-                <td>
-                  <div class="d-flex align-items-center gap-2">
-                    <div class="progress flex-grow-1" style="height: 8px; min-width: 60px;">
-                      <div
-                        class="progress-bar"
-                        [class.bg-success]="result.confidence >= 0.8"
-                        [class.bg-warning]="result.confidence >= 0.5 && result.confidence < 0.8"
-                        [class.bg-danger]="result.confidence < 0.5"
-                        [style.width.%]="result.confidence * 100"
-                      ></div>
-                    </div>
-                    <span class="small fw-semibold" [class.text-success]="result.confidence >= 0.8" [class.text-warning]="result.confidence >= 0.5 && result.confidence < 0.8" [class.text-danger]="result.confidence < 0.5">
-                      {{ (result.confidence * 100).toFixed(0) }}%
-                    </span>
-                  </div>
-                </td>
-                <td>
-                  <input
-                    type="text"
-                    class="form-control form-control-sm"
-                    [ngModel]="getCorrectionValue(result)"
-                    (ngModelChange)="corrections[result.id] = $event"
-                    (blur)="onCorrectionBlur(result)"
-                    placeholder="Enter correction..."
-                    style="min-width: 150px;"
-                  />
-                </td>
-                <td class="text-end">
+              <div
+                class="dv-row dv-row--static dv-grid"
+                [class.is-reviewed]="result.reviewed"
+                style="--dv-cols: 26px 90px 1fr 1fr 1.2fr 130px 1.1fr 86px"
+              >
+                <button
+                  type="button"
+                  class="dv-check"
+                  [class.is-checked]="selectedIds().has(result.id)"
+                  [attr.aria-label]="'Select result ' + result.id"
+                  (click)="toggleSelect(result.id)"
+                >
+                  @if (selectedIds().has(result.id)) {
+                    ✓
+                  }
+                </button>
+
+                <a class="doc-link" [routerLink]="['/documents', result.document]">
+                  #{{ result.document }}
+                </a>
+                <span class="dv-muted dv-clip">{{ result.template_name }}</span>
+                <span class="row-name dv-clip">{{ result.field_name }}</span>
+                <span class="dv-meta dv-clip">{{ result.extracted_value || '—' }}</span>
+
+                <span class="conf">
+                  <span class="dv-bar dv-bar--micro">
+                    <span
+                      class="dv-bar__fill"
+                      [class.dv-bar__fill--ok]="result.confidence >= 0.8"
+                      [class.dv-bar__fill--warn]="
+                        result.confidence >= 0.5 && result.confidence < 0.8
+                      "
+                      [class.dv-bar__fill--danger]="result.confidence < 0.5"
+                      [style.width.%]="result.confidence * 100"
+                    ></span>
+                  </span>
+                  <span
+                    class="conf__pct"
+                    [class.dv-ok]="result.confidence >= 0.8"
+                    [class.dv-warn]="result.confidence >= 0.5 && result.confidence < 0.8"
+                    [class.dv-danger]="result.confidence < 0.5"
+                  >
+                    {{ (result.confidence * 100).toFixed(0) }}%
+                  </span>
+                </span>
+
+                <input
+                  type="text"
+                  class="dv-input dv-input--mono dv-input--r7 correction"
+                  [ngModel]="getCorrectionValue(result)"
+                  (ngModelChange)="corrections[result.id] = $event"
+                  (blur)="onCorrectionBlur(result)"
+                  placeholder="correction…"
+                  [attr.aria-label]="'Correction for ' + result.field_name"
+                />
+
+                <span class="row-actions">
                   @if (result.reviewed) {
-                    <span class="badge bg-success">
-                      <i class="bi bi-check-lg"></i> Reviewed
-                    </span>
+                    <span class="dv-chip dv-chip--ok dv-chip--upper">reviewed</span>
                   } @else {
-                    <button
-                      class="btn btn-sm btn-outline-success"
-                      (click)="acceptResult(result)"
-                      title="Accept"
-                    >
-                      <i class="bi bi-check-lg"></i> Accept
+                    <button type="button" class="row-action" (click)="acceptResult(result)">
+                      accept
                     </button>
                   }
-                </td>
-              </tr>
+                </span>
+              </div>
             } @empty {
-              <tr>
-                <td colspan="8" class="text-center text-muted py-4">
-                  No OCR results matching the current filters.
-                </td>
-              </tr>
+              <div class="dv-empty">No OCR results matching the current filters.</div>
             }
-          </tbody>
-        </table>
-      </div>
+          </div>
 
-      <!-- Pagination -->
-      @if (totalCount() > pageSize) {
-        <nav class="d-flex justify-content-center mt-3">
-          <ul class="pagination">
-            <li class="page-item" [class.disabled]="currentPage() === 1">
-              <button class="page-link" (click)="goToPage(currentPage() - 1)">&laquo;</button>
-            </li>
-            @for (p of pageNumbers(); track p) {
-              <li class="page-item" [class.active]="p === currentPage()">
-                <button class="page-link" (click)="goToPage(p)">{{ p }}</button>
-              </li>
-            }
-            <li class="page-item" [class.disabled]="currentPage() >= totalPages()">
-              <button class="page-link" (click)="goToPage(currentPage() + 1)">&raquo;</button>
-            </li>
-          </ul>
-        </nav>
-      }
-    }
+          @if (totalCount() > pageSize) {
+            <div class="dv-pager">
+              <span (click)="goToPage(currentPage() - 1)">‹ prev</span>
+              @for (p of pageNumbers(); track p) {
+                <span [class.is-current]="p === currentPage()" (click)="goToPage(p)">{{ p }}</span>
+              }
+              <span (click)="goToPage(currentPage() + 1)">next ›</span>
+            </div>
+          }
+        }
+      </div>
+    </div>
   `,
 })
 export class ZoneOcrReviewComponent implements OnInit {
@@ -285,6 +301,10 @@ export class ZoneOcrReviewComponent implements OnInit {
     } else {
       this.selectedIds.set(new Set(this.results().map((r) => r.id)));
     }
+  }
+
+  clearSelection(): void {
+    this.selectedIds.set(new Set());
   }
 
   toggleSelect(id: number): void {

@@ -1,121 +1,132 @@
-<div class="container-fluid py-4">
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="mb-0">Audit Log</h4>
-    <div class="btn-group">
-      <button class="btn btn-outline-secondary btn-sm" (click)="exportLog('csv')" [disabled]="exportLoading()">
-        <i class="bi bi-filetype-csv me-1"></i> Export CSV
-      </button>
-      <button class="btn btn-outline-secondary btn-sm" (click)="exportLog('json')" [disabled]="exportLoading()">
-        <i class="bi bi-filetype-json me-1"></i> Export JSON
-      </button>
-    </div>
-  </div>
+<div class="dv-screen dv-screen--tight">
+  <div class="dv-inner dv-inner--wide">
+    <dv-subnav />
 
-  @if (errorMessage()) {
-    <div class="alert alert-danger alert-dismissible">
-      {{ errorMessage() }}
-      <button type="button" class="btn-close" (click)="errorMessage.set('')"></button>
-    </div>
-  }
-
-  <!-- Filters -->
-  <div class="card mb-3">
-    <div class="card-body">
-      <div class="row g-2 align-items-end">
-        <div class="col-md-3">
-          <label class="form-label form-label-sm">Action</label>
-          <select class="form-select form-select-sm" [(ngModel)]="filterAction">
-            <option value="">All actions</option>
-            @for (action of actionTypes; track action) {
-              <option [value]="action">{{ action }}</option>
-            }
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label form-label-sm">From Date</label>
-          <input type="date" class="form-control form-control-sm" [(ngModel)]="filterFromDate" />
-        </div>
-        <div class="col-md-3">
-          <label class="form-label form-label-sm">To Date</label>
-          <input type="date" class="form-control form-control-sm" [(ngModel)]="filterToDate" />
-        </div>
-        <div class="col-md-3">
-          <button class="btn btn-primary btn-sm me-1" (click)="applyFilters()">
-            <i class="bi bi-funnel me-1"></i> Filter
-          </button>
-          <button class="btn btn-outline-secondary btn-sm" (click)="clearFilters()">
-            Clear
-          </button>
-        </div>
+    @if (errorMessage()) {
+      <div class="dv-banner dv-banner--error al-banner" role="alert">
+        <span>{{ errorMessage() }}</span>
+        <button
+          type="button"
+          class="dv-banner__close"
+          aria-label="Dismiss"
+          (click)="errorMessage.set('')"
+        >
+          ✕
+        </button>
       </div>
-    </div>
-  </div>
-
-  <!-- Table -->
-  @if (loading()) {
-    <div class="text-center py-4">
-      <div class="spinner-border"></div>
-    </div>
-  } @else {
-    <div class="table-responsive">
-      <table class="table table-sm table-striped table-hover">
-        <thead class="table-dark">
-          <tr>
-            <th>Timestamp</th>
-            <th>User</th>
-            <th>Action</th>
-            <th>Model</th>
-            <th>Detail</th>
-            <th>IP Address</th>
-          </tr>
-        </thead>
-        <tbody>
-          @if (entries().length === 0) {
-            <tr>
-              <td colspan="6" class="text-center text-muted py-3">No audit log entries found.</td>
-            </tr>
-          }
-          @for (entry of entries(); track entry.id) {
-            <tr>
-              <td class="text-nowrap">{{ formatTimestamp(entry.timestamp) }}</td>
-              <td>{{ entry.username || '(system)' }}</td>
-              <td>
-                <span class="badge" [class]="getActionBadgeClass(entry.action)">
-                  {{ entry.action }}
-                </span>
-              </td>
-              <td>{{ entry.model_type }}</td>
-              <td class="text-truncate" style="max-width: 300px;" [title]="entry.detail">
-                {{ entry.detail }}
-              </td>
-              <td>{{ entry.ip_address || '-' }}</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Pagination -->
-    @if (totalPages > 1) {
-      <nav>
-        <ul class="pagination pagination-sm justify-content-center">
-          <li class="page-item" [class.disabled]="currentPage() === 1">
-            <button class="page-link" (click)="goToPage(currentPage() - 1)">Previous</button>
-          </li>
-          @for (p of pageNumbers; track p) {
-            <li class="page-item" [class.active]="p === currentPage()">
-              <button class="page-link" (click)="goToPage(p)">{{ p }}</button>
-            </li>
-          }
-          <li class="page-item" [class.disabled]="currentPage() === totalPages">
-            <button class="page-link" (click)="goToPage(currentPage() + 1)">Next</button>
-          </li>
-        </ul>
-      </nav>
     }
 
-    <p class="text-muted text-center small">
-      Showing {{ entries().length }} of {{ totalCount() }} entries
-    </p>
-  }
+    <!-- Filters -->
+    <div class="al-bar">
+      <input
+        type="search"
+        class="dv-input dv-input--r7 al-search"
+        placeholder="Filter loaded rows by user, action, or object…"
+        aria-label="Filter loaded rows"
+        [(ngModel)]="filterUser"
+      />
+      <button
+        type="button"
+        class="dv-btn dv-btn--ghost dv-btn--md dv-push"
+        (click)="exportLog('csv')"
+        [disabled]="exportLoading()"
+      >
+        Export CSV
+      </button>
+      <button
+        type="button"
+        class="dv-btn dv-btn--ghost dv-btn--md"
+        (click)="exportLog('json')"
+        [disabled]="exportLoading()"
+      >
+        Export JSON
+      </button>
+    </div>
+
+    <div class="al-bar al-bar--query">
+      <label class="al-query">
+        <span class="dv-field__label">action</span>
+        <select class="dv-select dv-input--r7 al-select" [(ngModel)]="filterAction">
+          <option value="">all actions</option>
+          @for (action of actionTypes; track action) {
+            <option [value]="action">{{ action }}</option>
+          }
+        </select>
+      </label>
+      <label class="al-query">
+        <span class="dv-field__label">from</span>
+        <input type="date" class="dv-input dv-input--r7 dv-mono al-date" [(ngModel)]="filterFromDate" />
+      </label>
+      <label class="al-query">
+        <span class="dv-field__label">to</span>
+        <input type="date" class="dv-input dv-input--r7 dv-mono al-date" [(ngModel)]="filterToDate" />
+      </label>
+      <div class="al-query__actions">
+        <button type="button" class="dv-btn dv-btn--accent dv-btn--md" (click)="applyFilters()">
+          Filter
+        </button>
+        <button type="button" class="dv-btn dv-btn--ghost dv-btn--md" (click)="clearFilters()">
+          Clear
+        </button>
+      </div>
+    </div>
+
+    <!-- Rows -->
+    @if (loading()) {
+      <div class="dv-empty"><span class="dv-spinner"></span> Loading…</div>
+    } @else {
+      <div class="al-table">
+        <div
+          class="dv-thead dv-grid"
+          style="--dv-cols: 150px 90px 96px 100px 1fr 110px; --dv-gap: 12px"
+        >
+          <span>timestamp</span>
+          <span>user</span>
+          <span>action</span>
+          <span>model</span>
+          <span>object</span>
+          <span class="dv-num">ip</span>
+        </div>
+
+        @for (entry of displayedEntries(); track entry.id) {
+          <div
+            class="dv-row dv-row--static dv-grid al-row"
+            style="--dv-cols: 150px 90px 96px 100px 1fr 110px; --dv-gap: 12px"
+          >
+            <span class="dv-faint">{{ formatTimestamp(entry.timestamp) }}</span>
+            <span class="dv-clip">{{ entry.username || '(system)' }}</span>
+            <span [ngClass]="getActionBadgeClass(entry.action)">{{ entry.action }}</span>
+            <span class="dv-faint dv-clip">{{ entry.model_type }}</span>
+            <span class="dv-muted dv-clip" [title]="entry.detail">{{ entry.detail }}</span>
+            <span class="dv-faint dv-num">{{ entry.ip_address || '—' }}</span>
+          </div>
+        } @empty {
+          <div class="dv-empty">No audit log entries found.</div>
+        }
+      </div>
+
+      <!-- Pagination -->
+      @if (totalPages > 1) {
+        <nav class="dv-pager" aria-label="Audit log pages">
+          <span
+            [class.al-pager-off]="currentPage() === 1"
+            (click)="currentPage() > 1 && goToPage(currentPage() - 1)"
+            >prev</span
+          >
+          @for (p of pageNumbers; track p) {
+            <span [class.is-current]="p === currentPage()" (click)="goToPage(p)">{{ p }}</span>
+          }
+          <span
+            [class.al-pager-off]="currentPage() === totalPages"
+            (click)="currentPage() < totalPages && goToPage(currentPage() + 1)"
+            >next</span
+          >
+        </nav>
+      }
+
+      <div class="dv-meta al-count">
+        showing {{ displayedEntries().length }} of {{ totalCount() }} entries
+      </div>
+    }
+  </div>
 </div>

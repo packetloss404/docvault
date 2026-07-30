@@ -1,7 +1,6 @@
 import { Component, OnInit, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { DocumentService } from '../../services/document.service';
 import { OrganizationService } from '../../services/organization.service';
@@ -10,115 +9,128 @@ import {
   CustomField,
   DocumentTypeCustomField,
 } from '../../models/organization.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-doctype-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [FormsModule, RouterLink, SubnavComponent],
   template: `
-    <div class="container py-4">
-      <!-- Header -->
-      <div class="d-flex align-items-center mb-4 gap-3">
-        <a routerLink="/metadata-types" class="btn btn-outline-secondary btn-sm">
-          &larr; Back
-        </a>
-        <h2 class="mb-0">
-          @if (loading()) {
-            <span class="text-muted">Loading&hellip;</span>
-          } @else if (docType()) {
-            {{ docType()!.name }} &mdash; Custom Fields
-          } @else {
-            Document Type Not Found
-          }
-        </h2>
-      </div>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner">
+        <dv-subnav>
+          <a
+            subnavAction
+            class="dv-btn dv-btn--secondary dv-btn--sm dv-push tabstrip-action"
+            routerLink="/metadata-types"
+            >← Back</a
+          >
+        </dv-subnav>
 
-      @if (error()) {
-        <div class="alert alert-danger">{{ error() }}</div>
-      }
-
-      @if (!loading() && docType()) {
-        <!-- Assigned custom fields list -->
-        <div class="card mb-4">
-          <div class="card-header fw-semibold">Assigned Custom Fields</div>
-          <ul class="list-group list-group-flush">
-            @if (assignments().length === 0) {
-              <li class="list-group-item text-muted fst-italic">
-                No custom fields assigned yet.
-              </li>
+        <div class="dv-pagehead pagehead">
+          <h1 class="dv-h1 dv-h1--sm">
+            @if (loading()) {
+              <span class="dv-faint">Loading…</span>
+            } @else if (docType()) {
+              {{ docType()!.name }}
+            } @else {
+              Document type not found
             }
+          </h1>
+          @if (!loading() && docType()) {
+            <span class="dv-chip dv-chip--upper">custom fields</span>
+          }
+        </div>
+
+        @if (error()) {
+          <div class="form-error" role="alert">{{ error() }}</div>
+        }
+
+        @if (!loading() && docType()) {
+          <!-- Assigned custom fields -->
+          <div class="dv-card dv-card--flush stack">
+            <div class="dv-card__head">
+              <span class="dv-card__title">Assigned custom fields</span>
+              <span class="dv-ts dv-push">{{ assignments().length }}</span>
+            </div>
+
+            @if (assignments().length === 0) {
+              <div class="dv-empty">No custom fields assigned yet.</div>
+            }
+
             @for (a of assignments(); track a.id) {
-              <li class="list-group-item d-flex align-items-center justify-content-between">
-                <div>
-                  <span class="fw-medium">{{ a.field_name }}</span>
-                  <span class="badge bg-secondary ms-2">{{ a.field_data_type }}</span>
-                  @if (a.required) {
-                    <span class="badge bg-danger ms-1">Required</span>
-                  }
-                </div>
+              <div class="dv-listrow">
+                <span class="row-name">{{ a.field_name }}</span>
+                <span class="dv-chip">{{ a.field_data_type }}</span>
+                @if (a.required) {
+                  <span class="dv-chip dv-chip--danger dv-chip--upper">required</span>
+                }
                 <button
-                  class="btn btn-outline-danger btn-sm"
+                  type="button"
+                  class="dv-btn dv-btn--danger dv-btn--sm dv-push"
                   (click)="removeAssignment(a)"
                   [disabled]="saving()"
                 >
                   Remove
                 </button>
-              </li>
+              </div>
             }
-          </ul>
-        </div>
+          </div>
 
-        <!-- Add custom field -->
-        <div class="card">
-          <div class="card-header fw-semibold">Add Custom Field</div>
-          <div class="card-body">
+          <!-- Add custom field -->
+          <div class="dv-card dv-card--pad stack form-card">
+            <div class="dv-card__title">Add custom field</div>
+
             @if (availableFields().length === 0) {
-              <p class="text-muted mb-0">
+              <p class="dv-muted form-note">
                 All available custom fields are already assigned, or no custom fields exist.
               </p>
             } @else {
-              <div class="row g-3 align-items-end">
-                <div class="col-sm-5">
-                  <label class="form-label">Custom Field</label>
-                  <select
-                    class="form-select"
-                    [(ngModel)]="selectedFieldId"
-                  >
-                    <option [ngValue]="null">— Select a field —</option>
+              <div class="form-grid">
+                <div>
+                  <label class="dv-field__label" for="dte-field">custom field</label>
+                  <select id="dte-field" class="dv-select" [(ngModel)]="selectedFieldId">
+                    <option [ngValue]="null">— select a field —</option>
                     @for (f of availableFields(); track f.id) {
                       <option [ngValue]="f.id">{{ f.name }} ({{ f.data_type }})</option>
                     }
                   </select>
                 </div>
-                <div class="col-sm-3 d-flex align-items-center gap-2 pt-3">
-                  <input
-                    type="checkbox"
-                    class="form-check-input"
-                    id="requiredCheck"
-                    [(ngModel)]="addRequired"
-                  />
-                  <label class="form-check-label" for="requiredCheck">Required</label>
-                </div>
-                <div class="col-sm-4">
+
+                <div class="form-switch">
+                  <span class="dv-field__label">required</span>
                   <button
-                    class="btn btn-primary w-100"
+                    type="button"
+                    class="dv-toggle"
+                    [class.is-on]="addRequired"
+                    [attr.aria-pressed]="addRequired"
+                    aria-label="Required"
+                    (click)="addRequired = !addRequired"
+                  ></button>
+                </div>
+
+                <div class="form-submit">
+                  <button
+                    type="button"
+                    class="dv-btn dv-btn--primary dv-btn--sm dv-btn--block"
                     (click)="addAssignment()"
                     [disabled]="selectedFieldId === null || saving()"
                   >
                     @if (saving()) {
-                      Adding&hellip;
+                      Adding…
                     } @else {
-                      Add Field
+                      Add field
                     }
                   </button>
                 </div>
               </div>
             }
           </div>
-        </div>
-      }
+        }
+      </div>
     </div>
   `,
+  styleUrl: './doctype-editor.component.scss',
 })
 export class DoctypeEditorComponent implements OnInit {
   docType = signal<DocumentType | null>(null);

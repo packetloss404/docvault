@@ -1,5 +1,5 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
@@ -7,6 +7,7 @@ import {
   DocumentQueryParams,
 } from '../../services/document.service';
 import { OrganizationService } from '../../services/organization.service';
+import { UploadService } from '../../services/upload.service';
 import {
   Document,
   DocumentType,
@@ -21,32 +22,167 @@ export interface ColumnDef {
   label: string;
   sortable?: boolean;
   sortField?: string;
+  /** Grid track for this column, used to build the row `--dv-cols`. */
+  width: string;
+  /** Right-align the cell (mono numerics and dates). */
+  numeric?: boolean;
+}
+
+/** A removable filter token shown above the table. */
+export interface FilterToken {
+  key: 'search' | 'type';
+  label: string;
 }
 
 @Component({
   selector: 'app-document-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [DatePipe, FormsModule],
   templateUrl: './document-list.component.html',
+  styleUrl: './document-list.component.scss',
 })
 export class DocumentListComponent implements OnInit {
+  private readonly documentService = inject(DocumentService);
+  private readonly organizationService = inject(OrganizationService);
+  private readonly uploads = inject(UploadService);
+  private readonly router = inject(Router);
+
   // --- Column configuration ---
   readonly availableColumns: ColumnDef[] = [
-    { key: 'title', label: 'Title', sortable: true, sortField: 'title' },
-    { key: 'document_type', label: 'Type' },
-    { key: 'correspondent', label: 'Correspondent' },
-    { key: 'cabinet', label: 'Cabinet' },
-    { key: 'created', label: 'Created', sortable: true, sortField: 'created' },
-    { key: 'added', label: 'Added', sortable: true, sortField: 'added' },
-    { key: 'archive_serial_number', label: 'ASN' },
-    { key: 'page_count', label: 'Pages' },
-    { key: 'tags', label: 'Tags' },
+    { key: 'title', label: 'title', sortable: true, sortField: 'title', width: 'minmax(0, 1fr)' },
+    { key: 'document_type', label: 'type', width: '110px' },
+    { key: 'correspondent', label: 'correspondent', width: '150px' },
+    { key: 'cabinet', label: 'cabinet', width: '150px' },
+    { key: 'created', label: 'created', sortable: true, sortField: 'created', width: '96px', numeric: true },
+    { key: 'added', label: 'added', sortable: true, sortField: 'added', width: '110px', numeric: true },
+    { key: 'archive_serial_number', label: 'asn', width: '96px', numeric: true },
+    { key: 'page_count', label: 'pages', width: '64px', numeric: true },
+    { key: 'tags', label: 'tags', width: '150px' },
   ];
 
   readonly defaultColumns = ['title', 'document_type', 'correspondent', 'created'];
 
   selectedColumns = signal<string[]>(this.defaultColumns);
   showColumnDropdown = signal(false);
+  showFilterPanel = signal(false);
+
+  documents = signal<Document[]>([]);
+  documentTypes = signal<DocumentType[]>([]);
+  totalCount = signal(0);
+  loading = signal(false);
+
+  // Query state
+  currentPage = signal(1);
+  pageSize = signal(25);
+  searchQuery = signal('');
+  selectedTypeId = signal<number | null>(null);
+  ordering = signal('-created');
+
+  /** Draft search text, applied to `searchQuery` only on submit. */
+  searchDraft = signal('');
+
+  totalPages = computed(() => Math.ceil(this.totalCount() / this.pageSize()));
+
+  // Bulk selection state
+  selectedIds = signal<Set<number>>(new Set());
+  hasSelection = computed(() => this.selectedIds().size > 0);
+  selectionCount = computed(() => this.selectedIds().size);
+  allSelected = computed(() => {
+    const docs = this.documents();
+    const sel = this.selectedIds();
+    return docs.length > 0 && docs.every((d) => sel.has(d.id));
+  });
+
+  // Bulk action state
+  bulkAction = signal<string | null>(null);
+  bulkLoading = signal(false);
+  bulkMessage = signal('');
+  bulkError = signal(false);
+
+  // Organization data for bulk actions and tag chips
+  tags = signal<Tag[]>([]);
+  correspondents = signal<Correspondent[]>([]);
+
+  private readonly tagNames = computed(() => {
+    const map = new Map<number, string>();
+    for (const tag of this.tags()) map.set(tag.id, tag.name);
+    return map;
+  });
+
+  // Bulk action form state
+  selectedTagIds = signal<Set<number>>(new Set());
+  selectedCorrespondentId = signal<number | null>(null);
+  selectedDocTypeId = signal<number | null>(null);
+  showDeleteConfirm = signal(false);
+
+  readonly visibleColumns = computed(() =>
+    this.availableColumns.filter((c) => this.selectedColumns().includes(c.key)),
+  );
+
+  /** `--dv-cols` for the header and every row: checkbox plus visible columns. */
+  readonly gridColumns = computed(
+    () => `28px ${this.visibleColumns().map((c) => c.width).join(' ')}`,
+  );
+
+  /** Active filters, rendered as removable tokens above the table. */
+  readonly filterTokens = computed<FilterToken[]>(() => {
+    const tokens: FilterToken[] = [];
+    const search = this.searchQuery();
+    if (search) tokens.push({ key: 'search', label: `search = "${search}"` });
+    const typeId = this.selectedTypeId();
+    if (typeId !== null) {
+      const name =
+        this.documentTypes().find((t) => t.id === typeId)?.name ?? String(typeId);
+      tokens.push({ key: 'type', label: `type = ${name}` });
+    }
+    return tokens;
+  });
+
+  /** e.g. "created ↓" — the sort affordance on the right of the token row. */
+  readonly sortLabel = computed(() => {
+    const ordering = this.ordering();
+    const descending = ordering.startsWith('-');
+    const field = descending ? ordering.slice(1) : ordering;
+    const label =
+      this.availableColumns.find((c) => c.sortField === field)?.label ?? field;
+    return `${label} ${descending ? '↓' : '↑'}`;
+  });
+
+  /** Condensed page list: 1 2 3 … 143, with gaps as null. */
+  readonly pageItems = computed<(number | null)[]>(() => {
+    const total = this.totalPages();
+    const current = this.currentPage();
+    if (total <= 7) {
+      return Array.from({ length: total }, (_, i) => i + 1);
+    }
+    const pages = new Set<number>([1, total, current]);
+    for (const offset of [-1, 1]) {
+      const page = current + offset;
+      if (page > 1 && page < total) pages.add(page);
+    }
+    // Keep a stable leading run so the control does not jump on page 1-3.
+    if (current <= 3) [2, 3].forEach((p) => pages.add(p));
+    if (current >= total - 2) [total - 1, total - 2].forEach((p) => pages.add(p));
+
+    const sorted = [...pages].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+    const items: (number | null)[] = [];
+    let previous = 0;
+    for (const page of sorted) {
+      if (previous && page - previous > 1) items.push(null);
+      items.push(page);
+      previous = page;
+    }
+    return items;
+  });
+
+  ngOnInit(): void {
+    this.loadColumnPrefs();
+    this.loadDocumentTypes();
+    this.loadTags();
+    this.loadDocuments();
+  }
+
+  // --- Columns ---
 
   isColumnSelected(key: string): boolean {
     return this.selectedColumns().includes(key);
@@ -96,57 +232,7 @@ export class DocumentListComponent implements OnInit {
     }
   }
 
-  documents = signal<Document[]>([]);
-  documentTypes = signal<DocumentType[]>([]);
-  totalCount = signal(0);
-  loading = signal(false);
-
-  // Query state
-  currentPage = signal(1);
-  pageSize = signal(25);
-  searchQuery = signal('');
-  selectedTypeId = signal<number | null>(null);
-  ordering = signal('-created');
-
-  totalPages = computed(() => Math.ceil(this.totalCount() / this.pageSize()));
-
-  // Bulk selection state
-  selectedIds = signal<Set<number>>(new Set());
-  hasSelection = computed(() => this.selectedIds().size > 0);
-  selectionCount = computed(() => this.selectedIds().size);
-  allSelected = computed(() => {
-    const docs = this.documents();
-    const sel = this.selectedIds();
-    return docs.length > 0 && docs.every((d) => sel.has(d.id));
-  });
-
-  // Bulk action state
-  bulkAction = signal<string | null>(null);
-  bulkLoading = signal(false);
-  bulkMessage = signal('');
-  bulkError = signal(false);
-
-  // Organization data for bulk actions
-  tags = signal<Tag[]>([]);
-  correspondents = signal<Correspondent[]>([]);
-
-  // Bulk action form state
-  selectedTagIds = signal<Set<number>>(new Set());
-  selectedCorrespondentId = signal<number | null>(null);
-  selectedDocTypeId = signal<number | null>(null);
-  showDeleteConfirm = signal(false);
-
-  constructor(
-    private documentService: DocumentService,
-    private organizationService: OrganizationService,
-    private router: Router,
-  ) {}
-
-  ngOnInit(): void {
-    this.loadColumnPrefs();
-    this.loadDocumentTypes();
-    this.loadDocuments();
-  }
+  // --- Data ---
 
   loadDocuments(): void {
     this.loading.set(true);
@@ -178,9 +264,13 @@ export class DocumentListComponent implements OnInit {
     });
   }
 
+  // --- Filtering ---
+
   onSearch(): void {
+    this.searchQuery.set(this.searchDraft().trim());
     this.currentPage.set(1);
     this.clearSelection();
+    this.showFilterPanel.set(false);
     this.loadDocuments();
   }
 
@@ -188,6 +278,27 @@ export class DocumentListComponent implements OnInit {
     this.selectedTypeId.set(typeId ? Number(typeId) : null);
     this.currentPage.set(1);
     this.clearSelection();
+    this.loadDocuments();
+  }
+
+  removeFilter(token: FilterToken): void {
+    if (token.key === 'search') {
+      this.searchQuery.set('');
+      this.searchDraft.set('');
+    } else {
+      this.selectedTypeId.set(null);
+    }
+    this.currentPage.set(1);
+    this.clearSelection();
+    this.loadDocuments();
+  }
+
+  /** Cycles the sort direction of the column currently being sorted on. */
+  toggleSortDirection(): void {
+    const ordering = this.ordering();
+    this.ordering.set(
+      ordering.startsWith('-') ? ordering.slice(1) : `-${ordering}`,
+    );
     this.loadDocuments();
   }
 
@@ -203,11 +314,12 @@ export class DocumentListComponent implements OnInit {
     this.loadDocuments();
   }
 
-  getSortIcon(field: string): string {
+  /** Sort indicator glyph; blank when the column is not the sort key. */
+  getSortGlyph(field: string): string {
     const current = this.ordering();
-    if (current === field) return 'bi-sort-up';
-    if (current === `-${field}`) return 'bi-sort-down';
-    return 'bi-chevron-expand';
+    if (current === field) return '↑';
+    if (current === `-${field}`) return '↓';
+    return '';
   }
 
   goToPage(page: number): void {
@@ -220,8 +332,14 @@ export class DocumentListComponent implements OnInit {
     this.router.navigate(['/documents', doc.id]);
   }
 
-  getPreviewUrl(doc: Document): string {
-    return this.documentService.getPreviewUrl(doc.id);
+  upload(): void {
+    this.uploads.pick();
+  }
+
+  /** Tag display names for a document's `tag_ids`, resolved where known. */
+  tagLabels(doc: Document): string[] {
+    const names = this.tagNames();
+    return (doc.tag_ids ?? []).map((id) => names.get(id) ?? `#${id}`);
   }
 
   // --- Selection ---

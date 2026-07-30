@@ -3,12 +3,14 @@ import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { CollaborationService } from '../../services/collaboration.service';
 import { ActivityEntry } from '../../models/collaboration.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-activity-feed',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, SubnavComponent],
   templateUrl: './activity-feed.component.html',
+  styleUrl: './activity-feed.component.scss',
 })
 export class ActivityFeedComponent implements OnInit {
   activities = signal<ActivityEntry[]>([]);
@@ -33,24 +35,15 @@ export class ActivityFeedComponent implements OnInit {
     });
   }
 
-  getEventBadgeClass(eventType: string): string {
-    if (eventType.startsWith('document.')) return 'bg-primary';
-    if (eventType.startsWith('comment.')) return 'bg-success';
-    if (eventType.startsWith('checkout.')) return 'bg-warning text-dark';
-    if (eventType.startsWith('share.')) return 'bg-info text-dark';
-    if (eventType.startsWith('workflow.')) return 'bg-purple';
-    if (eventType.startsWith('retention.')) return 'bg-danger';
-    return 'bg-secondary';
-  }
-
-  getEventIcon(eventType: string): string {
-    if (eventType.startsWith('document.')) return 'bi-file-earmark-text';
-    if (eventType.startsWith('comment.')) return 'bi-chat-dots';
-    if (eventType.startsWith('checkout.')) return 'bi-lock';
-    if (eventType.startsWith('share.')) return 'bi-link-45deg';
-    if (eventType.startsWith('workflow.')) return 'bi-diagram-3';
-    if (eventType.startsWith('retention.')) return 'bi-trash';
-    return 'bi-circle';
+  /** Timeline dot colour by event class. */
+  getEventDotClass(eventType: string): string {
+    if (eventType.startsWith('document.') || eventType.startsWith('comment.'))
+      return 'dv-dot--accent';
+    if (eventType.startsWith('share.')) return 'dv-dot--ok';
+    if (eventType.startsWith('checkout.') || eventType.startsWith('workflow.'))
+      return 'dv-dot--warn';
+    if (eventType.startsWith('retention.')) return 'dv-dot--danger';
+    return '';
   }
 
   truncateBody(body: string, maxLength: number = 100): string {

@@ -20,7 +20,7 @@
         [attr.aria-current]="isActive(item) ? 'page' : null"
       >
         <dv-icon [name]="item.icon" />
-        <span class="visually-hidden">{{ item.label }}</span>
+        <span class="dv-sr">{{ item.label }}</span>
       </a>
     }
 

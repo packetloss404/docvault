@@ -1,0 +1,197 @@
+// Zone OCR template detail: one-off geometry only. Colours come from tokens.
+
+.crumb {
+  padding: 4px 0 0;
+  font: 400 12px "JetBrains Mono", ui-monospace, monospace;
+
+  &__up {
+    color: var(--faint);
+
+    &:hover {
+      color: var(--text);
+    }
+  }
+}
+
+.pagehead {
+  margin: 14px 0 0;
+}
+
+.lede {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+  max-width: 620px;
+}
+
+.load-label {
+  margin-top: 10px;
+}
+
+.form-card {
+  margin-top: 16px;
+
+  &--well {
+    padding: 15px 17px;
+  }
+
+  .dv-card__title {
+    display: block;
+    margin-bottom: 14px;
+  }
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+
+  &__wide {
+    grid-column: 1 / -1;
+  }
+}
+
+.form-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  align-self: end;
+  padding-bottom: 8px;
+
+  .dv-field__label {
+    margin-bottom: 0;
+  }
+}
+
+.form-textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+// Sample page preview with the zone overlay.
+.preview {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+
+  &__img {
+    display: block;
+    max-width: 100%;
+    max-height: 600px;
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+  }
+}
+
+.zone {
+  position: absolute;
+  border: 2px solid var(--border2);
+  border-radius: 2px;
+
+  &__label {
+    position: absolute;
+    top: -19px;
+    left: -1px;
+    font: 400 10px "JetBrains Mono", ui-monospace, monospace;
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    padding: 0 4px;
+    white-space: nowrap;
+  }
+}
+
+.zone-index {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--border2);
+  display: grid;
+  place-items: center;
+  font: 500 10.5px "JetBrains Mono", ui-monospace, monospace;
+}
+
+.row-name {
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.row-action {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: 400 11px "JetBrains Mono", ui-monospace, monospace;
+  color: var(--faint);
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &--danger:hover {
+    color: var(--danger);
+  }
+}
+
+.test-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+
+  &__field {
+    flex: 1;
+    max-width: 260px;
+  }
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 16px;
+}
+
+.result-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  font: 400 12px "JetBrains Mono", ui-monospace, monospace;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.result-key {
+  color: var(--faint);
+}
+
+.result-value {
+  color: var(--text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-conf {
+  font: 400 11px "JetBrains Mono", ui-monospace, monospace;
+  width: 52px;
+  text-align: right;
+}

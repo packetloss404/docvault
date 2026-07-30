@@ -3,115 +3,86 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SecurityService } from '../../services/security.service';
 import { Permission } from '../../models/security.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-permissions-browser',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SubnavComponent],
+  styleUrl: './permissions-browser.component.scss',
   template: `
-    <div class="container-fluid">
-      <div class="d-flex align-items-center justify-content-between mb-4">
-        <div>
-          <h2 class="mb-1">
-            <i class="bi bi-key me-2 text-primary"></i>Permissions Browser
-          </h2>
-          <p class="text-muted mb-0 small">
-            All system permissions available for assignment to groups and roles.
-          </p>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner dv-inner--wide">
+        <div class="dv-pagehead">
+          <h1 class="dv-h1 dv-h1--sm">Admin</h1>
+          <dv-subnav />
+          <span class="dv-meta dv-push">
+            {{ filteredPermissions().length }} / {{ permissions().length }} permissions
+          </span>
         </div>
-        <span class="badge bg-secondary fs-6">
-          {{ filteredPermissions().length }} of {{ permissions().length }}
-        </span>
-      </div>
 
-      <!-- Search -->
-      <div class="card mb-4 shadow-sm">
-        <div class="card-body py-3">
-          <div class="input-group">
-            <span class="input-group-text">
-              <i class="bi bi-search"></i>
-            </span>
-            <input
-              type="text"
-              class="form-control"
-              placeholder="Filter by codename or name..."
-              [(ngModel)]="searchQuery"
-              (ngModelChange)="onSearchChange($event)"
-            />
-            @if (searchQuery) {
-              <button class="btn btn-outline-secondary" type="button" (click)="clearSearch()">
-                <i class="bi bi-x-lg"></i>
-              </button>
-            }
+        <!-- Filter -->
+        <div class="pb-filter">
+          <input
+            type="text"
+            class="dv-input"
+            placeholder="Filter by codename or name…"
+            aria-label="Filter permissions"
+            [(ngModel)]="searchQuery"
+            (ngModelChange)="onSearchChange($event)"
+          />
+          @if (searchQuery) {
+            <button type="button" class="dv-btn dv-btn--ghost dv-btn--sm" (click)="clearSearch()">
+              ✕ clear
+            </button>
+          }
+        </div>
+
+        @if (loading()) {
+          <div class="dv-empty"><span class="dv-spinner"></span> Loading permissions…</div>
+        }
+
+        @if (error()) {
+          <div class="pb-error" role="alert">{{ error() }}</div>
+        }
+
+        @if (!loading() && !error()) {
+          <div class="dv-thead dv-grid" style="--dv-cols: minmax(0, 1fr) minmax(0, 1fr) 120px 70px">
+            <span>codename</span><span>display name</span><span>content type</span>
+            <span class="dv-num">id</span>
           </div>
-        </div>
-      </div>
 
-      <!-- Loading -->
-      @if (loading()) {
-        <div class="text-center py-5">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
-          <p class="text-muted mt-2">Loading permissions...</p>
-        </div>
-      }
-
-      <!-- Error -->
-      @if (error()) {
-        <div class="alert alert-danger d-flex align-items-center" role="alert">
-          <i class="bi bi-exclamation-triangle-fill me-2"></i>
-          <div>{{ error() }}</div>
-        </div>
-      }
-
-      <!-- Table -->
-      @if (!loading() && !error()) {
-        <div class="card shadow-sm">
-          <div class="table-responsive">
-            <table class="table table-hover table-striped mb-0 align-middle">
-              <thead class="table-dark">
-                <tr>
-                  <th scope="col" style="width: 60px;">#</th>
-                  <th scope="col">Codename</th>
-                  <th scope="col">Display Name</th>
-                  <th scope="col" style="width: 130px;" class="text-center">Content Type ID</th>
-                </tr>
-              </thead>
-              <tbody>
-                @if (filteredPermissions().length === 0) {
-                  <tr>
-                    <td colspan="4" class="text-center py-4 text-muted">
-                      <i class="bi bi-search me-2"></i>
-                      No permissions match <strong>{{ searchQuery }}</strong>.
-                    </td>
-                  </tr>
-                }
-                @for (perm of filteredPermissions(); track perm.id) {
-                  <tr>
-                    <td class="text-muted small">{{ perm.id }}</td>
-                    <td>
-                      <code class="text-primary">{{ perm.codename }}</code>
-                    </td>
-                    <td>{{ perm.name }}</td>
-                    <td class="text-center">
-                      <span class="badge bg-light text-dark border">{{ perm.content_type }}</span>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-          @if (filteredPermissions().length > 0) {
-            <div class="card-footer text-muted small">
-              Showing {{ filteredPermissions().length }} permission{{ filteredPermissions().length !== 1 ? 's' : '' }}
+          @for (perm of filteredPermissions(); track perm.id) {
+            <div
+              class="dv-row dv-row--static dv-row--tight dv-grid"
+              style="--dv-cols: minmax(0, 1fr) minmax(0, 1fr) 120px 70px"
+            >
+              <span class="dv-mono dv-accent dv-clip">{{ perm.codename }}</span>
+              <span class="dv-clip">{{ perm.name }}</span>
+              <span><span class="dv-chip dv-chip--well">ct {{ perm.content_type }}</span></span>
+              <span class="dv-meta dv-num">{{ perm.id }}</span>
+            </div>
+          } @empty {
+            <div class="dv-empty">
               @if (searchQuery) {
-                &nbsp;matching "<strong>{{ searchQuery }}</strong>"
+                No permissions match “{{ searchQuery }}”.
+              } @else {
+                No permissions defined.
               }
             </div>
           }
-        </div>
-      }
+
+          @if (filteredPermissions().length > 0) {
+            <div class="dv-meta pb-foot">
+              showing {{ filteredPermissions().length }} permission{{
+                filteredPermissions().length !== 1 ? 's' : ''
+              }}@if (searchQuery) {
+                <span> matching “{{ searchQuery }}”</span>
+              }
+            </div>
+          }
+        }
+      </div>
     </div>
   `,
 })

@@ -1,14 +1,15 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { OrganizationService } from '../../services/organization.service';
 import { MetadataType } from '../../models/organization.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-metadata-types',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule, SubnavComponent],
   templateUrl: './metadata-types.component.html',
+  styleUrl: './metadata-types.component.scss',
 })
 export class MetadataTypesComponent implements OnInit {
   metadataTypes = signal<MetadataType[]>([]);

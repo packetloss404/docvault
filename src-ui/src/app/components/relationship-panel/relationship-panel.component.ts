@@ -13,156 +13,118 @@ import {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
   template: `
-    <div class="container-fluid py-3">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="mb-0">
-          <i class="bi bi-diagram-2 me-2"></i>Document Relationships
-        </h4>
-        <a
-          *ngIf="resolvedDocumentId"
-          [routerLink]="['/documents', resolvedDocumentId, 'graph']"
-          class="btn btn-outline-primary btn-sm"
-        >
-          <i class="bi bi-share me-1"></i>View Graph
-        </a>
+    <div class="rp" [class.rp--screen]="!embedded">
+      <div class="rp__head">
+        <span class="dv-eyebrow">relationships</span>
+        @if (resolvedDocumentId) {
+          <a
+            class="dv-link dv-mono dv-push rp__graph"
+            [routerLink]="['/documents', resolvedDocumentId, 'graph']"
+            >graph →</a
+          >
+        }
       </div>
 
-      <!-- Add Relationship Form -->
-      <div class="card mb-4">
-        <div class="card-header">
-          <i class="bi bi-plus-circle me-1"></i>Add Relationship
+      <!-- Add relationship -->
+      <div class="dv-card dv-card--r9 rp__add">
+        <div class="rp__addrow">
+          <input
+            type="number"
+            class="dv-input dv-input--r7 rp__id"
+            placeholder="doc id"
+            aria-label="Target document ID"
+            [ngModel]="newTargetId()"
+            (ngModelChange)="newTargetId.set($event)"
+          />
+          <select
+            class="dv-input dv-input--r7 rp__type"
+            aria-label="Relationship type"
+            [ngModel]="newTypeId()"
+            (ngModelChange)="newTypeId.set($event)"
+          >
+            <option [ngValue]="0" disabled>relation…</option>
+            @for (t of relationshipTypes(); track t.id) {
+              <option [ngValue]="t.id">{{ t.label }}</option>
+            }
+          </select>
+          <button
+            type="button"
+            class="dv-btn dv-btn--accent dv-btn--sm rp__addbtn"
+            (click)="addRelationship()"
+            [disabled]="!newTargetId() || !newTypeId()"
+          >
+            + add
+          </button>
         </div>
-        <div class="card-body">
-          <div class="row g-2 align-items-end">
-            <div class="col-md-3">
-              <label class="form-label">Target Document ID</label>
-              <input
-                type="number"
-                class="form-control form-control-sm"
-                placeholder="Document ID"
-                [ngModel]="newTargetId()"
-                (ngModelChange)="newTargetId.set($event)"
-              />
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">Relationship Type</label>
-              <select
-                class="form-select form-select-sm"
-                [ngModel]="newTypeId()"
-                (ngModelChange)="newTypeId.set($event)"
-              >
-                <option [ngValue]="0" disabled>Select type...</option>
-                @for (t of relationshipTypes(); track t.id) {
-                  <option [ngValue]="t.id">
-                    {{ t.label }}
-                  </option>
-                }
-              </select>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">Notes</label>
-              <input
-                type="text"
-                class="form-control form-control-sm"
-                placeholder="Optional notes"
-                [ngModel]="newNotes()"
-                (ngModelChange)="newNotes.set($event)"
-              />
-            </div>
-            <div class="col-md-2">
-              <button
-                class="btn btn-primary btn-sm w-100"
-                (click)="addRelationship()"
-                [disabled]="!newTargetId() || !newTypeId()"
-              >
-                <i class="bi bi-plus me-1"></i>Add
-              </button>
-            </div>
-          </div>
-          @if (addError()) {
-            <div class="alert alert-danger mt-2 mb-0 py-1 small">
-              {{ addError() }}
-            </div>
-          }
-        </div>
+        <input
+          type="text"
+          class="dv-input dv-input--r7 rp__notes"
+          placeholder="Notes (optional)"
+          aria-label="Relationship notes"
+          [ngModel]="newNotes()"
+          (ngModelChange)="newNotes.set($event)"
+        />
+        @if (addError()) {
+          <div class="dv-danger rp__error">{{ addError() }}</div>
+        }
       </div>
 
-      <!-- Relationships List grouped by type -->
+      <!-- Relationship rows, grouped by type -->
       @if (loading()) {
-        <div class="text-center py-4">
-          <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-          </div>
+        <div class="dv-empty rp__empty">
+          <span class="dv-spinner"></span>
+          <span class="dv-sr">Loading relationships…</span>
         </div>
       } @else if (relationships().length === 0) {
-        <div class="text-center text-muted py-4">
-          <i class="bi bi-diagram-2 fs-1"></i>
-          <p class="mt-2">No relationships found for this document.</p>
-        </div>
+        <div class="dv-empty rp__empty">No relationships for this document.</div>
       } @else {
         @for (group of groupedRelationships(); track group.typeLabel) {
-          <div class="card mb-3">
-            <div class="card-header py-2">
-              <i class="bi" [ngClass]="group.typeIcon || 'bi-link-45deg'"></i>
-              <strong class="ms-1">{{ group.typeLabel }}</strong>
-              <span class="badge bg-secondary ms-2">{{
-                group.items.length
+          @for (rel of group.items; track rel.id) {
+            <div class="dv-card dv-card--r9 dv-card--hover rp__row">
+              <span class="dv-chip dv-chip--upper rp__kind">{{
+                group.typeLabel
               }}</span>
+              <a
+                class="rp__title dv-clip"
+                [routerLink]="[
+                  '/documents',
+                  rel.source_document === resolvedDocumentId
+                    ? rel.target_document
+                    : rel.source_document
+                ]"
+                [title]="rel.notes || null"
+                >{{
+                  rel.source_document === resolvedDocumentId
+                    ? rel.target_title
+                    : rel.source_title
+                }}</a
+              >
+              <span class="dv-meta rp__date">{{
+                rel.created_at | date: 'yyyy-MM-dd'
+              }}</span>
+              <button
+                type="button"
+                class="rp__del"
+                title="Remove relationship"
+                (click)="deleteRelationship(rel.id)"
+              >
+                <span aria-hidden="true">✕</span>
+                <span class="dv-sr">Remove relationship</span>
+              </button>
             </div>
-            <ul class="list-group list-group-flush">
-              @for (rel of group.items; track rel.id) {
-                <li
-                  class="list-group-item d-flex justify-content-between align-items-center"
-                >
-                  <div>
-                    <a
-                      [routerLink]="[
-                        '/documents',
-                        rel.source_document === resolvedDocumentId
-                          ? rel.target_document
-                          : rel.source_document
-                      ]"
-                      class="text-decoration-none"
-                    >
-                      <i class="bi bi-file-earmark me-1"></i>
-                      {{
-                        rel.source_document === resolvedDocumentId
-                          ? rel.target_title
-                          : rel.source_title
-                      }}
-                    </a>
-                    <small class="text-muted ms-2">
-                      (ID:
-                      {{
-                        rel.source_document === resolvedDocumentId
-                          ? rel.target_document
-                          : rel.source_document
-                      }})
-                    </small>
-                    @if (rel.notes) {
-                      <br /><small class="text-muted">{{ rel.notes }}</small>
-                    }
-                  </div>
-                  <button
-                    class="btn btn-outline-danger btn-sm"
-                    (click)="deleteRelationship(rel.id)"
-                    title="Remove relationship"
-                  >
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </li>
-              }
-            </ul>
-          </div>
+          }
         }
       }
     </div>
   `,
+  styleUrl: './relationship-panel.component.scss',
 })
 export class RelationshipPanelComponent implements OnInit {
   @Input() documentId: number | null = null;
 
   resolvedDocumentId: number = 0;
+  /** True when rendered inside the document panel rather than as a screen. */
+  embedded = false;
   relationships = signal<DocumentRelationship[]>([]);
   relationshipTypes = signal<RelationshipType[]>([]);
   loading = signal(true);
@@ -185,6 +147,7 @@ export class RelationshipPanelComponent implements OnInit {
   ngOnInit(): void {
     if (this.documentId) {
       this.resolvedDocumentId = this.documentId;
+      this.embedded = true;
     } else {
       this.resolvedDocumentId = Number(this.route.snapshot.paramMap.get('id'));
     }

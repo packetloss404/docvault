@@ -1,126 +1,168 @@
 import { Component, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SecurityService } from '../../services/security.service';
 import { ScannerDevice } from '../../models/security.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-scanner',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [FormsModule, SubnavComponent],
+  styleUrl: './scanner.component.scss',
   template: `
-    <div class="container-fluid py-4">
-      <h4>Scanners</h4>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner dv-inner--wide">
+        <dv-subnav />
 
-      @if (errorMessage()) {
-        <div class="alert alert-danger alert-dismissible">
-          {{ errorMessage() }}
-          <button type="button" class="btn-close" (click)="errorMessage.set('')"></button>
-        </div>
-      }
-
-      @if (successMessage()) {
-        <div class="alert alert-success alert-dismissible">
-          {{ successMessage() }}
-          <button type="button" class="btn-close" (click)="successMessage.set('')"></button>
-        </div>
-      }
-
-      <!-- Discover -->
-      <div class="card mb-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <span>Available Scanners</span>
-          <button class="btn btn-primary btn-sm" (click)="discoverScanners()" [disabled]="discovering()">
+        <div class="dv-pagehead pagehead">
+          <h1 class="dv-h1 dv-h1--sm">Scanners</h1>
+          <button
+            type="button"
+            class="dv-btn dv-btn--secondary dv-btn--sm dv-push"
+            (click)="discoverScanners()"
+            [disabled]="discovering()"
+          >
             @if (discovering()) {
-              <span class="spinner-border spinner-border-sm me-1"></span>
+              <span class="dv-spinner"></span>
+              Discovering…
+            } @else {
+              Discover scanners
             }
-            <i class="bi bi-arrow-clockwise me-1"></i> Discover Scanners
           </button>
         </div>
-        <div class="card-body">
-          @if (scanners().length === 0) {
-            <p class="text-muted mb-0">
-              No scanners found. Click "Discover Scanners" to search for connected devices.
-            </p>
-          } @else {
-            <div class="list-group">
-              @for (scanner of scanners(); track scanner.id) {
-                <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-                        [class.active]="selectedScanner()?.id === scanner.id"
-                        (click)="selectScanner(scanner)">
-                  <div>
-                    <strong>{{ scanner.label || scanner.model }}</strong>
-                    <br />
-                    <small class="text-body-secondary">{{ scanner.vendor }} - {{ scanner.type }}</small>
-                  </div>
-                  @if (selectedScanner()?.id === scanner.id) {
-                    <i class="bi bi-check-circle-fill"></i>
-                  }
-                </button>
-              }
-            </div>
-          }
-        </div>
-      </div>
 
-      <!-- Scan Settings -->
-      @if (selectedScanner()) {
-        <div class="card mb-3">
-          <div class="card-header">Scan Settings</div>
-          <div class="card-body">
-            <div class="row g-3">
-              <div class="col-md-4">
-                <label class="form-label">DPI (Resolution)</label>
-                <select class="form-select" [(ngModel)]="scanDpi">
-                  <option [ngValue]="150">150 DPI (Draft)</option>
-                  <option [ngValue]="200">200 DPI</option>
-                  <option [ngValue]="300">300 DPI (Standard)</option>
-                  <option [ngValue]="600">600 DPI (High Quality)</option>
+        @if (errorMessage()) {
+          <div class="notice notice--bad" role="alert">
+            <span>{{ errorMessage() }}</span>
+            <button type="button" class="notice__close" (click)="errorMessage.set('')">✕</button>
+          </div>
+        }
+
+        @if (successMessage()) {
+          <div class="notice notice--ok" role="status">
+            <span>{{ successMessage() }}</span>
+            <button type="button" class="notice__close" (click)="successMessage.set('')">✕</button>
+          </div>
+        }
+
+        <div class="dv-section">
+          <span class="dv-eyebrow">available scanners</span>
+        </div>
+
+        @if (scanners().length === 0) {
+          <div class="dv-dropzone">
+            No scanners found yet — run “Discover scanners” to search for connected devices.
+          </div>
+        } @else {
+          <div class="scanner-grid">
+            @for (scanner of scanners(); track scanner.id) {
+              <div
+                class="dv-card dv-card--pad dv-card--hover"
+                [class.dv-card--accent]="selectedScanner()?.id === scanner.id"
+              >
+                <div class="scanner-head">
+                  <span class="scanner-name">{{ scanner.label || scanner.model }}</span>
+                  <span
+                    class="scanner-state dv-push"
+                    [class.scanner-state--on]="selectedScanner()?.id === scanner.id"
+                  >
+                    {{ selectedScanner()?.id === scanner.id ? '● selected' : '○ idle' }}
+                  </span>
+                </div>
+                <div class="scanner-meta">{{ scanner.vendor }} · {{ scanner.type }}</div>
+                <div class="scanner-id dv-meta">{{ scanner.id }}</div>
+                <div class="scanner-actions">
+                  <button
+                    type="button"
+                    class="dv-btn dv-btn--primary dv-btn--md"
+                    (click)="scanNow(scanner)"
+                    [disabled]="scanning()"
+                  >
+                    @if (scanning() && selectedScanner()?.id === scanner.id) {
+                      <span class="dv-spinner"></span>
+                      Scanning…
+                    } @else {
+                      Scan now
+                    }
+                  </button>
+                  <button
+                    type="button"
+                    class="dv-btn dv-btn--ghost dv-btn--md"
+                    (click)="selectScanner(scanner)"
+                  >
+                    Settings
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        @if (selectedScanner()) {
+          <div class="dv-section">
+            <span class="dv-eyebrow">scan settings</span>
+          </div>
+
+          <div class="dv-card dv-card--pad form-card">
+            <div class="form-grid">
+              <div>
+                <label class="dv-field__label" for="scan-dpi">dpi</label>
+                <select id="scan-dpi" class="dv-select" [(ngModel)]="scanDpi">
+                  <option [ngValue]="150">150 · draft</option>
+                  <option [ngValue]="200">200</option>
+                  <option [ngValue]="300">300 · standard</option>
+                  <option [ngValue]="600">600 · high quality</option>
                 </select>
               </div>
-              <div class="col-md-4">
-                <label class="form-label">Color Mode</label>
-                <select class="form-select" [(ngModel)]="scanColorMode">
-                  <option value="color">Color</option>
-                  <option value="grayscale">Grayscale</option>
-                  <option value="lineart">Black &amp; White</option>
+
+              <div>
+                <label class="dv-field__label" for="scan-color">colour mode</label>
+                <select id="scan-color" class="dv-select" [(ngModel)]="scanColorMode">
+                  <option value="color">Colour</option>
+                  <option value="grayscale">Greyscale</option>
+                  <option value="lineart">Black &amp; white</option>
                 </select>
               </div>
-              <div class="col-md-4">
-                <label class="form-label">Paper Size</label>
-                <select class="form-select" [(ngModel)]="scanPaperSize">
+
+              <div>
+                <label class="dv-field__label" for="scan-paper">paper size</label>
+                <select id="scan-paper" class="dv-select" [(ngModel)]="scanPaperSize">
                   <option value="a4">A4</option>
                   <option value="letter">Letter</option>
                   <option value="legal">Legal</option>
-                  <option value="auto">Auto Detect</option>
+                  <option value="auto">Auto detect</option>
                 </select>
               </div>
             </div>
-            <div class="mt-3">
-              <button class="btn btn-success" (click)="startScan()" [disabled]="scanning()">
+
+            <div class="form-actions">
+              <button
+                type="button"
+                class="dv-btn dv-btn--primary dv-btn--sm"
+                (click)="startScan()"
+                [disabled]="scanning()"
+              >
                 @if (scanning()) {
-                  <span class="spinner-border spinner-border-sm me-1"></span>
+                  <span class="dv-spinner"></span>
+                  Scanning…
+                } @else {
+                  Scan document
                 }
-                <i class="bi bi-printer me-1"></i> Scan Document
               </button>
             </div>
           </div>
-        </div>
-      }
+        }
 
-      <!-- Scan Result -->
-      @if (scanTaskId()) {
-        <div class="card">
-          <div class="card-header">Scan Result</div>
-          <div class="card-body text-center">
-            <div class="alert alert-info">
-              <i class="bi bi-info-circle me-1"></i>
-              Scan task submitted successfully (Task ID: {{ scanTaskId() }}).
-              The document will appear in your inbox once processing is complete.
+        @if (scanTaskId()) {
+          <div class="dv-callout callout">
+            <div class="dv-callout__label">scan queued</div>
+            <div class="callout__body">
+              Task <span class="dv-mono">{{ scanTaskId() }}</span> submitted. The document appears
+              in your inbox once processing completes.
             </div>
           </div>
-        </div>
-      }
+        }
+      </div>
     </div>
   `,
 })
@@ -159,6 +201,12 @@ export class ScannerComponent {
 
   selectScanner(scanner: ScannerDevice): void {
     this.selectedScanner.set(scanner);
+  }
+
+  /** Card-level "Scan now": select the device, then scan with current settings. */
+  scanNow(scanner: ScannerDevice): void {
+    this.selectScanner(scanner);
+    this.startScan();
   }
 
   startScan(): void {

@@ -1,60 +1,92 @@
 import { Component, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { AIService } from '../../services/ai.service';
 import { AIConfig } from '../../models/ai.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-ai-config',
   standalone: true,
-  imports: [CommonModule],
+  imports: [SubnavComponent],
+  styleUrl: './ai-config.component.scss',
   template: `
-    <div class="container-fluid py-4">
-      <h4>AI Configuration</h4>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner dv-inner--wide">
+        <dv-subnav />
 
-      @if (config(); as cfg) {
-        <div class="row mt-3">
-          <div class="col-md-6">
-            <div class="card">
-              <div class="card-header">LLM Provider</div>
-              <div class="card-body">
-                <table class="table table-sm mb-0">
-                  <tbody>
-                    <tr><td>Enabled</td><td>
-                      <span class="badge" [class]="cfg.llm_enabled ? 'bg-success' : 'bg-secondary'">
-                        {{ cfg.llm_enabled ? 'Yes' : 'No' }}
-                      </span>
-                    </td></tr>
-                    <tr><td>Provider</td><td>{{ cfg.llm_provider }}</td></tr>
-                    <tr><td>Model</td><td>{{ cfg.llm_model }}</td></tr>
-                    <tr><td>Embedding Model</td><td>{{ cfg.embedding_model }}</td></tr>
-                  </tbody>
-                </table>
+        <div class="dv-pagehead pagehead">
+          <h1 class="dv-h1 dv-h1--sm">AI configuration</h1>
+        </div>
+
+        @if (config(); as cfg) {
+          <div class="card-grid">
+            <!-- LLM provider -->
+            <div class="dv-card dv-card--pad">
+              <div class="card-head">
+                <span class="dv-card__title">LLM provider</span>
+                <span class="state dv-push" [class.state--on]="cfg.llm_enabled">
+                  {{ cfg.llm_enabled ? '● enabled' : '○ disabled' }}
+                </span>
               </div>
+
+              <div class="chips">
+                <span class="dv-navchip is-active">{{ cfg.llm_provider || 'unset' }}</span>
+              </div>
+
+              <div class="stat-lines">
+                <div class="dv-stat-line">
+                  <span class="dv-stat-line__k">chat model</span>
+                  <span class="dv-stat-line__v">{{ cfg.llm_model || '—' }}</span>
+                </div>
+                <div class="dv-stat-line">
+                  <span class="dv-stat-line__k">embeddings</span>
+                  <span class="dv-stat-line__v">{{ cfg.embedding_model || '—' }}</span>
+                </div>
+              </div>
+
+              @if (isLocalProvider()) {
+                <div class="card-note dv-meta">runs fully local — no data leaves your server</div>
+              }
             </div>
-          </div>
-          <div class="col-md-6">
-            <div class="card">
-              <div class="card-header">Vector Store</div>
-              <div class="card-body">
-                <p class="mb-2">Documents indexed: <strong>{{ cfg.vector_store_count }}</strong></p>
-                <button class="btn btn-warning btn-sm" (click)="rebuildIndex()" [disabled]="rebuilding()">
-                  @if (rebuilding()) {
-                    <span class="spinner-border spinner-border-sm me-1"></span>
-                  }
-                  Rebuild Vector Index
-                </button>
-                @if (rebuildMessage()) {
-                  <div class="alert alert-info mt-2 mb-0">{{ rebuildMessage() }}</div>
+
+            <!-- Vector store -->
+            <div class="dv-card dv-card--pad">
+              <div class="card-head">
+                <span class="dv-card__title">Vector store</span>
+              </div>
+
+              <div class="stat-lines">
+                <div class="dv-stat-line">
+                  <span class="dv-stat-line__k">documents indexed</span>
+                  <span class="dv-stat-line__v dv-accent">{{ cfg.vector_store_count }}</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                class="dv-btn dv-btn--secondary dv-btn--sm store-action"
+                (click)="rebuildIndex()"
+                [disabled]="rebuilding()"
+              >
+                @if (rebuilding()) {
+                  <span class="dv-spinner"></span>
+                  Rebuilding…
+                } @else {
+                  Rebuild vector index
                 }
-              </div>
+              </button>
+
+              @if (rebuildMessage()) {
+                <div class="notice card-note" role="status">{{ rebuildMessage() }}</div>
+              }
             </div>
           </div>
-        </div>
-      } @else {
-        <div class="text-center py-4">
-          <div class="spinner-border"></div>
-        </div>
-      }
+        } @else {
+          <div class="dv-empty">
+            <span class="dv-spinner"></span>
+            <div class="load-label">Loading AI configuration…</div>
+          </div>
+        }
+      </div>
     </div>
   `,
 })
@@ -67,6 +99,12 @@ export class AIConfigComponent implements OnInit {
 
   ngOnInit() {
     this.aiService.getConfig().subscribe(cfg => this.config.set(cfg));
+  }
+
+  /** Local inference backends keep every request on this server. */
+  isLocalProvider(): boolean {
+    const provider = (this.config()?.llm_provider ?? '').toLowerCase();
+    return provider === 'ollama' || provider === 'local' || provider === 'llamacpp';
   }
 
   rebuildIndex() {

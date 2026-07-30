@@ -5,181 +5,363 @@ import { ActivatedRoute } from '@angular/router';
 import { AnalyticsService } from '../../services/analytics.service';
 import { SearchService } from '../../services/search.service';
 import { SearchCuration } from '../../models/analytics.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-curation-manager',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SubnavComponent],
   template: `
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2>Search Curations</h2>
-      <button class="btn btn-primary" (click)="showForm = !showForm">
-        <i class="bi bi-plus-lg me-1"></i>
-        {{ showForm ? 'Cancel' : 'New Curation' }}
-      </button>
-    </div>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner">
+        <dv-subnav />
 
-    @if (showForm) {
-      <div class="card mb-4">
-        <div class="card-body">
-          <h5 class="card-title">{{ editingId ? 'Edit' : 'Create' }} Curation</h5>
-          <form (ngSubmit)="onSave()">
-            <div class="mb-3">
-              <label class="form-label">Query Text</label>
-              <input
-                type="text"
-                class="form-control"
-                [(ngModel)]="formQueryText"
-                name="queryText"
-                placeholder="Enter the search query to curate"
-                required
-              />
-            </div>
-            <div class="row g-3 mb-3">
-              <div class="col-md-6">
-                <label class="form-label">Pinned Document IDs</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  [(ngModel)]="formPinnedIds"
-                  name="pinnedIds"
-                  placeholder="e.g. 1, 5, 12"
-                />
-                <div class="form-text">Comma-separated document IDs to pin at the top of results.</div>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label">Hidden Document IDs</label>
-                <input
-                  type="text"
-                  class="form-control"
-                  [(ngModel)]="formHiddenIds"
-                  name="hiddenIds"
-                  placeholder="e.g. 3, 7"
-                />
-                <div class="form-text">Comma-separated document IDs to hide from results.</div>
-              </div>
-            </div>
+        <div class="dv-section cu-head">
+          <span class="dv-eyebrow"
+            >{{ curations().length }} curation{{ curations().length !== 1 ? 's' : '' }}</span
+          >
+          <button
+            type="button"
+            class="dv-btn dv-btn--accent dv-btn--md dv-push"
+            (click)="showForm = !showForm"
+          >
+            {{ showForm ? 'Cancel' : '+ New curation' }}
+          </button>
+        </div>
 
-            <!-- Document Search Helper -->
-            <div class="mb-3">
-              <label class="form-label">Search for Documents</label>
-              <div class="input-group">
+        @if (showForm) {
+          <form class="dv-card dv-card--r10 cu-form" (ngSubmit)="onSave()">
+            <div class="dv-card__head">
+              <span class="dv-card__title">{{ editingId ? 'Edit' : 'Create' }} curation</span>
+            </div>
+            <div class="cu-form__body">
+              <div>
+                <label class="dv-field__label" for="cu-query">query text</label>
                 <input
                   type="text"
-                  class="form-control"
-                  [(ngModel)]="docSearchQuery"
-                  name="docSearchQuery"
-                  placeholder="Search documents to find IDs..."
+                  id="cu-query"
+                  class="dv-input dv-input--mono"
+                  [(ngModel)]="formQueryText"
+                  name="queryText"
+                  placeholder="the search query to curate"
+                  required
                 />
-                <button class="btn btn-outline-secondary" type="button" (click)="searchDocuments()">
-                  <i class="bi bi-search"></i>
-                </button>
               </div>
-              @if (searchResults().length > 0) {
-                <div class="list-group mt-2" style="max-height: 200px; overflow-y: auto;">
-                  @for (doc of searchResults(); track doc.id) {
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                      <span><strong>#{{ doc.id }}</strong> - {{ doc.title }}</span>
-                      <div>
-                        <button class="btn btn-sm btn-outline-success me-1" type="button" (click)="addPinned(doc.id)" title="Pin">
-                          <i class="bi bi-pin-angle"></i>
+
+              <div class="cu-fields">
+                <div>
+                  <label class="dv-field__label" for="cu-pinned">pinned document ids</label>
+                  <input
+                    type="text"
+                    id="cu-pinned"
+                    class="dv-input dv-input--mono"
+                    [(ngModel)]="formPinnedIds"
+                    name="pinnedIds"
+                    placeholder="1, 5, 12"
+                  />
+                  <div class="dv-meta cu-hint">pinned to the top of results, in order</div>
+                </div>
+                <div>
+                  <label class="dv-field__label" for="cu-hidden">hidden document ids</label>
+                  <input
+                    type="text"
+                    id="cu-hidden"
+                    class="dv-input dv-input--mono"
+                    [(ngModel)]="formHiddenIds"
+                    name="hiddenIds"
+                    placeholder="3, 7"
+                  />
+                  <div class="dv-meta cu-hint">removed from results for this query</div>
+                </div>
+              </div>
+
+              <!-- Document lookup helper -->
+              <div>
+                <span class="dv-field__label">find documents</span>
+                <div class="cu-lookup">
+                  <input
+                    type="text"
+                    class="dv-input dv-input--r7"
+                    [(ngModel)]="docSearchQuery"
+                    name="docSearchQuery"
+                    placeholder="Search documents to find their ids…"
+                    aria-label="Search documents"
+                  />
+                  <button
+                    type="button"
+                    class="dv-btn dv-btn--ghost dv-btn--sm"
+                    (click)="searchDocuments()"
+                  >
+                    Search
+                  </button>
+                </div>
+
+                @if (searchResults().length > 0) {
+                  <div class="dv-well cu-hits">
+                    @for (doc of searchResults(); track doc.id) {
+                      <div class="cu-hit">
+                        <span class="dv-mono dv-faint">#{{ doc.id }}</span>
+                        <span class="dv-clip">{{ doc.title }}</span>
+                        <button
+                          type="button"
+                          class="cu-action dv-push"
+                          title="Pin"
+                          (click)="addPinned(doc.id)"
+                        >
+                          📌 pin
                         </button>
-                        <button class="btn btn-sm btn-outline-danger" type="button" (click)="addHidden(doc.id)" title="Hide">
-                          <i class="bi bi-eye-slash"></i>
+                        <button
+                          type="button"
+                          class="cu-action cu-action--danger"
+                          title="Hide"
+                          (click)="addHidden(doc.id)"
+                        >
+                          ✕ hide
                         </button>
                       </div>
-                    </div>
+                    }
+                  </div>
+                }
+              </div>
+
+              <div class="cu-switch">
+                <button
+                  type="button"
+                  class="dv-toggle"
+                  [class.is-on]="formEnabled"
+                  role="switch"
+                  [attr.aria-checked]="formEnabled"
+                  aria-label="Enabled"
+                  (click)="formEnabled = !formEnabled"
+                ></button>
+                <span>Enabled</span>
+              </div>
+
+              <div class="cu-actions">
+                <button
+                  type="submit"
+                  class="dv-btn dv-btn--primary dv-btn--md"
+                  [disabled]="saving()"
+                >
+                  {{ editingId ? 'Update' : 'Create' }}
+                </button>
+                <button
+                  type="button"
+                  class="dv-btn dv-btn--ghost dv-btn--md"
+                  (click)="cancelEdit()"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </form>
+        }
+
+        @if (loading()) {
+          <div class="dv-empty">
+            <span class="dv-spinner"></span>
+            <span class="dv-sr">Loading…</span>
+          </div>
+        } @else {
+          <div class="cu-list">
+            @for (curation of curations(); track curation.id) {
+              <div class="dv-card dv-card--r10 cu-card">
+                <div class="cu-card__head">
+                  <span class="cu-query">“{{ curation.query_text }}”</span>
+                  <span class="dv-push"></span>
+                  @if (!curation.enabled) {
+                    <span class="dv-chip dv-chip--warn dv-chip--upper">disabled</span>
+                  }
+                  <button
+                    type="button"
+                    class="dv-toggle"
+                    [class.is-on]="curation.enabled"
+                    role="switch"
+                    [attr.aria-checked]="curation.enabled"
+                    aria-label="Toggle enabled"
+                    (click)="toggleEnabled(curation)"
+                  ></button>
+                  <button type="button" class="cu-action" (click)="onEdit(curation)">edit</button>
+                  <button
+                    type="button"
+                    class="cu-action cu-action--danger"
+                    title="Delete"
+                    aria-label="Delete curation"
+                    (click)="onDelete(curation)"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div class="cu-card__body">
+                  @if (curation.pinned_documents.length > 0) {
+                    <span class="cu-pin">
+                      <span class="cu-pin__glyph" aria-hidden="true">📌</span>
+                      <span class="cu-pin__label"
+                        >{{ curation.pinned_documents.length }} pinned</span
+                      >
+                      <span class="dv-meta">#{{ curation.pinned_documents.join(' #') }}</span>
+                    </span>
+                  }
+                  @if (curation.hidden_documents.length > 0) {
+                    <span class="dv-chip dv-chip--danger"
+                      >{{ curation.hidden_documents.length }} hidden</span
+                    >
+                  }
+                  @if (
+                    curation.pinned_documents.length === 0 &&
+                    curation.hidden_documents.length === 0
+                  ) {
+                    <span class="dv-meta">no pins or hides yet</span>
                   }
                 </div>
-              }
-            </div>
-
-            <div class="form-check form-switch mb-3">
-              <input
-                class="form-check-input"
-                type="checkbox"
-                [(ngModel)]="formEnabled"
-                name="enabled"
-                id="curationEnabledSwitch"
-              />
-              <label class="form-check-label" for="curationEnabledSwitch">Enabled</label>
-            </div>
-            <button type="submit" class="btn btn-success me-2" [disabled]="saving()">
-              <i class="bi bi-check-lg me-1"></i>{{ editingId ? 'Update' : 'Create' }}
-            </button>
-            <button type="button" class="btn btn-secondary" (click)="cancelEdit()">Cancel</button>
-          </form>
-        </div>
-      </div>
-    }
-
-    @if (loading()) {
-      <div class="text-center py-5">
-        <div class="spinner-border" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    } @else {
-      <div class="table-responsive">
-        <table class="table table-hover align-middle">
-          <thead>
-            <tr>
-              <th>Query</th>
-              <th>Pinned</th>
-              <th>Hidden</th>
-              <th>Status</th>
-              <th class="text-end">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (curation of curations(); track curation.id) {
-              <tr>
-                <td class="fw-semibold"><code>{{ curation.query_text }}</code></td>
-                <td>
-                  @if (curation.pinned_documents.length > 0) {
-                    <span class="badge bg-success">{{ curation.pinned_documents.length }} pinned</span>
-                  } @else {
-                    <span class="text-muted">-</span>
-                  }
-                </td>
-                <td>
-                  @if (curation.hidden_documents.length > 0) {
-                    <span class="badge bg-danger">{{ curation.hidden_documents.length }} hidden</span>
-                  } @else {
-                    <span class="text-muted">-</span>
-                  }
-                </td>
-                <td>
-                  <div class="form-check form-switch">
-                    <input
-                      class="form-check-input"
-                      type="checkbox"
-                      [checked]="curation.enabled"
-                      (change)="toggleEnabled(curation)"
-                    />
-                  </div>
-                </td>
-                <td class="text-end">
-                  <button class="btn btn-sm btn-outline-primary me-1" (click)="onEdit(curation)" title="Edit">
-                    <i class="bi bi-pencil"></i>
-                  </button>
-                  <button class="btn btn-sm btn-outline-danger" (click)="onDelete(curation)" title="Delete">
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </td>
-              </tr>
+              </div>
             } @empty {
-              <tr>
-                <td colspan="5" class="text-center text-muted py-4">
-                  No curations defined. Create one to customize search results for specific queries.
-                </td>
-              </tr>
+              <div class="dv-empty">
+                No curations defined. Create one to shape results for a specific query.
+              </div>
             }
-          </tbody>
-        </table>
+          </div>
+        }
       </div>
-    }
+    </div>
   `,
+  styles: [
+    `
+      $mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+      :host {
+        display: contents;
+      }
+
+      dv-subnav {
+        display: block;
+        margin-bottom: 16px;
+      }
+
+      .cu-head {
+        align-items: center;
+      }
+
+      .cu-form {
+        margin-bottom: 18px;
+
+        &__body {
+          padding: 16px 18px;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+      }
+
+      .cu-fields {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px 14px;
+      }
+
+      .cu-hint {
+        margin-top: 6px;
+      }
+
+      .cu-lookup {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+
+        .dv-input {
+          flex: 1;
+          min-width: 0;
+        }
+      }
+
+      .cu-hits {
+        margin-top: 8px;
+        max-height: 200px;
+        overflow-y: auto;
+        padding: 4px 0;
+      }
+
+      .cu-hit {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 7px 12px;
+        font-size: 12.5px;
+        min-width: 0;
+      }
+
+      .cu-action {
+        background: none;
+        border: none;
+        padding: 0 2px;
+        font: 400 11px #{$mono};
+        color: var(--faint);
+        cursor: pointer;
+        white-space: nowrap;
+
+        &:hover {
+          color: var(--text);
+        }
+
+        &--danger:hover {
+          color: var(--danger);
+        }
+      }
+
+      .cu-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .cu-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .cu-card {
+        padding: 13px 17px;
+
+        &__head {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 0;
+        }
+
+        &__body {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-top: 9px;
+          flex-wrap: wrap;
+        }
+      }
+
+      .cu-query {
+        font: 400 12.5px #{$mono};
+        color: var(--accent-text);
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+
+      .cu-pin {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12.5px;
+
+        &__glyph {
+          color: var(--warn);
+        }
+
+        &__label {
+          font-weight: 500;
+        }
+      }
+    `,
+  ],
 })
 export class CurationManagerComponent implements OnInit {
   curations = signal<SearchCuration[]>([]);

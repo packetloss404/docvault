@@ -1,0 +1,62 @@
+// Screen-local geometry for the legal hold detail.
+
+.lhd-back {
+  display: inline-block;
+  margin-top: 20px;
+  margin-bottom: 8px;
+
+  &:hover {
+    color: var(--text);
+  }
+}
+
+.lhd-head {
+  margin-bottom: 16px;
+}
+
+.lhd-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.lhd-callout {
+  margin-bottom: 14px;
+
+  &__text {
+    font-size: 12.5px;
+    color: var(--text);
+    margin-top: 4px;
+  }
+}
+
+.lhd-card {
+  margin-bottom: 4px;
+}
+
+.lhd-desc {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.lhd-stats {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.lhd-section {
+  margin-top: 24px;
+}
+
+.lhd-doc {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.lhd-notes {
+  font-size: 12.5px;
+}

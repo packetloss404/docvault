@@ -21,152 +21,88 @@ export interface AnnotationToolSelection {
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="d-flex align-items-center gap-2 p-2 border rounded bg-light flex-wrap">
-      <!-- Tool Buttons -->
-      <div class="btn-group btn-group-sm" role="group" aria-label="Annotation tools">
-        <button
-          type="button"
-          class="btn"
-          [ngClass]="activeTool() === 'highlight' ? 'btn-warning' : 'btn-outline-secondary'"
-          title="Highlight"
-          (click)="selectTool('highlight')"
-        >
-          <i class="bi bi-highlighter"></i>
-        </button>
-        <button
-          type="button"
-          class="btn"
-          [ngClass]="activeTool() === 'underline' ? 'btn-warning' : 'btn-outline-secondary'"
-          title="Underline"
-          (click)="selectTool('underline')"
-        >
-          <i class="bi bi-type-underline"></i>
-        </button>
-        <button
-          type="button"
-          class="btn"
-          [ngClass]="activeTool() === 'strikethrough' ? 'btn-warning' : 'btn-outline-secondary'"
-          title="Strikethrough"
-          (click)="selectTool('strikethrough')"
-        >
-          <i class="bi bi-type-strikethrough"></i>
-        </button>
-        <button
-          type="button"
-          class="btn"
-          [ngClass]="activeTool() === 'sticky_note' ? 'btn-warning' : 'btn-outline-secondary'"
-          title="Sticky Note"
-          (click)="selectTool('sticky_note')"
-        >
-          <i class="bi bi-sticky"></i>
-        </button>
-        <button
-          type="button"
-          class="btn"
-          [ngClass]="activeTool() === 'freehand' ? 'btn-warning' : 'btn-outline-secondary'"
-          title="Freehand"
-          (click)="selectTool('freehand')"
-        >
-          <i class="bi bi-pencil"></i>
-        </button>
-        <button
-          type="button"
-          class="btn"
-          [ngClass]="activeTool() === 'rectangle' ? 'btn-warning' : 'btn-outline-secondary'"
-          title="Rectangle"
-          (click)="selectTool('rectangle')"
-        >
-          <i class="bi bi-square"></i>
-        </button>
-        <button
-          type="button"
-          class="btn"
-          [ngClass]="activeTool() === 'text_box' ? 'btn-warning' : 'btn-outline-secondary'"
-          title="Text Box"
-          (click)="selectTool('text_box')"
-        >
-          <i class="bi bi-fonts"></i>
-        </button>
-        <button
-          type="button"
-          class="btn"
-          [ngClass]="activeTool() === 'rubber_stamp' ? 'btn-warning' : 'btn-outline-secondary'"
-          title="Rubber Stamp"
-          (click)="selectTool('rubber_stamp')"
-        >
-          <i class="bi bi-stamp"></i>
-        </button>
+    <div class="at">
+      <div class="at__tools" role="group" aria-label="Annotation tools">
+        @for (tool of tools; track tool.id) {
+          <button
+            type="button"
+            class="dv-btn dv-btn--ghost dv-btn--sm at__tool"
+            [class.is-active]="activeTool() === tool.id"
+            [title]="tool.label"
+            [attr.aria-pressed]="activeTool() === tool.id"
+            (click)="selectTool(tool.id)"
+          >
+            <span aria-hidden="true">{{ tool.glyph }}</span>
+            <span class="dv-sr">{{ tool.label }}</span>
+          </button>
+        }
       </div>
 
-      <div class="vr"></div>
+      <span class="at__sep" aria-hidden="true"></span>
 
-      <!-- Color Picker -->
-      <div class="d-flex align-items-center gap-1">
-        <label class="form-label mb-0 small text-muted">Color</label>
+      <label class="at__group">
+        <span class="dv-eyebrow">colour</span>
         <input
           type="color"
-          class="form-control form-control-color form-control-sm"
+          class="at__color"
           [ngModel]="color()"
           (ngModelChange)="onColorChange($event)"
-          title="Annotation color"
-          style="width: 32px; height: 32px;"
+          title="Annotation colour"
         />
-      </div>
+      </label>
 
-      <!-- Opacity Slider -->
-      <div class="d-flex align-items-center gap-1">
-        <label class="form-label mb-0 small text-muted">Opacity</label>
+      <label class="at__group">
+        <span class="dv-eyebrow">opacity</span>
         <input
           type="range"
-          class="form-range"
+          class="at__range"
           min="0.1"
           max="1.0"
           step="0.1"
           [ngModel]="opacity()"
           (ngModelChange)="onOpacityChange($event)"
           title="Annotation opacity"
-          style="width: 80px;"
         />
-        <span class="small text-muted">{{ (opacity() * 100).toFixed(0) }}%</span>
-      </div>
+        <span class="dv-meta at__pct">{{ (opacity() * 100).toFixed(0) }}%</span>
+      </label>
 
-      <div class="vr"></div>
+      <span class="at__sep" aria-hidden="true"></span>
 
-      <!-- Visibility Toggle -->
       <button
-        class="btn btn-sm"
-        [ngClass]="annotationsVisible() ? 'btn-outline-primary' : 'btn-outline-secondary'"
+        type="button"
+        class="dv-btn dv-btn--ghost dv-btn--sm at__tool"
+        [class.is-active]="annotationsVisible()"
+        [attr.aria-pressed]="annotationsVisible()"
         title="Toggle annotation visibility"
         (click)="toggleVisibility()"
       >
-        <i class="bi" [ngClass]="annotationsVisible() ? 'bi-eye' : 'bi-eye-slash'"></i>
+        <span aria-hidden="true">{{ annotationsVisible() ? '◉' : '◌' }}</span>
+        <span class="dv-sr">Toggle annotation visibility</span>
       </button>
 
-      <!-- Author Filter -->
-      <div class="d-flex align-items-center gap-1">
-        <select
-          class="form-select form-select-sm"
-          style="width: auto;"
-          [ngModel]="authorFilter()"
-          (ngModelChange)="onAuthorFilterChange($event)"
-        >
-          <option value="">All Authors</option>
-          @for (author of authors; track author) {
-            <option [value]="author">{{ author }}</option>
-          }
-        </select>
-      </div>
+      <select
+        class="dv-input dv-input--r7 at__authors"
+        aria-label="Filter annotations by author"
+        [ngModel]="authorFilter()"
+        (ngModelChange)="onAuthorFilterChange($event)"
+      >
+        <option value="">all authors</option>
+        @for (author of authors; track author) {
+          <option [value]="author">{{ author }}</option>
+        }
+      </select>
 
-      <!-- Export Button -->
       <button
-        class="btn btn-sm btn-outline-success"
+        type="button"
+        class="dv-btn dv-btn--ghost dv-btn--sm dv-push"
         title="Export annotations"
         (click)="onExport()"
       >
-        <i class="bi bi-download me-1"></i>Export
+        ↓ export
       </button>
     </div>
   `,
+  styleUrl: './annotation-toolbar.component.scss',
 })
 export class AnnotationToolbarComponent implements OnInit {
   @Input() documentId = 0;
@@ -176,6 +112,18 @@ export class AnnotationToolbarComponent implements OnInit {
   @Output() visibilityChanged = new EventEmitter<boolean>();
   @Output() authorFilterChanged = new EventEmitter<string>();
   @Output() exportRequested = new EventEmitter<void>();
+
+  /** Tool palette. Console has no icon font, so each tool carries a glyph. */
+  readonly tools: { id: string; label: string; glyph: string }[] = [
+    { id: 'highlight', label: 'Highlight', glyph: '▮' },
+    { id: 'underline', label: 'Underline', glyph: '﹍' },
+    { id: 'strikethrough', label: 'Strikethrough', glyph: '⌦' },
+    { id: 'sticky_note', label: 'Sticky note', glyph: '📌' },
+    { id: 'freehand', label: 'Freehand', glyph: '✎' },
+    { id: 'rectangle', label: 'Rectangle', glyph: '▢' },
+    { id: 'text_box', label: 'Text box', glyph: 'T' },
+    { id: 'rubber_stamp', label: 'Rubber stamp', glyph: '⧉' },
+  ];
 
   activeTool = signal('');
   color = signal('#FFFF00');

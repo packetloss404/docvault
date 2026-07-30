@@ -1,0 +1,118 @@
+// Scanners screen: one-off geometry only. Colours come from tokens.
+
+.pagehead {
+  margin: 18px 0 20px;
+}
+
+.scanner-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.scanner-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.scanner-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.scanner-state {
+  font: 400 11px "JetBrains Mono", ui-monospace, monospace;
+  color: var(--faint);
+
+  &--on {
+    color: var(--ok);
+  }
+}
+
+.scanner-meta {
+  font: 400 11.5px "JetBrains Mono", ui-monospace, monospace;
+  color: var(--faint);
+  margin-top: 6px;
+}
+
+.scanner-id {
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+}
+
+.scanner-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.form-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.callout {
+  margin-top: 16px;
+
+  &__body {
+    margin-top: 5px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+}
+
+// Dismissible status notice (no `.dv-alert` primitive exists yet).
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border-radius: 8px;
+  padding: 9px 12px;
+  margin-bottom: 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+
+  &--ok {
+    background: var(--ok-dim);
+    border-color: var(--ok);
+    color: var(--ok);
+  }
+
+  &--bad {
+    background: var(--danger-dim);
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+
+  &__close {
+    margin-left: auto;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: inherit;
+    font: 400 12px "JetBrains Mono", ui-monospace, monospace;
+    opacity: 0.7;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+}

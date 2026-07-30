@@ -1,204 +1,177 @@
-<div class="container-fluid">
-  <h2 class="mb-4"><i class="bi bi-upc-scan me-2"></i>Barcode & ASN Configuration</h2>
+<div class="dv-screen dv-screen--tight">
+  <div class="dv-inner dv-inner--wide">
+    <dv-subnav />
 
-  <!-- Loading State -->
-  @if (loading()) {
-    <div class="text-center py-5">
-      <div class="spinner-border text-primary"></div>
-      <p class="mt-2 text-muted">Loading barcode configuration...</p>
+    <div class="dv-pagehead pagehead">
+      <h1 class="dv-h1 dv-h1--sm">Barcode &amp; ASN</h1>
     </div>
-  } @else if (error()) {
-    <div class="alert alert-danger">
-      <i class="bi bi-exclamation-triangle me-1"></i>{{ error() }}
-      <button class="btn btn-sm btn-outline-danger ms-2" (click)="loadConfig()">
-        Retry
-      </button>
-    </div>
-  } @else if (config()) {
-    <div class="row g-4">
-      <!-- Barcode Configuration Card -->
-      <div class="col-lg-6">
-        <div class="card h-100">
-          <div class="card-header">
-            <h5 class="card-title mb-0">
-              <i class="bi bi-gear me-2"></i>Barcode Configuration
-            </h5>
-          </div>
-          <div class="card-body">
-            <dl class="row mb-0">
-              <dt class="col-sm-6">Status</dt>
-              <dd class="col-sm-6">
-                @if (config()!.enabled) {
-                  <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Enabled</span>
-                } @else {
-                  <span class="badge bg-secondary"><i class="bi bi-x-circle me-1"></i>Disabled</span>
-                }
-              </dd>
 
-              <dt class="col-sm-6">Separator Barcode</dt>
-              <dd class="col-sm-6"><code>{{ config()!.separator_barcode }}</code></dd>
-
-              <dt class="col-sm-6">ASN Prefix</dt>
-              <dd class="col-sm-6"><code>{{ config()!.asn_prefix }}</code></dd>
-
-              <dt class="col-sm-6">DPI</dt>
-              <dd class="col-sm-6">{{ config()!.dpi }}</dd>
-
-              <dt class="col-sm-6">Max Pages</dt>
-              <dd class="col-sm-6">{{ config()!.max_pages }}</dd>
-
-              <dt class="col-sm-6">Upscale Factor</dt>
-              <dd class="col-sm-6">{{ config()!.upscale }}x</dd>
-
-              <dt class="col-sm-6">Retain Separator Pages</dt>
-              <dd class="col-sm-6">
-                @if (config()!.retain_separator_pages) {
-                  <span class="badge bg-info">Yes</span>
-                } @else {
-                  <span class="badge bg-secondary">No</span>
-                }
-              </dd>
-            </dl>
-          </div>
-        </div>
+    @if (loading()) {
+      <div class="dv-empty">
+        <span class="dv-spinner"></span>
+        <div class="load-label">Loading barcode configuration…</div>
       </div>
-
-      <!-- Tag Mapping Card -->
-      <div class="col-lg-6">
-        <div class="card h-100">
-          <div class="card-header">
-            <h5 class="card-title mb-0">
-              <i class="bi bi-tags me-2"></i>Tag Mapping
-            </h5>
-          </div>
-          <div class="card-body">
-            @if (tagMappingEntries().length > 0) {
-              <table class="table table-sm table-striped mb-0">
-                <thead>
-                  <tr>
-                    <th>Pattern</th>
-                    <th>Tag Name</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (entry of tagMappingEntries(); track entry.pattern) {
-                    <tr>
-                      <td><code>{{ entry.pattern }}</code></td>
-                      <td>{{ entry.tag }}</td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            } @else {
-              <p class="text-muted mb-0">No mappings configured</p>
-            }
-          </div>
-        </div>
+    } @else if (error()) {
+      <div class="notice notice--bad" role="alert">
+        <span>{{ error() }}</span>
+        <button type="button" class="dv-btn dv-btn--danger dv-btn--sm dv-push" (click)="loadConfig()">
+          Retry
+        </button>
       </div>
+    } @else if (config()) {
+      <div class="card-grid">
+        <!-- Barcode detection -->
+        <div class="dv-card dv-card--pad">
+          <div class="card-head">
+            <span class="dv-card__title">Barcode detection</span>
+            <span class="state dv-push" [class.state--on]="config()!.enabled">
+              {{ config()!.enabled ? '● enabled' : '○ disabled' }}
+            </span>
+          </div>
 
-      <!-- Next Available ASN Card -->
-      <div class="col-lg-6">
-        <div class="card">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="card-title mb-0">
-              <i class="bi bi-hash me-2"></i>Next Available ASN
-            </h5>
+          <div class="stat-lines">
+            <div class="dv-stat-line">
+              <span class="dv-stat-line__k">separator barcode</span>
+              <span class="dv-stat-line__v">{{ config()!.separator_barcode }}</span>
+            </div>
+            <div class="dv-stat-line">
+              <span class="dv-stat-line__k">dpi</span>
+              <span class="dv-stat-line__v">{{ config()!.dpi }}</span>
+            </div>
+            <div class="dv-stat-line">
+              <span class="dv-stat-line__k">max pages</span>
+              <span class="dv-stat-line__v">{{ config()!.max_pages }}</span>
+            </div>
+            <div class="dv-stat-line">
+              <span class="dv-stat-line__k">upscale</span>
+              <span class="dv-stat-line__v">{{ config()!.upscale }}×</span>
+            </div>
+            <div class="dv-stat-line">
+              <span class="dv-stat-line__k">retain separator pages</span>
+              <span class="dv-stat-line__v">
+                {{ config()!.retain_separator_pages ? 'yes' : 'no' }}
+              </span>
+            </div>
+          </div>
+
+          <div class="card-note dv-meta">read-only — set on the server</div>
+        </div>
+
+        <!-- ASN & labels -->
+        <div class="dv-card dv-card--pad">
+          <div class="card-head">
+            <span class="dv-card__title">ASN &amp; labels</span>
             <button
-              class="btn btn-sm btn-outline-primary"
+              type="button"
+              class="row-action dv-push"
               (click)="loadNextAsn()"
               [disabled]="asnLoading()"
             >
-              @if (asnLoading()) {
-                <span class="spinner-border spinner-border-sm me-1"></span>
-                Loading...
-              } @else {
-                <i class="bi bi-arrow-clockwise me-1"></i>Refresh
-              }
+              {{ asnLoading() ? 'refreshing…' : 'refresh' }}
             </button>
           </div>
-          <div class="card-body">
-            @if (asnError()) {
-              <div class="alert alert-danger mb-0">
-                <i class="bi bi-exclamation-triangle me-1"></i>{{ asnError() }}
-              </div>
-            } @else if (nextAsn() !== null) {
-              <div class="text-center">
-                <span class="display-4 fw-bold text-primary">{{ nextAsn() }}</span>
-                <p class="text-muted mt-2 mb-0">This ASN will be assigned to the next document</p>
-              </div>
-            }
-          </div>
-        </div>
-      </div>
 
-      <!-- Bulk ASN Assignment Card -->
-      <div class="col-lg-6">
-        <div class="card">
-          <div class="card-header">
-            <h5 class="card-title mb-0">
-              <i class="bi bi-collection me-2"></i>Bulk ASN Assignment
-            </h5>
-          </div>
-          <div class="card-body">
-            <div class="mb-3">
-              <label for="documentIds" class="form-label">Document IDs (comma separated)</label>
-              <textarea
-                id="documentIds"
-                class="form-control"
-                rows="3"
-                placeholder="e.g. 1, 2, 15, 42"
-                [ngModel]="documentIdsInput()"
-                (ngModelChange)="documentIdsInput.set($event)"
-              ></textarea>
+          <div class="stat-lines">
+            <div class="dv-stat-line">
+              <span class="dv-stat-line__k">prefix</span>
+              <span class="dv-stat-line__v">{{ config()!.asn_prefix || '—' }}</span>
             </div>
+            <div class="dv-stat-line">
+              <span class="dv-stat-line__k">next asn</span>
+              @if (asnError()) {
+                <span class="dv-stat-line__v dv-danger">unavailable</span>
+              } @else if (nextAsn() !== null) {
+                <span class="dv-stat-line__v dv-accent">
+                  {{ config()!.asn_prefix }}{{ nextAsn() }}
+                </span>
+              } @else {
+                <span class="dv-stat-line__v dv-faint">—</span>
+              }
+            </div>
+          </div>
+
+          @if (asnError()) {
+            <div class="notice notice--bad card-note" role="alert">{{ asnError() }}</div>
+          } @else {
+            <div class="card-note dv-meta">assigned to the next consumed document</div>
+          }
+        </div>
+
+        <!-- Tag mapping -->
+        <div class="dv-card dv-card--pad">
+          <div class="card-head">
+            <span class="dv-card__title">Tag mapping</span>
+            <span class="dv-ts dv-push">{{ tagMappingEntries().length }}</span>
+          </div>
+
+          @if (tagMappingEntries().length > 0) {
+            <div class="map-list">
+              @for (entry of tagMappingEntries(); track entry.pattern) {
+                <div class="dv-stat-line">
+                  <span class="dv-stat-line__k dv-mono">{{ entry.pattern }}</span>
+                  <span class="dv-stat-line__v">→ {{ entry.tag }}</span>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="dv-empty">No mappings configured.</div>
+          }
+        </div>
+
+        <!-- Bulk ASN assignment -->
+        <div class="dv-card dv-card--pad">
+          <div class="card-head">
+            <span class="dv-card__title">Bulk ASN assignment</span>
+          </div>
+
+          <div class="bulk-form">
+            <label class="dv-field__label" for="documentIds">document ids (comma separated)</label>
+            <textarea
+              id="documentIds"
+              class="dv-input dv-input--mono bulk-input"
+              rows="3"
+              placeholder="1, 2, 15, 42"
+              [ngModel]="documentIdsInput()"
+              (ngModelChange)="documentIdsInput.set($event)"
+            ></textarea>
+
             <button
-              class="btn btn-primary"
+              type="button"
+              class="dv-btn dv-btn--primary dv-btn--sm bulk-submit"
               (click)="bulkAssign()"
               [disabled]="assigning() || !documentIdsInput().trim()"
             >
               @if (assigning()) {
-                <span class="spinner-border spinner-border-sm me-1"></span>
-                Assigning...
+                <span class="dv-spinner"></span>
+                Assigning…
               } @else {
-                <i class="bi bi-check2-all me-1"></i>Assign ASNs
+                Assign ASNs
               }
             </button>
+          </div>
 
-            @if (assignError()) {
-              <div class="alert alert-danger mt-3 mb-0">
-                <i class="bi bi-exclamation-triangle me-1"></i>{{ assignError() }}
-              </div>
-            }
+          @if (assignError()) {
+            <div class="notice notice--bad card-note" role="alert">{{ assignError() }}</div>
+          }
 
-            @if (assignCount() !== null) {
-              <div class="mt-3">
-                <div class="alert alert-success">
-                  <i class="bi bi-check-circle me-1"></i>Successfully assigned {{ assignCount() }} ASN(s)
-                </div>
+          @if (assignCount() !== null) {
+            <div class="notice notice--ok card-note" role="status">
+              Assigned {{ assignCount() }} ASN(s).
+            </div>
 
-                @if (assignResults().length > 0) {
-                  <table class="table table-sm table-striped mb-0">
-                    <thead>
-                      <tr>
-                        <th>Document ID</th>
-                        <th>Assigned ASN</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (assignment of assignResults(); track assignment.document_id) {
-                        <tr>
-                          <td>{{ assignment.document_id }}</td>
-                          <td><span class="badge bg-primary">{{ assignment.asn }}</span></td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
+            @if (assignResults().length > 0) {
+              <div class="map-list">
+                @for (assignment of assignResults(); track assignment.document_id) {
+                  <div class="dv-stat-line">
+                    <span class="dv-stat-line__k dv-mono">doc #{{ assignment.document_id }}</span>
+                    <span class="dv-stat-line__v dv-accent">{{ assignment.asn }}</span>
+                  </div>
                 }
               </div>
             }
-          </div>
+          }
         </div>
       </div>
-    </div>
-  }
+    }
+  </div>
 </div>

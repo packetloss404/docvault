@@ -2,6 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 interface DedupStats {
   total_blobs: number;
@@ -21,8 +22,9 @@ interface IntegrityResult {
 @Component({
   selector: 'app-storage-admin',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SubnavComponent],
   templateUrl: './storage-admin.component.html',
+  styleUrl: './storage-admin.component.scss',
 })
 export class StorageAdminComponent implements OnInit {
   private readonly apiUrl = environment.apiUrl;

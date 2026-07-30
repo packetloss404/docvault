@@ -3,111 +3,236 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AnalyticsService } from '../../services/analytics.service';
 import { SearchSynonym } from '../../models/analytics.model';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-synonym-manager',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, SubnavComponent],
   template: `
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h2>Synonym Manager</h2>
-      <button class="btn btn-primary" (click)="showForm = !showForm">
-        <i class="bi bi-plus-lg me-1"></i>
-        {{ showForm ? 'Cancel' : 'Add Synonym Group' }}
-      </button>
-    </div>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner">
+        <dv-subnav />
 
-    @if (showForm) {
-      <div class="card mb-4">
-        <div class="card-body">
-          <h5 class="card-title">{{ editingId ? 'Edit' : 'Create' }} Synonym Group</h5>
-          <form (ngSubmit)="onSave()">
-            <div class="mb-3">
-              <label class="form-label">Terms (comma-separated)</label>
-              <input
-                type="text"
-                class="form-control"
-                [(ngModel)]="formTerms"
-                name="terms"
-                placeholder="e.g. invoice, bill, receipt"
-                required
-              />
-              <div class="form-text">Enter synonymous terms separated by commas. All terms in a group will be treated as equivalent in search.</div>
+        <div class="dv-section sy-head">
+          <span class="dv-eyebrow"
+            >{{ synonyms().length }} synonym group{{
+              synonyms().length !== 1 ? 's' : ''
+            }}</span
+          >
+          <button
+            type="button"
+            class="dv-btn dv-btn--accent dv-btn--md dv-push"
+            (click)="showForm = !showForm"
+          >
+            {{ showForm ? 'Cancel' : '+ Add synonym group' }}
+          </button>
+        </div>
+
+        @if (showForm) {
+          <form class="dv-card dv-card--r10 sy-form" (ngSubmit)="onSave()">
+            <div class="dv-card__head">
+              <span class="dv-card__title"
+                >{{ editingId ? 'Edit' : 'Create' }} synonym group</span
+              >
             </div>
-            <div class="form-check form-switch mb-3">
-              <input
-                class="form-check-input"
-                type="checkbox"
-                [(ngModel)]="formEnabled"
-                name="enabled"
-                id="synEnabledSwitch"
-              />
-              <label class="form-check-label" for="synEnabledSwitch">Enabled</label>
+            <div class="sy-form__body">
+              <div>
+                <label class="dv-field__label" for="sy-terms">terms (comma-separated)</label>
+                <input
+                  type="text"
+                  id="sy-terms"
+                  class="dv-input dv-input--mono"
+                  [(ngModel)]="formTerms"
+                  name="terms"
+                  placeholder="invoice, bill, receipt"
+                  required
+                />
+                <div class="dv-meta sy-hint">
+                  every term in a group is treated as equivalent at query time — two
+                  terms minimum
+                </div>
+              </div>
+
+              <div class="sy-switch">
+                <button
+                  type="button"
+                  class="dv-toggle"
+                  [class.is-on]="formEnabled"
+                  role="switch"
+                  [attr.aria-checked]="formEnabled"
+                  aria-label="Enabled"
+                  (click)="formEnabled = !formEnabled"
+                ></button>
+                <span>Enabled</span>
+              </div>
+
+              <div class="sy-actions">
+                <button
+                  type="submit"
+                  class="dv-btn dv-btn--primary dv-btn--md"
+                  [disabled]="saving()"
+                >
+                  {{ editingId ? 'Update' : 'Create' }}
+                </button>
+                <button
+                  type="button"
+                  class="dv-btn dv-btn--ghost dv-btn--md"
+                  (click)="cancelEdit()"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
-            <button type="submit" class="btn btn-success me-2" [disabled]="saving()">
-              <i class="bi bi-check-lg me-1"></i>{{ editingId ? 'Update' : 'Create' }}
-            </button>
-            <button type="button" class="btn btn-secondary" (click)="cancelEdit()">Cancel</button>
           </form>
-        </div>
-      </div>
-    }
+        }
 
-    @if (loading()) {
-      <div class="text-center py-5">
-        <div class="spinner-border" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    } @else {
-      <div class="table-responsive">
-        <table class="table table-hover align-middle">
-          <thead>
-            <tr>
-              <th>Terms</th>
-              <th>Status</th>
-              <th class="text-end">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+        @if (loading()) {
+          <div class="dv-empty">
+            <span class="dv-spinner"></span>
+            <span class="dv-sr">Loading…</span>
+          </div>
+        } @else {
+          <div class="sy-list">
             @for (synonym of synonyms(); track synonym.id) {
-              <tr>
-                <td>
-                  @for (term of synonym.terms; track term) {
-                    <span class="badge bg-info text-dark me-1">{{ term }}</span>
+              <div class="dv-card dv-card--r9 sy-row">
+                <span class="sy-terms">
+                  @for (term of synonym.terms; track term; let last = $last) {
+                    <span class="sy-term">{{ term }}</span>
+                    @if (!last) {
+                      <span class="sy-swap" aria-hidden="true">⇄</span>
+                    }
                   }
-                </td>
-                <td>
-                  <div class="form-check form-switch">
-                    <input
-                      class="form-check-input"
-                      type="checkbox"
-                      [checked]="synonym.enabled"
-                      (change)="toggleEnabled(synonym)"
-                    />
-                  </div>
-                </td>
-                <td class="text-end">
-                  <button class="btn btn-sm btn-outline-primary me-1" (click)="onEdit(synonym)" title="Edit">
-                    <i class="bi bi-pencil"></i>
-                  </button>
-                  <button class="btn btn-sm btn-outline-danger" (click)="onDelete(synonym)" title="Delete">
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </td>
-              </tr>
+                </span>
+
+                <span class="dv-push"></span>
+                @if (!synonym.enabled) {
+                  <span class="dv-chip dv-chip--warn dv-chip--upper">disabled</span>
+                }
+                <button
+                  type="button"
+                  class="dv-toggle"
+                  [class.is-on]="synonym.enabled"
+                  role="switch"
+                  [attr.aria-checked]="synonym.enabled"
+                  aria-label="Toggle enabled"
+                  (click)="toggleEnabled(synonym)"
+                ></button>
+                <button type="button" class="sy-action" (click)="onEdit(synonym)">edit</button>
+                <button
+                  type="button"
+                  class="sy-action sy-action--danger"
+                  title="Delete"
+                  aria-label="Delete synonym group"
+                  (click)="onDelete(synonym)"
+                >
+                  ✕
+                </button>
+              </div>
             } @empty {
-              <tr>
-                <td colspan="3" class="text-center text-muted py-4">
-                  No synonym groups defined. Create one to improve search recall.
-                </td>
-              </tr>
+              <div class="dv-empty">
+                No synonym groups defined. Create one to improve search recall.
+              </div>
             }
-          </tbody>
-        </table>
+          </div>
+        }
       </div>
-    }
+    </div>
   `,
+  styles: [
+    `
+      $mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+      :host {
+        display: contents;
+      }
+
+      dv-subnav {
+        display: block;
+        margin-bottom: 16px;
+      }
+
+      .sy-head {
+        align-items: center;
+      }
+
+      .sy-form {
+        margin-bottom: 18px;
+
+        &__body {
+          padding: 16px 18px;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+      }
+
+      .sy-hint {
+        margin-top: 6px;
+        line-height: 1.45;
+      }
+
+      .sy-switch {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .sy-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .sy-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .sy-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        font: 400 12.5px #{$mono};
+      }
+
+      .sy-terms {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        min-width: 0;
+      }
+
+      .sy-term {
+        color: var(--text);
+      }
+
+      .sy-swap {
+        color: var(--accent-text);
+      }
+
+      .sy-action {
+        background: none;
+        border: none;
+        padding: 0 2px;
+        font: 400 11px #{$mono};
+        color: var(--faint);
+        cursor: pointer;
+
+        &:hover {
+          color: var(--text);
+        }
+
+        &--danger:hover {
+          color: var(--danger);
+        }
+      }
+    `,
+  ],
 })
 export class SynonymManagerComponent implements OnInit {
   synonyms = signal<SearchSynonym[]>([]);

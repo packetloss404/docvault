@@ -13,6 +13,48 @@
 // ---------------------------------------------------------------------------
 // Base
 // ---------------------------------------------------------------------------
+
+// Bootstrap's reboot currently supplies these. They are restated here so that
+// deleting the Bootstrap import does not silently shift every layout.
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+figure,
+blockquote,
+dl,
+dd {
+  margin: 0;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+img,
+svg,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+table {
+  border-collapse: collapse;
+}
+
 html,
 body {
   height: 100%;

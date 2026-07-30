@@ -1,0 +1,62 @@
+// Modal shell. `.dv-overlay` supplies the scrim; this is the card.
+.td-modal {
+  width: 520px;
+  max-width: calc(100vw - 32px);
+  height: fit-content;
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  animation: dvFadeUp 0.18s ease;
+  text-align: left;
+}
+
+.td-modal__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.td-modal__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--faint);
+  font: 400 14px "JetBrains Mono", ui-monospace, monospace;
+  padding: 0;
+
+  &:hover {
+    color: var(--text);
+  }
+}
+
+.td-modal__body {
+  padding: 16px 20px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.td-modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.td-field {
+  margin-top: 14px;
+}
+
+.td-textarea {
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.td-help {
+  margin-top: 5px;
+}

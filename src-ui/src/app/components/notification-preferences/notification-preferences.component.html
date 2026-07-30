@@ -1,138 +1,131 @@
-<div class="container-fluid">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Notification Settings</h2>
-  </div>
+<div class="dv-screen dv-screen--tight">
+  <div class="dv-inner dv-inner--wide">
+    <div class="dv-pagehead">
+      <h1 class="dv-h1 dv-h1--sm">Notification preferences</h1>
+      <a class="np-link dv-push" routerLink="/notifications">← notifications</a>
+    </div>
 
-  <!-- Quota Usage Card -->
-  @if (quotaUsage()) {
-    <div class="card mb-4">
-      <div class="card-header">
-        <h5 class="mb-0"><i class="bi bi-speedometer me-2"></i>Quota Usage</h5>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <label class="form-label fw-semibold">Documents</label>
-            <div class="d-flex justify-content-between mb-1">
-              <span>{{ quotaUsage()!.document_count }} used</span>
-              @if (quotaUsage()!.max_documents !== null) {
-                <span>{{ quotaUsage()!.max_documents }} max</span>
-              } @else {
-                <span class="text-muted">Unlimited</span>
-              }
-            </div>
-            @if (quotaUsage()!.max_documents !== null) {
-              <div class="progress" style="height: 8px;">
-                <div
-                  class="progress-bar"
-                  [class]="getProgressBarClass(getUsagePercent(quotaUsage()!.document_count, quotaUsage()!.max_documents))"
-                  [style.width.%]="getUsagePercent(quotaUsage()!.document_count, quotaUsage()!.max_documents)"
-                ></div>
-              </div>
-              @if (quotaUsage()!.documents_remaining !== null) {
-                <small class="text-muted">{{ quotaUsage()!.documents_remaining }} remaining</small>
-              }
-            }
+    <!-- Quotas -->
+    @if (quotaUsage(); as quota) {
+      <div class="np-quotas">
+        <div class="dv-card dv-card--pad">
+          <div class="dv-card__title">Documents</div>
+          <div class="dv-stat-line np-line">
+            <span class="dv-stat-line__k">used</span>
+            <span class="dv-stat-line__v">
+              {{ quota.document_count }} /
+              {{ quota.max_documents === null ? 'unlimited' : quota.max_documents }}
+            </span>
           </div>
-          <div class="col-md-6 mb-3">
-            <label class="form-label fw-semibold">Storage</label>
-            <div class="d-flex justify-content-between mb-1">
-              <span>{{ formatBytes(quotaUsage()!.storage_bytes) }} used</span>
-              @if (quotaUsage()!.max_storage_bytes !== null) {
-                <span>{{ formatBytes(quotaUsage()!.max_storage_bytes!) }} max</span>
-              } @else {
-                <span class="text-muted">Unlimited</span>
-              }
+          @if (quota.max_documents !== null) {
+            <div class="dv-bar dv-bar--sm np-bar">
+              <div
+                class="dv-bar__fill"
+                [ngClass]="
+                  getProgressBarClass(getUsagePercent(quota.document_count, quota.max_documents))
+                "
+                [style.width.%]="getUsagePercent(quota.document_count, quota.max_documents)"
+              ></div>
             </div>
-            @if (quotaUsage()!.max_storage_bytes !== null) {
-              <div class="progress" style="height: 8px;">
-                <div
-                  class="progress-bar"
-                  [class]="getProgressBarClass(getUsagePercent(quotaUsage()!.storage_bytes, quotaUsage()!.max_storage_bytes))"
-                  [style.width.%]="getUsagePercent(quotaUsage()!.storage_bytes, quotaUsage()!.max_storage_bytes)"
-                ></div>
-              </div>
-              @if (quotaUsage()!.storage_remaining !== null) {
-                <small class="text-muted">{{ formatBytes(quotaUsage()!.storage_remaining!) }} remaining</small>
-              }
+            @if (quota.documents_remaining !== null) {
+              <div class="dv-meta np-foot">{{ quota.documents_remaining }} remaining</div>
             }
+          }
+        </div>
+
+        <div class="dv-card dv-card--pad">
+          <div class="dv-card__title">Storage</div>
+          <div class="dv-stat-line np-line">
+            <span class="dv-stat-line__k">used</span>
+            <span class="dv-stat-line__v">
+              {{ formatBytes(quota.storage_bytes) }} /
+              {{
+                quota.max_storage_bytes === null
+                  ? 'unlimited'
+                  : formatBytes(quota.max_storage_bytes)
+              }}
+            </span>
           </div>
+          @if (quota.max_storage_bytes !== null) {
+            <div class="dv-bar dv-bar--sm np-bar">
+              <div
+                class="dv-bar__fill"
+                [ngClass]="
+                  getProgressBarClass(
+                    getUsagePercent(quota.storage_bytes, quota.max_storage_bytes)
+                  )
+                "
+                [style.width.%]="getUsagePercent(quota.storage_bytes, quota.max_storage_bytes)"
+              ></div>
+            </div>
+            @if (quota.storage_remaining !== null) {
+              <div class="dv-meta np-foot">
+                {{ formatBytes(quota.storage_remaining!) }} remaining
+              </div>
+            }
+          }
         </div>
       </div>
-    </div>
-  }
+    }
 
-  <!-- Notification Preferences Table -->
-  <div class="card">
-    <div class="card-header">
-      <h5 class="mb-0"><i class="bi bi-bell me-2"></i>Delivery Preferences</h5>
-    </div>
-    <div class="card-body p-0">
-      <div class="table-responsive">
-        <table class="table table-sm table-hover mb-0">
-          <thead>
-            <tr>
-              <th style="width: 260px;">Event Type</th>
-              @for (channel of channels; track channel) {
-                <th class="text-center" style="width: 100px;">{{ formatChannelLabel(channel) }}</th>
-              }
-              <th>Webhook URL</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (row of rows(); track row.event_type) {
-              <tr>
-                <td>
-                  <span class="fw-semibold">{{ formatEventType(row.event_type) }}</span>
-                  <br />
-                  <small class="text-muted">{{ row.event_type }}</small>
-                </td>
-                @for (channel of channels; track channel) {
-                  <td class="text-center align-middle">
-                    <div class="form-check form-switch d-flex justify-content-center">
-                      <input
-                        class="form-check-input"
-                        type="checkbox"
-                        role="switch"
-                        [checked]="isEnabled(row, channel)"
-                        (change)="togglePreference(row, channel)"
-                      />
-                    </div>
-                  </td>
-                }
-                <td class="align-middle">
-                  @if (isEnabled(row, 'webhook')) {
-                    <div class="input-group input-group-sm">
-                      <input
-                        type="url"
-                        class="form-control form-control-sm"
-                        placeholder="https://example.com/webhook"
-                        [ngModel]="getWebhookUrl(row.event_type)"
-                        (ngModelChange)="setWebhookUrl(row.event_type, $event)"
-                      />
-                      <button
-                        class="btn btn-outline-primary btn-sm"
-                        (click)="saveWebhookUrl(row)"
-                        [disabled]="saving()"
-                      >
-                        <i class="bi bi-check-lg"></i>
-                      </button>
-                    </div>
-                  } @else {
-                    <span class="text-muted small">Enable webhook to set URL</span>
-                  }
-                </td>
-              </tr>
-            } @empty {
-              <tr>
-                <td colspan="5" class="text-muted text-center py-4">
-                  Loading preferences...
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
+    <!-- Delivery matrix -->
+    <div class="dv-card dv-card--pad np-matrix">
+      <div class="dv-card__title">Delivery preferences</div>
+
+      <div class="dv-thead dv-grid np-head" style="--dv-cols: minmax(0, 1fr) 70px 70px 80px 260px">
+        <span>event</span>
+        @for (channel of channels; track channel) {
+          <span class="np-center">{{ formatChannelLabel(channel) }}</span>
+        }
+        <span>webhook url</span>
       </div>
+
+      @for (row of rows(); track row.event_type) {
+        <div class="np-row dv-grid" style="--dv-cols: minmax(0, 1fr) 70px 70px 80px 260px">
+          <div class="dv-clip">
+            <div class="np-event">{{ formatEventType(row.event_type) }}</div>
+            <div class="dv-meta dv-clip">{{ row.event_type }}</div>
+          </div>
+
+          @for (channel of channels; track channel) {
+            <span class="np-center">
+              <button
+                type="button"
+                class="dv-toggle"
+                [class.is-on]="isEnabled(row, channel)"
+                [attr.aria-pressed]="isEnabled(row, channel)"
+                [attr.aria-label]="formatChannelLabel(channel) + ' for ' + row.event_type"
+                (click)="togglePreference(row, channel)"
+              ></button>
+            </span>
+          }
+
+          <span class="np-webhook">
+            @if (isEnabled(row, 'webhook')) {
+              <input
+                type="url"
+                class="dv-input dv-input--r7"
+                placeholder="https://example.com/webhook"
+                [attr.aria-label]="'Webhook URL for ' + row.event_type"
+                [ngModel]="getWebhookUrl(row.event_type)"
+                (ngModelChange)="setWebhookUrl(row.event_type, $event)"
+              />
+              <button
+                type="button"
+                class="dv-btn dv-btn--ghost dv-btn--sm"
+                (click)="saveWebhookUrl(row)"
+                [disabled]="saving()"
+              >
+                save
+              </button>
+            } @else {
+              <span class="dv-meta">enable webhook to set a url</span>
+            }
+          </span>
+        </div>
+      } @empty {
+        <div class="dv-empty"><span class="dv-spinner"></span> Loading preferences…</div>
+      }
     </div>
   </div>
 </div>

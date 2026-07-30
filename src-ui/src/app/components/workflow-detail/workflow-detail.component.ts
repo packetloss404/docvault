@@ -14,6 +14,7 @@ import {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './workflow-detail.component.html',
+  styleUrl: './workflow-detail.component.scss',
 })
 export class WorkflowDetailComponent implements OnInit {
   template = signal<WorkflowTemplate | null>(null);

@@ -15,6 +15,7 @@ import {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './workflow-panel.component.html',
+  styleUrl: './workflow-panel.component.scss',
 })
 export class WorkflowPanelComponent implements OnInit {
   @Input() documentId!: number;

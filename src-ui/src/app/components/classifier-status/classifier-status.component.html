@@ -1,150 +1,95 @@
-<div class="container-fluid">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-cpu me-2"></i>ML Classifier</h2>
-    <button
-      class="btn btn-primary"
-      (click)="triggerTraining()"
-      [disabled]="training()"
-    >
-      @if (training()) {
-        <span class="spinner-border spinner-border-sm me-1"></span>
-        Training...
-      } @else {
-        <i class="bi bi-play-fill me-1"></i>Train Now
-      }
-    </button>
-  </div>
+<div class="dv-screen dv-screen--tight">
+  <div class="dv-inner dv-inner--wide">
+    <dv-subnav />
 
-  @if (trainMessage()) {
-    <div class="alert alert-info alert-dismissible fade show" role="alert">
-      <i class="bi bi-info-circle me-1"></i>{{ trainMessage() }}
+    <div class="dv-pagehead pagehead">
+      <h1 class="dv-h1 dv-h1--sm">ML classifier</h1>
       <button
         type="button"
-        class="btn-close"
-        (click)="trainMessage.set(null)"
-      ></button>
-    </div>
-  }
-
-  @if (loading()) {
-    <div class="text-center py-5">
-      <div class="spinner-border text-primary"></div>
-      <p class="mt-2 text-muted">Loading classifier status...</p>
-    </div>
-  } @else if (error()) {
-    <div class="alert alert-danger">
-      <i class="bi bi-exclamation-triangle me-1"></i>{{ error() }}
-      <button class="btn btn-sm btn-outline-danger ms-2" (click)="loadStatus()">
-        Retry
+        class="dv-btn dv-btn--primary dv-btn--sm dv-push"
+        (click)="triggerTraining()"
+        [disabled]="training()"
+      >
+        @if (training()) {
+          <span class="dv-spinner"></span>
+          Training…
+        } @else {
+          Retrain now
+        }
       </button>
     </div>
-  } @else if (status()) {
-    <!-- Overall Status Card -->
-    <div class="row mb-4">
-      <div class="col-md-6 col-lg-4">
-        <div class="card">
-          <div class="card-body text-center">
-            <h5 class="card-title">Classifier Status</h5>
-            @if (status()!.available) {
-              <span class="badge bg-success fs-6 px-3 py-2">
-                <i class="bi bi-check-circle me-1"></i>Available
-              </span>
-            } @else {
-              <span class="badge bg-secondary fs-6 px-3 py-2">
-                <i class="bi bi-x-circle me-1"></i>Not Available
-              </span>
-            }
+
+    @if (trainMessage()) {
+      <div class="notice" role="status">
+        <span>{{ trainMessage() }}</span>
+        <button type="button" class="notice__close" (click)="trainMessage.set(null)">✕</button>
+      </div>
+    }
+
+    @if (loading()) {
+      <div class="dv-empty">
+        <span class="dv-spinner"></span>
+        <div class="load-label">Loading classifier status…</div>
+      </div>
+    } @else if (error()) {
+      <div class="notice notice--bad" role="alert">
+        <span>{{ error() }}</span>
+        <button
+          type="button"
+          class="dv-btn dv-btn--danger dv-btn--sm dv-push"
+          (click)="loadStatus()"
+        >
+          Retry
+        </button>
+      </div>
+    } @else if (status()) {
+      <div class="model-grid">
+        <!-- Model card -->
+        <div class="dv-card dv-card--pad model-card">
+          <div class="card-head">
+            <span class="dv-card__title">Classifier model</span>
+            <span class="state dv-push" [class.state--on]="status()!.available">
+              {{ status()!.available ? '● trained' : '○ not available' }}
+            </span>
+          </div>
+
+          <div class="stat-lines">
             @if (status()!.format_version !== undefined) {
-              <p class="text-muted mt-2 mb-0">
-                Format version: {{ status()!.format_version }}
-              </p>
+              <div class="dv-stat-line">
+                <span class="dv-stat-line__k">format version</span>
+                <span class="dv-stat-line__v dv-accent">{{ status()!.format_version }}</span>
+              </div>
             }
+            <div class="dv-stat-line">
+              <span class="dv-stat-line__k">sub-classifiers trained</span>
+              <span class="dv-stat-line__v">{{ trainedCount() }} / 4</span>
+            </div>
           </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Sub-Classifier Cards -->
-    <div class="row g-3">
-      <!-- Tags Classifier -->
-      <div class="col-md-6 col-lg-3">
-        <div class="card h-100">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <span><i class="bi bi-tag me-1"></i>Tags</span>
-            @if (status()!.tags_trained) {
-              <span class="badge bg-success">Trained</span>
-            } @else {
-              <span class="badge bg-secondary">Not Trained</span>
-            }
-          </div>
-          <div class="card-body">
-            <p class="card-text">
-              <small class="text-muted">Data Hash</small><br />
-              <code>{{ truncateHash(status()!.tags_data_hash) }}</code>
-            </p>
+          <div class="card-note dv-meta">
+            retraining runs on the server and picks up newly tagged documents
           </div>
         </div>
-      </div>
 
-      <!-- Correspondent Classifier -->
-      <div class="col-md-6 col-lg-3">
-        <div class="card h-100">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <span><i class="bi bi-person me-1"></i>Correspondent</span>
-            @if (status()!.correspondent_trained) {
-              <span class="badge bg-success">Trained</span>
-            } @else {
-              <span class="badge bg-secondary">Not Trained</span>
-            }
+        <!-- Sub-classifiers -->
+        <div class="dv-card dv-card--pad">
+          <div class="card-head">
+            <span class="dv-card__title">Sub-classifiers</span>
           </div>
-          <div class="card-body">
-            <p class="card-text">
-              <small class="text-muted">Data Hash</small><br />
-              <code>{{ truncateHash(status()!.correspondent_data_hash) }}</code>
-            </p>
-          </div>
-        </div>
-      </div>
 
-      <!-- Document Type Classifier -->
-      <div class="col-md-6 col-lg-3">
-        <div class="card h-100">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <span><i class="bi bi-file-earmark me-1"></i>Document Type</span>
-            @if (status()!.document_type_trained) {
-              <span class="badge bg-success">Trained</span>
-            } @else {
-              <span class="badge bg-secondary">Not Trained</span>
+          <div class="sub-list">
+            @for (sub of subClassifiers(); track sub.key) {
+              <div class="sub-row">
+                <span class="sub-name">{{ sub.label }}</span>
+                <span class="state dv-push" [class.state--on]="sub.trained">
+                  {{ sub.trained ? '● trained' : '○ not trained' }}
+                </span>
+                <span class="sub-hash dv-mono">{{ truncateHash(sub.hash) }}</span>
+              </div>
             }
-          </div>
-          <div class="card-body">
-            <p class="card-text">
-              <small class="text-muted">Data Hash</small><br />
-              <code>{{ truncateHash(status()!.document_type_data_hash) }}</code>
-            </p>
           </div>
         </div>
       </div>
-
-      <!-- Storage Path Classifier -->
-      <div class="col-md-6 col-lg-3">
-        <div class="card h-100">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <span><i class="bi bi-folder2 me-1"></i>Storage Path</span>
-            @if (status()!.storage_path_trained) {
-              <span class="badge bg-success">Trained</span>
-            } @else {
-              <span class="badge bg-secondary">Not Trained</span>
-            }
-          </div>
-          <div class="card-body">
-            <p class="card-text">
-              <small class="text-muted">Data Hash</small><br />
-              <code>{{ truncateHash(status()!.storage_path_data_hash) }}</code>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  }
+    }
+  </div>
 </div>

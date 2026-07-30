@@ -11,12 +11,24 @@ import {
 } from '@angular/cdk/drag-drop';
 import { OrganizationService } from '../../services/organization.service';
 import { Cabinet, CabinetTreeNode } from '../../models/organization.model';
+import { IconComponent } from '../icon/icon.component';
+import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-cabinets',
   standalone: true,
-  imports: [CommonModule, FormsModule, CdkDropList, CdkDrag, CdkDragPlaceholder, CdkDragHandle],
+  imports: [
+    CommonModule,
+    FormsModule,
+    CdkDropList,
+    CdkDrag,
+    CdkDragPlaceholder,
+    CdkDragHandle,
+    IconComponent,
+    SubnavComponent,
+  ],
   templateUrl: './cabinets.component.html',
+  styleUrl: './cabinets.component.scss',
 })
 export class CabinetsComponent implements OnInit {
   cabinets = signal<Cabinet[]>([]);

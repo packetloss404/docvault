@@ -1,0 +1,125 @@
+// Side-by-side version diff. The diff table itself is server-rendered HTML
+// injected with [innerHTML], so it needs ::ng-deep to reach it.
+.vc__crumb {
+  margin: -24px -32px 22px;
+}
+
+.vc {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.vc__picker {
+  padding: 16px 18px;
+}
+
+.vc__pickrow {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.vc__field {
+  flex: 1;
+  min-width: 200px;
+}
+
+.vc__select {
+  cursor: pointer;
+  appearance: none;
+}
+
+.vc__go {
+  flex-shrink: 0;
+}
+
+.vc__note {
+  margin-top: 12px;
+  font-size: 12.5px;
+}
+
+.vc__error {
+  padding: 12px 16px;
+  border-color: var(--danger);
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.vc__result {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vc__resulthead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vc__versions {
+  font-size: 12.5px;
+  color: var(--accent-text);
+}
+
+.vc__pane {
+  overflow: auto;
+  max-height: 62vh;
+}
+
+.vc__legend {
+  display: flex;
+  gap: 14px;
+}
+
+// --- Server-rendered diff table ------------------------------------------
+:host ::ng-deep .vc__diff table.diff {
+  width: 100%;
+  border-collapse: collapse;
+  font: 400 12px "JetBrains Mono", ui-monospace, monospace;
+  color: var(--text);
+}
+
+:host ::ng-deep .vc__diff td,
+:host ::ng-deep .vc__diff th {
+  padding: 2px 7px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  vertical-align: top;
+}
+
+:host ::ng-deep .vc__diff .diff_header {
+  background: var(--panel2);
+  color: var(--faint);
+  font-weight: 500;
+  text-align: right;
+  user-select: none;
+}
+
+:host ::ng-deep .vc__diff th {
+  background: var(--panel);
+  color: var(--muted);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+:host ::ng-deep .vc__diff .diff_next {
+  display: none;
+}
+
+:host ::ng-deep .vc__diff .diff_add {
+  background: var(--ok-dim);
+  color: var(--ok);
+}
+
+:host ::ng-deep .vc__diff .diff_chg {
+  background: var(--warn-dim);
+  color: var(--warn);
+}
+
+:host ::ng-deep .vc__diff .diff_sub {
+  background: var(--danger-dim);
+  color: var(--danger);
+}

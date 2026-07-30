@@ -1,96 +1,99 @@
-<div class="card">
-  <div class="card-header d-flex justify-content-between align-items-center">
-    <h6 class="mb-0"><i class="bi bi-chat-dots me-2"></i>Comments</h6>
-    <span class="badge bg-secondary">{{ comments().length }}</span>
+<div class="cm">
+  <div class="cm__head">
+    <span class="dv-eyebrow">notes</span>
+    <span class="dv-meta dv-push">{{ comments().length }}</span>
   </div>
-  <div class="card-body">
-    @if (loading()) {
-      <div class="text-center py-3">
-        <div class="spinner-border spinner-border-sm text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    } @else {
-      <!-- Comment List -->
-      @for (comment of comments(); track comment.id) {
-        <div class="d-flex mb-3">
-          <div class="flex-shrink-0 me-2">
-            <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center"
-                 style="width: 36px; height: 36px;">
-              <i class="bi bi-person text-primary"></i>
-            </div>
-          </div>
-          <div class="flex-grow-1">
-            <div class="d-flex justify-content-between align-items-start">
-              <div>
-                <strong class="small">{{ comment.username }}</strong>
-                <span class="text-muted small ms-2">{{ formatTime(comment.created_at) }}</span>
-                @if (comment.updated_at !== comment.created_at) {
-                  <span class="text-muted small fst-italic ms-1">(edited)</span>
-                }
-              </div>
-              @if (isOwnComment(comment)) {
-                <div class="btn-group btn-group-sm">
-                  <button class="btn btn-sm btn-link text-muted p-0 me-2" (click)="startEdit(comment)"
-                          title="Edit comment">
-                    <i class="bi bi-pencil"></i>
-                  </button>
-                  <button class="btn btn-sm btn-link text-danger p-0" (click)="deleteComment(comment)"
-                          title="Delete comment">
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </div>
-              }
-            </div>
 
-            @if (editingComment()?.id === comment.id) {
-              <div class="mt-1">
-                <textarea
-                  class="form-control form-control-sm"
-                  rows="2"
-                  [ngModel]="editText()"
-                  (ngModelChange)="editText.set($event)"
-                ></textarea>
-                <div class="mt-1">
-                  <button class="btn btn-primary btn-sm me-1" (click)="saveEdit()" [disabled]="submitting()">
-                    Save
-                  </button>
-                  <button class="btn btn-secondary btn-sm" (click)="cancelEdit()">
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            } @else {
-              <p class="mb-0 small mt-1">{{ comment.text }}</p>
-            }
-          </div>
+  @if (loading()) {
+    <div class="dv-empty cm__empty">
+      <span class="dv-spinner"></span>
+      <span class="dv-sr">Loading notes…</span>
+    </div>
+  } @else {
+    @for (comment of comments(); track comment.id) {
+      <div class="dv-card dv-card--r9 cm__item">
+        <div class="cm__meta">
+          <span class="dv-avatar dv-avatar--sm" aria-hidden="true">{{
+            initials(comment.username)
+          }}</span>
+          <span class="cm__author">{{ comment.username }}</span>
+          <span class="dv-meta">{{ formatTime(comment.created_at) }}</span>
+          @if (comment.updated_at !== comment.created_at) {
+            <span class="dv-meta">edited</span>
+          }
+          @if (isOwnComment(comment)) {
+            <span class="cm__actions dv-push">
+              <button
+                type="button"
+                class="cm__act"
+                title="Edit comment"
+                (click)="startEdit(comment)"
+              >
+                <span aria-hidden="true">✎</span>
+                <span class="dv-sr">Edit comment</span>
+              </button>
+              <button
+                type="button"
+                class="cm__act cm__act--danger"
+                title="Delete comment"
+                (click)="deleteComment(comment)"
+              >
+                <span aria-hidden="true">✕</span>
+                <span class="dv-sr">Delete comment</span>
+              </button>
+            </span>
+          }
         </div>
-      } @empty {
-        <p class="text-muted text-center small mb-0">No comments yet. Be the first to comment.</p>
-      }
 
-      <!-- New Comment Form -->
-      <hr class="my-3" />
-      <div class="d-flex gap-2">
-        <textarea
-          class="form-control form-control-sm"
-          rows="2"
-          placeholder="Write a comment..."
-          [ngModel]="newCommentText()"
-          (ngModelChange)="newCommentText.set($event)"
-          (keydown.control.enter)="addComment()"
-        ></textarea>
-        <div class="d-flex align-items-end">
-          <button
-            class="btn btn-primary btn-sm"
-            (click)="addComment()"
-            [disabled]="!newCommentText().trim() || submitting()"
-          >
-            <i class="bi bi-send"></i>
-          </button>
-        </div>
+        @if (editingComment()?.id === comment.id) {
+          <textarea
+            class="dv-input dv-input--r7 cm__edit"
+            rows="2"
+            aria-label="Edit comment"
+            [ngModel]="editText()"
+            (ngModelChange)="editText.set($event)"
+          ></textarea>
+          <div class="cm__editactions">
+            <button
+              class="dv-btn dv-btn--primary dv-btn--sm"
+              (click)="saveEdit()"
+              [disabled]="submitting()"
+            >
+              Save
+            </button>
+            <button class="dv-btn dv-btn--ghost dv-btn--sm" (click)="cancelEdit()">
+              Cancel
+            </button>
+          </div>
+        } @else {
+          <div class="cm__text">{{ comment.text }}</div>
+        }
       </div>
-      <small class="text-muted">Press Ctrl+Enter to submit</small>
+    } @empty {
+      <div class="dv-empty cm__empty">No notes yet.</div>
     }
-  </div>
+
+    <div class="cm__compose">
+      <input
+        type="text"
+        class="dv-input dv-input--r7"
+        placeholder="Add a note…"
+        aria-label="Add a note"
+        [ngModel]="newCommentText()"
+        (ngModelChange)="newCommentText.set($event)"
+        (keyup.enter)="addComment()"
+        (keydown.control.enter)="addComment()"
+      />
+      <button
+        type="button"
+        class="dv-btn dv-btn--ghost cm__send"
+        title="Post note"
+        (click)="addComment()"
+        [disabled]="!newCommentText().trim() || submitting()"
+      >
+        <span aria-hidden="true">↵</span>
+        <span class="dv-sr">Post note</span>
+      </button>
+    </div>
+  }
 </div>

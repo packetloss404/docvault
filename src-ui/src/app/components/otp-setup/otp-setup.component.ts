@@ -8,136 +8,201 @@ import { OTPSetupResponse } from '../../models/security.model';
   selector: 'app-otp-setup',
   standalone: true,
   imports: [CommonModule, FormsModule],
+  styleUrl: './otp-setup.component.scss',
   template: `
-    <div class="container-fluid py-4">
-      <h4>Two-Factor Authentication</h4>
-
-      @if (loading()) {
-        <div class="text-center py-4">
-          <div class="spinner-border"></div>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner dv-inner--narrow">
+        <div class="dv-pagehead">
+          <h1 class="dv-h1 dv-h1--sm">Two-factor authentication</h1>
+          @if (otpEnabled()) {
+            <span class="dv-chip dv-chip--ok dv-chip--upper">totp enabled</span>
+          } @else {
+            <span class="dv-chip dv-chip--upper">not configured</span>
+          }
         </div>
-      } @else {
 
-        @if (errorMessage()) {
-          <div class="alert alert-danger alert-dismissible">
-            {{ errorMessage() }}
-            <button type="button" class="btn-close" (click)="errorMessage.set('')"></button>
-          </div>
-        }
+        @if (loading()) {
+          <div class="dv-empty"><span class="dv-spinner"></span> Reading 2FA status…</div>
+        } @else {
+          @if (errorMessage()) {
+            <div class="ot-banner ot-banner--error" role="alert">
+              <span>{{ errorMessage() }}</span>
+              <button
+                type="button"
+                class="ot-banner__close"
+                aria-label="Dismiss"
+                (click)="errorMessage.set('')"
+              >
+                ✕
+              </button>
+            </div>
+          }
 
-        @if (successMessage()) {
-          <div class="alert alert-success alert-dismissible">
-            {{ successMessage() }}
-            <button type="button" class="btn-close" (click)="successMessage.set('')"></button>
-          </div>
-        }
+          @if (successMessage()) {
+            <div class="ot-banner ot-banner--ok" role="status">
+              <span>{{ successMessage() }}</span>
+              <button
+                type="button"
+                class="ot-banner__close"
+                aria-label="Dismiss"
+                (click)="successMessage.set('')"
+              >
+                ✕
+              </button>
+            </div>
+          }
 
-        <!-- Status: OTP not enabled -->
-        @if (!otpEnabled()) {
-          <div class="card">
-            <div class="card-body">
-              <h5 class="card-title">2FA is not enabled</h5>
-              <p class="text-muted">
-                Two-factor authentication adds an extra layer of security to your account.
-                You will need a TOTP authenticator app (such as Google Authenticator or Authy).
+          <!-- Not enabled -->
+          @if (!otpEnabled()) {
+            <div class="dv-card dv-card--pad ot-card">
+              <div class="dv-card__title">2FA is not enabled</div>
+              <p class="ot-prose">
+                Two-factor authentication adds a second step to sign-in. You will need a TOTP
+                authenticator app such as Google Authenticator, Aegis or 1Password.
               </p>
-              <button class="btn btn-primary" (click)="enableOTP()" [disabled]="setupLoading()">
-                @if (setupLoading()) {
-                  <span class="spinner-border spinner-border-sm me-1"></span>
-                }
-                Enable 2FA
-              </button>
-            </div>
-          </div>
-        }
-
-        <!-- Step: Show QR Code -->
-        @if (setupData()) {
-          <div class="card mt-3">
-            <div class="card-header">Setup Two-Factor Authentication</div>
-            <div class="card-body">
-              <p>Scan this QR code with your authenticator app:</p>
-              <div class="text-center mb-3">
-                <img [src]="'data:image/png;base64,' + setupData()!.qr_code_base64"
-                     alt="QR Code" class="border rounded" style="max-width: 250px;" />
-              </div>
-              <div class="mb-3">
-                <label class="form-label fw-bold">Secret Key (manual entry):</label>
-                <div class="input-group" style="max-width: 400px;">
-                  <input type="text" class="form-control font-monospace" [value]="setupData()!.secret" readonly />
-                  <button class="btn btn-outline-secondary" (click)="copySecret()">
-                    <i class="bi bi-clipboard"></i>
-                  </button>
-                </div>
-              </div>
-              <hr />
-              <div class="mb-3" style="max-width: 300px;">
-                <label class="form-label">Enter the 6-digit code from your app:</label>
-                <input type="text" class="form-control" [(ngModel)]="confirmCode"
-                       maxlength="6" placeholder="000000" />
-              </div>
-              <button class="btn btn-success" (click)="confirmOTP()" [disabled]="confirmLoading() || confirmCode.length < 6">
-                @if (confirmLoading()) {
-                  <span class="spinner-border spinner-border-sm me-1"></span>
-                }
-                Verify &amp; Activate
-              </button>
-            </div>
-          </div>
-        }
-
-        <!-- Step: Show Backup Codes -->
-        @if (backupCodes().length > 0) {
-          <div class="card mt-3 border-success">
-            <div class="card-header bg-success text-white">
-              <i class="bi bi-shield-check me-1"></i> 2FA Enabled Successfully
-            </div>
-            <div class="card-body">
-              <p class="fw-bold">Save these backup codes in a secure location:</p>
-              <p class="text-muted">Each code can only be used once. If you lose access to your authenticator, use one of these codes to log in.</p>
-              <div class="row">
-                @for (code of backupCodes(); track code) {
-                  <div class="col-6 col-md-4 mb-2">
-                    <code class="fs-5">{{ code }}</code>
-                  </div>
-                }
-              </div>
-              <button class="btn btn-outline-secondary mt-3" (click)="copyBackupCodes()">
-                <i class="bi bi-clipboard me-1"></i> Copy All Codes
-              </button>
-            </div>
-          </div>
-        }
-
-        <!-- Status: OTP enabled -->
-        @if (otpEnabled() && !setupData() && backupCodes().length === 0) {
-          <div class="card">
-            <div class="card-body">
-              <h5 class="card-title">
-                <i class="bi bi-shield-check text-success me-2"></i>
-                2FA is enabled
-              </h5>
-              <p class="text-muted">
-                Your account is protected with two-factor authentication.
-              </p>
-              <hr />
-              <p class="mb-2">To disable 2FA, enter your password:</p>
-              <div class="input-group mb-3" style="max-width: 400px;">
-                <input type="password" class="form-control" [(ngModel)]="disablePassword"
-                       placeholder="Current password" />
-                <button class="btn btn-danger" (click)="disableOTP()"
-                        [disabled]="disableLoading() || !disablePassword">
-                  @if (disableLoading()) {
-                    <span class="spinner-border spinner-border-sm me-1"></span>
+              <div class="ot-actions">
+                <button
+                  type="button"
+                  class="dv-btn dv-btn--primary dv-btn--md"
+                  (click)="enableOTP()"
+                  [disabled]="setupLoading()"
+                >
+                  @if (setupLoading()) {
+                    <span class="dv-spinner"></span>
                   }
-                  Disable 2FA
+                  Enable 2FA
                 </button>
               </div>
             </div>
-          </div>
-        }
+          }
 
-      }
+          <!-- Enrolment: QR + secret + confirmation -->
+          @if (setupData(); as setup) {
+            <div class="dv-card dv-card--pad dv-card--accent ot-card">
+              <div class="dv-card__title">Scan with your authenticator</div>
+
+              <div class="ot-qr">
+                <img
+                  [src]="'data:image/png;base64,' + setup.qr_code_base64"
+                  alt="TOTP enrolment QR code"
+                />
+              </div>
+
+              <div class="ot-field">
+                <label class="dv-field__label" for="ot-secret">secret (manual entry)</label>
+                <div class="ot-inline">
+                  <input
+                    id="ot-secret"
+                    type="text"
+                    class="dv-input dv-input--mono"
+                    [value]="setup.secret"
+                    readonly
+                  />
+                  <button
+                    type="button"
+                    class="dv-btn dv-btn--ghost dv-btn--sm"
+                    title="Copy secret"
+                    (click)="copySecret()"
+                  >
+                    ⧉
+                  </button>
+                </div>
+              </div>
+
+              <hr class="dv-divider ot-field" />
+
+              <div class="ot-field">
+                <label class="dv-field__label" for="ot-code">6-digit code from your app</label>
+                <input
+                  id="ot-code"
+                  type="text"
+                  class="dv-input dv-input--mono ot-code"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  maxlength="6"
+                  placeholder="000000"
+                  [(ngModel)]="confirmCode"
+                />
+              </div>
+
+              <div class="ot-actions">
+                <button
+                  type="button"
+                  class="dv-btn dv-btn--primary dv-btn--md"
+                  (click)="confirmOTP()"
+                  [disabled]="confirmLoading() || confirmCode.length < 6"
+                >
+                  @if (confirmLoading()) {
+                    <span class="dv-spinner"></span>
+                  }
+                  Verify &amp; activate →
+                </button>
+              </div>
+            </div>
+          }
+
+          <!-- Backup codes -->
+          @if (backupCodes().length > 0) {
+            <div class="dv-card dv-card--pad ot-card">
+              <div class="dv-card__title dv-ok">✓ 2FA enabled</div>
+              <p class="ot-prose">
+                Save these backup codes somewhere safe. Each one works once, and they are the only
+                way in if you lose your authenticator.
+              </p>
+              <div class="dv-well ot-codes">
+                @for (code of backupCodes(); track code) {
+                  <code>{{ code }}</code>
+                }
+              </div>
+              <div class="ot-actions">
+                <button
+                  type="button"
+                  class="dv-btn dv-btn--ghost dv-btn--md"
+                  (click)="copyBackupCodes()"
+                >
+                  ⧉ Copy all codes
+                </button>
+              </div>
+            </div>
+          }
+
+          <!-- Enabled -->
+          @if (otpEnabled() && !setupData() && backupCodes().length === 0) {
+            <div class="dv-card dv-card--pad ot-card">
+              <div class="dv-card__title">2FA is active</div>
+              <p class="ot-prose">
+                Sign-in requires a code from your authenticator app. Disabling 2FA needs your
+                current password.
+              </p>
+
+              <div class="ot-field">
+                <label class="dv-field__label" for="ot-disable">current password</label>
+                <div class="ot-inline">
+                  <input
+                    id="ot-disable"
+                    type="password"
+                    class="dv-input dv-input--mono"
+                    autocomplete="current-password"
+                    placeholder="Current password"
+                    [(ngModel)]="disablePassword"
+                  />
+                  <button
+                    type="button"
+                    class="dv-btn dv-btn--danger dv-btn--md"
+                    (click)="disableOTP()"
+                    [disabled]="disableLoading() || !disablePassword"
+                  >
+                    @if (disableLoading()) {
+                      <span class="dv-spinner"></span>
+                    }
+                    Disable 2FA
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+        }
+      </div>
     </div>
   `,
 })

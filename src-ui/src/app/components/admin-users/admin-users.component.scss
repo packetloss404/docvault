@@ -1,0 +1,124 @@
+// Admin screens share this geometry via their own copies; only layout lives
+// here — every colour comes from a token through the Console primitives.
+.au-form {
+  margin-top: 18px;
+}
+
+.au-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.au-form__wide {
+  grid-column: 1 / -1;
+}
+
+.au-form__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.au-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+}
+
+// Native checkbox tinted with the accent token — keeps the (change) handler
+// contract the component already exposes.
+.dv-checkbox {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.au-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.au-table {
+  margin-top: 18px;
+}
+
+.au-user__name {
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.au-groups {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.au-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+// Row-level text action. `.dv-link` cannot be combined with `.dv-meta` /
+// `.dv-danger` because its own font/colour rules win, so rows get this.
+.au-action {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: 400 11px "JetBrains Mono", ui-monospace, monospace;
+  color: var(--faint);
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &--danger {
+    color: var(--danger);
+
+    &:hover {
+      color: var(--danger);
+    }
+  }
+}
+
+.au-banner {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 9px;
+  padding: 10px 13px;
+  font-size: 12.5px;
+
+  &--error {
+    background: var(--danger-dim);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+  }
+
+  &--ok {
+    background: var(--ok-dim);
+    border: 1px solid var(--ok);
+    color: var(--ok);
+  }
+}
+
+.au-banner__close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font: 400 13px "JetBrains Mono", ui-monospace, monospace;
+  padding: 0;
+}

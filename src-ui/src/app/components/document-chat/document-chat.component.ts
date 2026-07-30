@@ -9,46 +9,82 @@ import { ChatMessage, ChatSource } from '../../models/ai.model';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">Document Chat</h6>
-        <button class="btn btn-sm btn-outline-secondary" (click)="clearChat()">Clear</button>
-      </div>
-      <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-        @if (messages().length === 0) {
-          <p class="text-muted text-center">Ask a question about this document...</p>
-        }
-        @for (msg of messages(); track $index) {
-          <div class="mb-2" [class]="msg.role === 'user' ? 'text-end' : ''">
-            <div class="d-inline-block p-2 rounded" [class]="msg.role === 'user' ? 'bg-primary text-white' : 'bg-light'">
-              {{ msg.content }}
-            </div>
-          </div>
-        }
-        @if (loading()) {
-          <div class="text-center">
-            <div class="spinner-border spinner-border-sm text-primary"></div>
-            <span class="ms-2 text-muted">Thinking...</span>
-          </div>
-        }
-      </div>
-      <div class="card-footer">
-        @if (sources().length > 0) {
-          <div class="mb-2">
-            <small class="text-muted">Sources: {{ sources().length }} chunk(s) referenced</small>
-          </div>
-        }
-        <div class="input-group">
-          <input type="text" class="form-control" [(ngModel)]="question"
-                 placeholder="Ask a question..." (keyup.enter)="send()"
-                 [disabled]="loading()">
-          <button class="btn btn-primary" (click)="send()" [disabled]="loading() || !question.trim()">
-            Send
+    <div class="ch">
+      <div class="ch__head">
+        <span class="dv-eyebrow">ask this document</span>
+        @if (messages().length > 0) {
+          <button type="button" class="dv-link dv-push ch__clear" (click)="clearChat()">
+            clear
           </button>
+        }
+      </div>
+
+      <div class="ch__log">
+        @if (messages().length === 0 && !loading()) {
+          <div class="dv-empty ch__empty">Ask a question about this document.</div>
+        }
+
+        @for (msg of messages(); track $index) {
+          @if (msg.role === 'user') {
+            <div class="dv-card dv-card--r9 ch__turn">
+              <div class="dv-meta ch__who">you</div>
+              <div class="ch__body">{{ msg.content }}</div>
+            </div>
+          } @else {
+            <div class="dv-callout ch__turn">
+              <div class="dv-callout__label ch__who">docvault ai</div>
+              <div class="ch__body">{{ msg.content }}</div>
+            </div>
+          }
+        }
+
+        @if (loading()) {
+          <div class="ch__thinking">
+            <span class="dv-spinner"></span>
+            <span class="dv-meta">thinking…</span>
+          </div>
+        }
+      </div>
+
+      @if (sources().length > 0) {
+        <div class="ch__cites">
+          <span class="dv-eyebrow">cited</span>
+          @for (source of sources(); track source.document_id) {
+            <span
+              class="ch__cite"
+              [title]="
+                source.chunk_count
+                  ? source.chunk_count + ' passage(s) referenced'
+                  : 'referenced'
+              "
+              >[{{ source.title }}]</span
+            >
+          }
         </div>
+      }
+
+      <div class="ch__compose">
+        <input
+          type="text"
+          class="dv-input dv-input--r7"
+          [(ngModel)]="question"
+          placeholder="Ask about this document…"
+          aria-label="Ask about this document"
+          (keyup.enter)="send()"
+          [disabled]="loading()"
+        />
+        <button
+          type="button"
+          class="dv-btn dv-btn--primary ch__ask"
+          (click)="send()"
+          [disabled]="loading() || !question.trim()"
+        >
+          Ask
+        </button>
       </div>
     </div>
   `,
+  styleUrl: './document-chat.component.scss',
 })
 export class DocumentChatComponent {
   @Input() documentId!: number;

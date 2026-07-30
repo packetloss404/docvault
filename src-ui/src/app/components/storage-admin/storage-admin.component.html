@@ -1,143 +1,138 @@
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <h2><i class="bi bi-hdd-stack me-2"></i>Storage Administration</h2>
-</div>
+<div class="dv-screen dv-screen--tight">
+  <div class="dv-inner dv-inner--wide">
+    <div class="dv-pagehead">
+      <h1 class="dv-h1 dv-h1--sm">Admin</h1>
+      <dv-subnav />
+    </div>
 
-<div class="row g-4">
-  <!-- Dedup Stats -->
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Deduplication Statistics</h5>
-        <button class="btn btn-sm btn-outline-primary" (click)="loadDedupStats()" [disabled]="dedupLoading()">
-          <i class="bi bi-arrow-clockwise"></i>
-        </button>
-      </div>
-      <div class="card-body">
+    <div class="sa-grid">
+      <!-- Deduplication -->
+      <div class="dv-card dv-card--pad">
+        <div class="sa-cardhead">
+          <span class="dv-card__title">Deduplication</span>
+          <button
+            type="button"
+            class="dv-btn dv-btn--ghost dv-btn--sm dv-push"
+            (click)="loadDedupStats()"
+            [disabled]="dedupLoading()"
+          >
+            @if (dedupLoading()) {
+              <span class="dv-spinner"></span>
+            } @else {
+              refresh
+            }
+          </button>
+        </div>
+
         @if (dedupLoading()) {
-          <div class="text-center py-3">
-            <div class="spinner-border spinner-border-sm"></div>
-          </div>
+          <div class="dv-empty">Reading blob index…</div>
         } @else if (dedupStats(); as stats) {
-          <dl class="row mb-0">
-            <dt class="col-sm-6">Total Blobs</dt>
-            <dd class="col-sm-6">{{ stats.total_blobs | number }}</dd>
-
-            <dt class="col-sm-6">Total Size</dt>
-            <dd class="col-sm-6">{{ formatBytes(stats.total_size_bytes) }}</dd>
-
-            <dt class="col-sm-6">Deduplicated Size</dt>
-            <dd class="col-sm-6">{{ formatBytes(stats.deduplicated_size_bytes) }}</dd>
-
-            <dt class="col-sm-6">Storage Saved</dt>
-            <dd class="col-sm-6">
-              <span class="text-success fw-bold">{{ formatBytes(stats.savings_bytes) }}</span>
-            </dd>
-          </dl>
+          <div class="sa-lines">
+            <div class="dv-stat-line">
+              <span class="dv-stat-line__k">total blobs</span>
+              <span class="dv-stat-line__v">{{ stats.total_blobs | number }}</span>
+            </div>
+            <div class="dv-stat-line">
+              <span class="dv-stat-line__k">logical size</span>
+              <span class="dv-stat-line__v">{{ formatBytes(stats.total_size_bytes) }}</span>
+            </div>
+            <div class="dv-stat-line">
+              <span class="dv-stat-line__k">on disk</span>
+              <span class="dv-stat-line__v">{{ formatBytes(stats.deduplicated_size_bytes) }}</span>
+            </div>
+            <div class="dv-stat-line">
+              <span class="dv-stat-line__k">saved</span>
+              <span class="dv-stat-line__v dv-ok">
+                {{ formatBytes(stats.savings_bytes) }} ·
+                {{ stats.savings_percent | number: '1.1-1' }}%
+              </span>
+            </div>
+          </div>
 
           @if (stats.total_size_bytes > 0) {
-            <div class="mt-3">
-              <div class="d-flex justify-content-between small mb-1">
-                <span>Deduplication Efficiency</span>
-                <span class="fw-bold">{{ stats.savings_percent | number:'1.1-1' }}%</span>
-              </div>
-              <div class="progress" style="height: 8px;">
-                <div
-                  class="progress-bar bg-success"
-                  [style.width.%]="stats.savings_percent"
-                ></div>
-              </div>
+            <div class="dv-bar sa-bar">
+              <div
+                class="dv-bar__fill dv-bar__fill--ok"
+                [style.width.%]="stats.savings_percent"
+              ></div>
             </div>
           }
 
-          <p class="text-muted small mt-3 mb-0">
-            Content-addressed storage deduplicates identical file content across documents,
-            reducing total disk usage.
-          </p>
+          <div class="dv-meta sa-foot">content-addressed storage · sha256</div>
         } @else {
-          <p class="text-muted mb-0">Unable to load deduplication statistics.</p>
+          <div class="dv-empty">Deduplication statistics unavailable.</div>
         }
       </div>
-    </div>
-  </div>
 
-  <!-- Integrity Check -->
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-header">
-        <h5 class="mb-0">Storage Integrity Verification</h5>
-      </div>
-      <div class="card-body">
-        <p class="text-muted small">
-          Verifies that all stored files match their recorded checksums.
-          This operation may take several minutes for large repositories.
+      <!-- Integrity verification -->
+      <div class="dv-card dv-card--pad">
+        <div class="sa-cardhead">
+          <span class="dv-card__title">Integrity verification</span>
+        </div>
+
+        <p class="sa-prose">
+          Verifies stored files against their recorded checksums. This may take several
+          minutes on a large repository.
         </p>
 
         <button
-          class="btn btn-warning"
+          type="button"
+          class="dv-btn dv-btn--warn dv-btn--md sa-run"
           (click)="runIntegrityCheck()"
           [disabled]="integrityRunning()"
         >
           @if (integrityRunning()) {
-            <span class="spinner-border spinner-border-sm me-1"></span>
-            Running...
+            <span class="dv-spinner"></span>
+            Running…
           } @else {
-            <i class="bi bi-shield-check me-1"></i> Run Integrity Check
+            Run integrity check
           }
         </button>
 
         @if (integrityResult(); as result) {
-          <div class="mt-3">
-            <div class="row g-2 text-center mb-3">
-              <div class="col">
-                <div class="border rounded p-2">
-                  <div class="fw-bold">{{ result.total_checked }}</div>
-                  <small class="text-muted">Checked</small>
-                </div>
-              </div>
-              <div class="col">
-                <div class="border rounded p-2 border-success">
-                  <div class="fw-bold text-success">{{ result.passed }}</div>
-                  <small class="text-muted">Passed</small>
-                </div>
-              </div>
-              <div class="col">
-                <div class="border rounded p-2" [class.border-danger]="result.failed > 0">
-                  <div class="fw-bold" [class.text-danger]="result.failed > 0">{{ result.failed }}</div>
-                  <small class="text-muted">Failed</small>
-                </div>
-              </div>
+          <div class="sa-lines sa-result">
+            <div class="dv-stat-line">
+              <span class="dv-stat-line__k">checked</span>
+              <span class="dv-stat-line__v">{{ result.total_checked }}</span>
             </div>
-
-            @if (result.failed === 0) {
-              <div class="alert alert-success py-2 mb-0">
-                <i class="bi bi-check-circle-fill me-1"></i> All files passed integrity verification.
-              </div>
-            } @else {
-              <div class="alert alert-danger py-2">
-                <i class="bi bi-exclamation-triangle-fill me-1"></i> {{ result.failed }} file(s) failed verification.
-              </div>
-              @if (result.errors.length > 0) {
-                <div class="table-responsive">
-                  <table class="table table-sm mb-0">
-                    <thead>
-                      <tr>
-                        <th>File</th>
-                        <th>Reason</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (err of result.errors; track err.file) {
-                        <tr>
-                          <td><code class="small">{{ err.file }}</code></td>
-                          <td class="text-danger small">{{ err.reason }}</td>
-                        </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
-              }
-            }
+            <div class="dv-stat-line">
+              <span class="dv-stat-line__k">passed</span>
+              <span class="dv-stat-line__v dv-ok">{{ result.passed }}</span>
+            </div>
+            <div class="dv-stat-line">
+              <span class="dv-stat-line__k">failed</span>
+              <span
+                class="dv-stat-line__v"
+                [class.dv-danger]="result.failed > 0"
+                [class.dv-faint]="result.failed === 0"
+                >{{ result.failed }}</span
+              >
+            </div>
           </div>
+
+          @if (result.failed === 0) {
+            <div class="dv-meta sa-foot dv-ok">✓ all files passed verification</div>
+          } @else {
+            <div class="dv-meta sa-foot dv-danger">
+              {{ result.failed }} file(s) failed verification
+            </div>
+            @if (result.errors.length > 0) {
+              <div class="sa-errors">
+                <div class="dv-thead dv-grid" style="--dv-cols: 1fr 150px">
+                  <span>file</span><span>reason</span>
+                </div>
+                @for (err of result.errors; track err.file) {
+                  <div
+                    class="dv-row dv-row--static dv-row--tight dv-grid"
+                    style="--dv-cols: 1fr 150px"
+                  >
+                    <span class="dv-mono dv-clip">{{ err.file }}</span>
+                    <span class="dv-meta dv-danger">{{ err.reason }}</span>
+                  </div>
+                }
+              </div>
+            }
+          }
         }
       </div>
     </div>

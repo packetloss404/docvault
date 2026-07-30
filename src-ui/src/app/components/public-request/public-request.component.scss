@@ -1,0 +1,88 @@
+// Public "upload against a request token" page. Login-style frame, slightly
+// wider so the request brief reads comfortably.
+.dv-auth .pr__col {
+  width: 460px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pr__state {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+
+.pr__badge {
+  align-self: flex-start;
+}
+
+.pr__msg {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.pr__brief {
+  gap: 12px;
+}
+
+.pr__desc {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+.pr__deadline {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.pr__date {
+  font-size: 12.5px;
+}
+
+.pr__done {
+  padding: 14px 16px;
+}
+
+// Dashed drop target wrapping a hidden native file input.
+.pr__drop {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.pr__file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pr__filename {
+  font-size: 13px;
+  color: var(--text);
+  max-width: 100%;
+}
+
+.pr__pct {
+  margin-top: 6px;
+  text-align: right;
+}
+
+.pr__error {
+  background: var(--danger-dim);
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: var(--danger);
+  font-size: 12.5px;
+  line-height: 1.45;
+}

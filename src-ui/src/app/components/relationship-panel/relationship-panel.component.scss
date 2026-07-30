@@ -1,0 +1,98 @@
+// Relation rows. Compact by default so the panel fits the 400px document
+// sidebar; `--screen` adds screen padding for the standalone route.
+.rp {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  &--screen {
+    padding: 24px 32px;
+    max-width: 760px;
+  }
+}
+
+.rp__head {
+  display: flex;
+  align-items: center;
+}
+
+.rp__graph {
+  font-size: 11px;
+}
+
+.rp__add {
+  padding: 11px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rp__addrow {
+  display: flex;
+  gap: 8px;
+}
+
+.rp__id {
+  width: 84px;
+  flex-shrink: 0;
+}
+
+.rp__type {
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  appearance: none;
+}
+
+.rp__addbtn {
+  flex-shrink: 0;
+}
+
+.rp__error {
+  font-size: 12px;
+}
+
+.rp__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.rp__kind {
+  flex-shrink: 0;
+}
+
+.rp__title {
+  font-size: 12.5px;
+  font-weight: 500;
+  flex: 1;
+  color: var(--text);
+
+  &:hover {
+    color: var(--accent-text);
+  }
+}
+
+.rp__date {
+  flex-shrink: 0;
+}
+
+.rp__del {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  color: var(--faint);
+  font: 400 12px "JetBrains Mono", ui-monospace, monospace;
+  line-height: 1;
+
+  &:hover {
+    color: var(--danger);
+  }
+}
+
+.rp__empty {
+  padding: 22px 12px;
+}

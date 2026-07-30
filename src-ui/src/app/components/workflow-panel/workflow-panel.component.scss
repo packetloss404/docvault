@@ -1,0 +1,118 @@
+// Layout only; every colour comes from a token via the Console primitives.
+.wp-launch {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.wp-launch__field {
+  flex: 1;
+  min-width: 0;
+}
+
+.wp-instances {
+  margin-top: 12px;
+}
+
+.wp-card {
+  margin-top: 12px;
+}
+
+.wp-card__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wp-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.wp-progress {
+  margin-top: 14px;
+}
+
+.wp-bar {
+  margin-top: 7px;
+}
+
+.wp-when {
+  margin-top: 12px;
+}
+
+.wp-transitions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.wp-log {
+  margin-top: 14px;
+}
+
+// Centred modal shell. `.dv-overlay` supplies the scrim; this is the card.
+.wp-modal {
+  width: 520px;
+  max-width: calc(100vw - 32px);
+  height: fit-content;
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  animation: dvFadeUp 0.18s ease;
+  text-align: left;
+}
+
+.wp-modal__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.wp-modal__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--faint);
+  font: 400 14px "JetBrains Mono", ui-monospace, monospace;
+  padding: 0;
+
+  &:hover {
+    color: var(--text);
+  }
+}
+
+.wp-modal__body {
+  padding: 16px 20px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.wp-modal__foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+}
+
+.wp-field {
+  margin-top: 14px;
+}
+
+.wp-textarea {
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+.wp-help {
+  margin-top: 5px;
+}

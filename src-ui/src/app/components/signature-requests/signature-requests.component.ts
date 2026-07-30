@@ -3,120 +3,106 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { EsignatureService } from '../../services/esignature.service';
-import { SignatureRequest } from '../../models/esignature.model';
+import { SignatureRequest, Signer } from '../../models/esignature.model';
 
 @Component({
   selector: 'app-signature-requests',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
+  styleUrl: './signature-requests.component.scss',
   template: `
-    <div class="d-flex justify-content-between align-items-center mb-4">
-      <h3 class="mb-0">E-Signature Requests</h3>
-      <button class="btn btn-primary" routerLink="/documents">
-        <i class="bi bi-plus-lg me-1"></i>New Request
-      </button>
-    </div>
-
-    <!-- Filters -->
-    <div class="row mb-3">
-      <div class="col-auto">
-        <select
-          class="form-select form-select-sm"
-          [ngModel]="statusFilter()"
-          (ngModelChange)="onStatusFilterChange($event)"
-        >
-          <option value="">All Statuses</option>
-          <option value="draft">Draft</option>
-          <option value="sent">Sent</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-          <option value="expired">Expired</option>
-        </select>
-      </div>
-    </div>
-
-    @if (loading()) {
-      <div class="d-flex justify-content-center py-5">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
+    <div class="dv-screen dv-screen--tight">
+      <div class="dv-inner dv-inner--wide">
+        <div class="dv-pagehead">
+          <h1 class="dv-h1 dv-h1--sm">Signature requests</h1>
+          <select
+            class="dv-select sr-filter dv-push"
+            aria-label="Filter by status"
+            [ngModel]="statusFilter()"
+            (ngModelChange)="onStatusFilterChange($event)"
+          >
+            <option value="">all statuses</option>
+            <option value="draft">draft</option>
+            <option value="sent">sent</option>
+            <option value="in_progress">in progress</option>
+            <option value="completed">completed</option>
+            <option value="cancelled">cancelled</option>
+            <option value="expired">expired</option>
+          </select>
+          <a class="dv-btn dv-btn--primary" routerLink="/documents">+ New request</a>
         </div>
-      </div>
-    } @else if (filteredRequests().length === 0) {
-      <div class="text-center text-muted py-5">
-        <i class="bi bi-pen fs-1"></i>
-        <p class="mt-2">No signature requests found.</p>
-      </div>
-    } @else {
-      <div class="table-responsive">
-        <table class="table table-hover align-middle">
-          <thead>
-            <tr>
-              <th>Title</th>
-              <th>Document</th>
-              <th>Signers</th>
-              <th>Status</th>
-              <th>Created</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+
+        @if (loading()) {
+          <div class="dv-empty"><span class="dv-spinner"></span> Loading…</div>
+        } @else if (filteredRequests().length === 0) {
+          <div class="dv-empty">No signature requests found.</div>
+        } @else {
+          <div class="sr-list">
             @for (req of filteredRequests(); track req.id) {
-              <tr>
-                <td>
-                  <a [routerLink]="['/signature-requests', req.id]" class="text-decoration-none">
-                    {{ req.title }}
-                  </a>
-                </td>
-                <td>
-                  <a [routerLink]="['/documents', req.document]" class="text-decoration-none">
-                    #{{ req.document }}
-                  </a>
-                </td>
-                <td>
-                  <span class="badge bg-light text-dark">
-                    {{ req.signers.length }} signer{{ req.signers.length !== 1 ? 's' : '' }}
-                  </span>
-                </td>
-                <td>
-                  <span class="badge" [ngClass]="getStatusBadgeClass(req.status)">
+              <div class="dv-card dv-card--r10 dv-card--hover sr-card">
+                <div class="sr-card__head">
+                  <a class="sr-card__title" [routerLink]="['/signature-requests', req.id]">{{
+                    req.title
+                  }}</a>
+                  <span class="dv-chip dv-chip--upper" [ngClass]="getStatusBadgeClass(req.status)">
                     {{ formatStatus(req.status) }}
                   </span>
-                </td>
-                <td>{{ formatDate(req.created_at) }}</td>
-                <td>
-                  <div class="btn-group btn-group-sm">
-                    <a
-                      class="btn btn-outline-secondary"
-                      [routerLink]="['/signature-requests', req.id]"
-                      title="View"
-                    >
-                      <i class="bi bi-eye"></i>
-                    </a>
-                    @if (req.status === 'sent' || req.status === 'in_progress') {
-                      <button
-                        class="btn btn-outline-warning"
-                        title="Remind Signers"
-                        (click)="remind(req)"
-                      >
-                        <i class="bi bi-bell"></i>
-                      </button>
-                      <button
-                        class="btn btn-outline-danger"
-                        title="Cancel"
-                        (click)="cancel(req)"
-                      >
-                        <i class="bi bi-x-circle"></i>
-                      </button>
+                  <a class="dv-meta sr-card__doc" [routerLink]="['/documents', req.document]"
+                    >doc #{{ req.document }}</a
+                  >
+                  <span class="dv-meta dv-push">{{ dueLabel(req) }}</span>
+                </div>
+
+                <div class="sr-card__foot">
+                  <div class="dv-chain sr-chain">
+                    @for (signer of req.signers; track signer.id) {
+                      <span class="sr-signer">
+                        <span
+                          class="dv-avatar dv-avatar--sm"
+                          [class.dv-avatar--signed]="signer.status === 'signed'"
+                          >{{ initials(signer.name) }}</span
+                        >
+                        <span class="sr-signer__name">{{ signer.name }}</span>
+                        <span class="dv-meta" [ngClass]="signerStateClass(req, signer)">{{
+                          signerState(req, signer)
+                        }}</span>
+                      </span>
+                      @if (!$last) {
+                        <span class="dv-chain__arrow" aria-hidden="true">→</span>
+                      }
+                    }
+                    @if (req.signers.length === 0) {
+                      <span class="dv-meta">no signers</span>
                     }
                   </div>
-                </td>
-              </tr>
+
+                  <span class="dv-meta sr-mode">{{ req.signing_order }}</span>
+
+                  @if (req.status === 'sent' || req.status === 'in_progress') {
+                    <button
+                      type="button"
+                      class="dv-btn dv-btn--sm dv-btn--warn"
+                      title="Remind signers"
+                      (click)="remind(req)"
+                    >
+                      remind
+                    </button>
+                    <button
+                      type="button"
+                      class="dv-btn dv-btn--sm dv-btn--danger"
+                      title="Cancel request"
+                      (click)="cancel(req)"
+                    >
+                      cancel
+                    </button>
+                  }
+                </div>
+              </div>
             }
-          </tbody>
-        </table>
+          </div>
+        }
       </div>
-    }
+    </div>
   `,
 })
 export class SignatureRequestsComponent implements OnInit {
@@ -157,17 +143,70 @@ export class SignatureRequestsComponent implements OnInit {
     this.loadRequests();
   }
 
-  getStatusBadgeClass(
-    status: SignatureRequest['status'],
-  ): Record<string, boolean> {
-    return {
-      'bg-secondary': status === 'draft',
-      'bg-primary': status === 'sent',
-      'bg-warning text-dark': status === 'in_progress',
-      'bg-success': status === 'completed',
-      'bg-danger': status === 'cancelled',
-      'bg-dark': status === 'expired',
-    };
+  /** Console status chip modifier for a request status. */
+  getStatusBadgeClass(status: SignatureRequest['status']): string {
+    switch (status) {
+      case 'sent':
+        return 'dv-chip--accent';
+      case 'in_progress':
+        return 'dv-chip--warn';
+      case 'completed':
+        return 'dv-chip--ok';
+      case 'cancelled':
+      case 'expired':
+        return 'dv-chip--danger';
+      default:
+        return '';
+    }
+  }
+
+  /** Lowercase two-letter monogram, as the signer chain in the design uses. */
+  initials(name: string): string {
+    const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '··';
+    if (parts.length === 1) return parts[0].slice(0, 2).toLowerCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toLowerCase();
+  }
+
+  /**
+   * Chain state word. For a sequential request only the first outstanding
+   * signer is actually waiting; the rest are queued behind them.
+   */
+  signerState(req: SignatureRequest, signer: Signer): string {
+    if (signer.status === 'signed') return 'signed';
+    if (signer.status === 'declined') return 'declined';
+    if (signer.status === 'viewed') return 'viewed';
+    if (req.status === 'draft') return 'queued';
+    if (req.signing_order === 'parallel') return 'waiting';
+    const nextUp = req.signers
+      .filter((s) => s.status !== 'signed' && s.status !== 'declined')
+      .sort((a, b) => a.order - b.order)[0];
+    return nextUp && nextUp.id === signer.id ? 'waiting' : 'queued';
+  }
+
+  signerStateClass(req: SignatureRequest, signer: Signer): string {
+    switch (this.signerState(req, signer)) {
+      case 'signed':
+        return 'dv-ok';
+      case 'declined':
+        return 'dv-danger';
+      case 'viewed':
+      case 'waiting':
+        return 'dv-warn';
+      default:
+        return 'dv-faint';
+    }
+  }
+
+  /** Mono deadline readout: what matters most about this request's clock. */
+  dueLabel(req: SignatureRequest): string {
+    if (req.completed_at) return `completed ${this.formatDate(req.completed_at)}`;
+    if (req.expiration) {
+      return req.status === 'expired'
+        ? `expired ${this.formatDate(req.expiration)}`
+        : `expires ${this.formatDate(req.expiration)}`;
+    }
+    return `created ${this.formatDate(req.created_at)}`;
   }
 
   formatStatus(status: string): string {

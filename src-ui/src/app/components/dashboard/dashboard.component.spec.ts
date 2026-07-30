@@ -1,18 +1,24 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { signal } from '@angular/core';
 import { of } from 'rxjs';
 
 import { DashboardComponent, WidgetType } from './dashboard.component';
+import { AuthService } from '../../services/auth.service';
 import { DocumentService } from '../../services/document.service';
 import { SearchService } from '../../services/search.service';
 import { OrganizationService } from '../../services/organization.service';
 import { PreferencesService } from '../../services/preferences.service';
+import { EsignatureService } from '../../services/esignature.service';
+import { ShellStatsService } from '../../services/shell-stats.service';
+import { UploadService } from '../../services/upload.service';
 
 // Mirror of DEFAULT_LAYOUT from dashboard.component.ts
 const EXPECTED_DEFAULT_LAYOUT: WidgetType[] = [
   'welcome',
   'statistics',
   'recent_documents',
+  'attention',
   'saved_views',
   'upload',
 ];
@@ -24,6 +30,7 @@ describe('DashboardComponent', () => {
   let mockDocumentService: {
     getDocuments: ReturnType<typeof vi.fn>;
     getDocumentTypes: ReturnType<typeof vi.fn>;
+    getPreviewUrl: ReturnType<typeof vi.fn>;
   };
   let mockSearchService: {
     getDashboardViews: ReturnType<typeof vi.fn>;
@@ -45,6 +52,7 @@ describe('DashboardComponent', () => {
       getDocumentTypes: vi.fn().mockReturnValue(
         of({ count: 0, results: [], next: null, previous: null }),
       ),
+      getPreviewUrl: vi.fn().mockReturnValue('/api/v1/documents/1/preview/'),
     };
 
     mockSearchService = {
@@ -75,6 +83,38 @@ describe('DashboardComponent', () => {
         { provide: SearchService, useValue: mockSearchService },
         { provide: OrganizationService, useValue: mockOrganizationService },
         { provide: PreferencesService, useValue: mockPreferencesService },
+        {
+          provide: AuthService,
+          useValue: { currentUser: signal<{ username?: string } | null>(null) },
+        },
+        {
+          provide: EsignatureService,
+          useValue: { getRequests: vi.fn().mockReturnValue(of([])) },
+        },
+        {
+          // ShellStatsService reaches for HttpClient, which this TestBed does
+          // not provide; the dashboard only reads its signals.
+          provide: ShellStatsService,
+          useValue: {
+            refresh: vi.fn(),
+            activeTasks: () => 0,
+            storageLabel: () => null,
+            documentsLabel: () => null,
+            ocrLabel: () => 'ocr idle',
+            ocrBusy: () => false,
+          },
+        },
+        {
+          provide: UploadService,
+          useValue: {
+            pick: vi.fn(),
+            upload: vi.fn(),
+            uploading: () => false,
+            message: () => '',
+            error: () => false,
+            completedTick: () => 0,
+          },
+        },
         provideRouter([]),
       ],
     }).compileComponents();
@@ -200,8 +240,49 @@ describe('DashboardComponent', () => {
       expect(component.getWidgetTitle('welcome')).toBe('Welcome');
       expect(component.getWidgetTitle('statistics')).toBe('Statistics');
       expect(component.getWidgetTitle('recent_documents')).toBe('Recent Documents');
+      expect(component.getWidgetTitle('attention')).toBe('Needs your attention');
       expect(component.getWidgetTitle('saved_views')).toBe('Saved Views');
       expect(component.getWidgetTitle('upload')).toBe('Quick Upload');
+    });
+  });
+
+  describe('layout regions', () => {
+    it('spans the greeting, stats and recent documents across the grid', () => {
+      expect(component.isWideWidget('welcome')).toBe(true);
+      expect(component.isWideWidget('statistics')).toBe(true);
+      expect(component.isWideWidget('recent_documents')).toBe(true);
+    });
+
+    it('keeps the side cards in the narrow column', () => {
+      expect(component.isWideWidget('attention')).toBe(false);
+      expect(component.isWideWidget('saved_views')).toBe(false);
+      expect(component.isWideWidget('upload')).toBe(false);
+    });
+  });
+
+  describe('greeting', () => {
+    it('omits the name when no user is loaded', () => {
+      expect(component.greeting()).toMatch(/^Good (morning|afternoon|evening)$/);
+    });
+  });
+
+  describe('attention items', () => {
+    it('is empty when nothing is pending', () => {
+      component.pendingSignatures.set(0);
+      expect(component.attentionItems()).toEqual([]);
+    });
+
+    it('reports pending signature requests', () => {
+      component.pendingSignatures.set(2);
+      const items = component.attentionItems();
+      expect(items.length).toBe(1);
+      expect(items[0].text).toBe('2 signature requests pending');
+      expect(items[0].category).toBe('e-sign');
+    });
+
+    it('uses the singular for one request', () => {
+      component.pendingSignatures.set(1);
+      expect(component.attentionItems()[0].text).toBe('1 signature request pending');
     });
   });
 

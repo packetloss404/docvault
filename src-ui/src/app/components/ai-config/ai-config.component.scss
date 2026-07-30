@@ -1,0 +1,65 @@
+// AI configuration screen: one-off geometry only. Colours come from tokens.
+
+.pagehead {
+  margin: 18px 0 20px;
+}
+
+.load-label {
+  margin-top: 10px;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.stat-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+.store-action {
+  margin-top: 15px;
+}
+
+.card-note {
+  margin-top: 14px;
+  line-height: 1.5;
+}
+
+.state {
+  font: 400 11px "JetBrains Mono", ui-monospace, monospace;
+  color: var(--faint);
+
+  &--on {
+    color: var(--ok);
+  }
+}
+
+// Status notice (no `.dv-alert` primitive exists yet).
+.notice {
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-line);
+  color: var(--accent-text);
+}

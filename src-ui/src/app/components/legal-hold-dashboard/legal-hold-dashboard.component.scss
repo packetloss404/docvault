@@ -1,0 +1,100 @@
+// Screen-local geometry for the legal hold cards and create form.
+
+.lh-stats {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.lh-section {
+  margin-top: 24px;
+  gap: 10px;
+}
+
+.lh-filter {
+  width: auto;
+  min-width: 150px;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  padding: 6px 12px;
+}
+
+.lh-form {
+  margin-bottom: 16px;
+
+  &__title {
+    margin-bottom: 14px;
+  }
+
+  &__actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+}
+
+.lh-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.lh-field {
+  display: block;
+  min-width: 0;
+
+  &--full {
+    grid-column: 1 / -1;
+  }
+}
+
+.lh-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.lh-card {
+  padding: 14px 17px;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  &__name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+
+    &:hover {
+      color: var(--accent-text);
+    }
+  }
+
+  &__stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 10px;
+    font: 400 11.5px "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--faint);
+  }
+
+  &__note {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+    line-height: 1.45;
+  }
+
+  &__foot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+  }
+}
