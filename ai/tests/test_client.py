@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from django.test import override_settings
 
-from ai.client import LLMClient, get_llm_client, reset_client
+from ai.client import get_llm_client, reset_client
 
 
 @pytest.fixture(autouse=True)

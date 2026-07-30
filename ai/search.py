@@ -9,13 +9,19 @@ from .vector_store import get_vector_store
 logger = logging.getLogger(__name__)
 
 
-def semantic_search(query: str, k: int = VECTOR_SEARCH_K, user_id: int | None = None) -> list[dict]:
+def semantic_search(
+    query: str,
+    k: int = VECTOR_SEARCH_K,
+    user_id: int | None = None,
+    document_ids: list[int] | None = None,
+) -> list[dict]:
     """Perform semantic search using FAISS vector similarity.
 
     Args:
         query: Natural language search query.
         k: Maximum number of results.
-        user_id: Optional user ID for permission filtering.
+        user_id: Optional user ID for legacy owner filtering.
+        document_ids: Optional explicit set of permitted document IDs.
 
     Returns:
         List of result dicts with document_id, score, title, etc.
@@ -39,7 +45,9 @@ def semantic_search(query: str, k: int = VECTOR_SEARCH_K, user_id: int | None = 
         "correspondent", "document_type",
     ).prefetch_related("tags").filter(pk__in=doc_ids)
 
-    if user_id:
+    if document_ids is not None:
+        qs = qs.filter(pk__in=document_ids)
+    elif user_id:
         qs = qs.filter(owner_id=user_id)
 
     results = []
@@ -59,14 +67,18 @@ def semantic_search(query: str, k: int = VECTOR_SEARCH_K, user_id: int | None = 
 
 
 def find_similar_documents(
-    document_id: int, k: int = VECTOR_SEARCH_K, user_id: int | None = None
+    document_id: int,
+    k: int = VECTOR_SEARCH_K,
+    user_id: int | None = None,
+    document_ids: list[int] | None = None,
 ) -> list[dict]:
     """Find documents similar to a given document using vector similarity.
 
     Args:
         document_id: The ID of the source document.
         k: Maximum number of similar documents.
-        user_id: Optional user ID for permission filtering.
+        user_id: Optional user ID for legacy owner filtering.
+        document_ids: Optional explicit set of permitted document IDs.
 
     Returns:
         List of similar document dicts.
@@ -100,7 +112,9 @@ def find_similar_documents(
         "correspondent", "document_type",
     ).prefetch_related("tags").filter(pk__in=doc_ids)
 
-    if user_id:
+    if document_ids is not None:
+        qs = qs.filter(pk__in=document_ids)
+    elif user_id:
         qs = qs.filter(owner_id=user_id)
 
     results = []
@@ -123,6 +137,7 @@ def hybrid_search(
     query: str,
     k: int = VECTOR_SEARCH_K,
     user_id: int | None = None,
+    document_ids: list[int] | None = None,
     keyword_weight: float = HYBRID_KEYWORD_WEIGHT,
     semantic_weight: float = HYBRID_SEMANTIC_WEIGHT,
 ) -> list[dict]:
@@ -136,12 +151,18 @@ def hybrid_search(
     keyword_results = execute_search(
         query_text=query,
         user_id=user_id,
+        document_ids=document_ids,
         page=1,
         page_size=k * 2,
     )
 
     # Semantic search
-    sem_results = semantic_search(query, k=k * 2, user_id=user_id)
+    sem_results = semantic_search(
+        query,
+        k=k * 2,
+        user_id=user_id,
+        document_ids=document_ids,
+    )
 
     # Reciprocal Rank Fusion
     rrf_constant = 60

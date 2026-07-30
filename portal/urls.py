@@ -10,7 +10,11 @@ router.register(r"document-requests", views.DocumentRequestViewSet, basename="do
 urlpatterns = [
     # Admin endpoints
     path("portal-submissions/", views.PortalSubmissionListView.as_view(), name="portal-submission-list"),
-    path("portal-submissions/<int:pk>/review/", views.PortalSubmissionReviewView.as_view(), name="portal-submission-review"),
+    path(
+        "portal-submissions/<int:pk>/review/",
+        views.PortalSubmissionReviewView.as_view(),
+        name="portal-submission-review",
+    ),
     # Public endpoints (no auth)
     path("portal/<slug:slug>/", views.PublicPortalView.as_view(), name="public-portal"),
     path("portal/<slug:slug>/upload/", views.PublicPortalUploadView.as_view(), name="public-portal-upload"),

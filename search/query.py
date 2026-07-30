@@ -74,6 +74,7 @@ def _load_curation(query_text):
 def build_search_query(
     query_text,
     user_id=None,
+    document_ids=None,
     filters=None,
     page=1,
     page_size=25,
@@ -85,7 +86,7 @@ def build_search_query(
     - Full-text search across title, content, original_filename
     - Field-specific queries: tag:invoice, correspondent:acme, type:invoice
     - Date range: created:[2025-01-01 TO 2025-12-31]
-    - Permission filtering by owner_id
+    - Permission filtering by permitted document IDs or owner_id
     """
     must_clauses = []
     filter_clauses = []
@@ -123,8 +124,17 @@ def build_search_query(
             if date_range:
                 filter_clauses.append({"range": {"created": date_range}})
 
-    # Permission filter
-    if user_id:
+    deny_all = False
+
+    # Permission filter. Prefer explicit permitted IDs; user_id remains for
+    # non-view callers that still only know the owner constraint.
+    if document_ids is not None:
+        document_ids = list(document_ids)
+        if document_ids:
+            filter_clauses.append({"terms": {"id": document_ids}})
+        else:
+            deny_all = True
+    elif user_id:
         filter_clauses.append({"term": {"owner_id": user_id}})
 
     # Additional filters
@@ -158,7 +168,9 @@ def build_search_query(
             filter_clauses.append({"term": {"mime_type": filters["mime_type"]}})
 
     # Build the final query
-    if not must_clauses and not filter_clauses:
+    if deny_all:
+        es_query = {"match_none": {}}
+    elif not must_clauses and not filter_clauses:
         es_query = {"match_all": {}}
     else:
         bool_query = {}
@@ -201,7 +213,14 @@ def build_search_query(
     return body
 
 
-def execute_search(query_text, user_id=None, filters=None, page=1, page_size=25):
+def execute_search(
+    query_text,
+    user_id=None,
+    document_ids=None,
+    filters=None,
+    page=1,
+    page_size=25,
+):
     """Execute a search query and return formatted results.
 
     Before building the ES query:
@@ -236,7 +255,14 @@ def execute_search(query_text, user_id=None, filters=None, page=1, page_size=25)
         )
 
     # Build and execute main ES query using the expanded text
-    body = build_search_query(expanded_query, user_id, filters, page, page_size)
+    body = build_search_query(
+        expanded_query,
+        user_id=user_id,
+        document_ids=document_ids,
+        filters=filters,
+        page=page,
+        page_size=page_size,
+    )
 
     # Exclude hidden documents at the ES level for efficiency
     if hidden_ids:
@@ -258,19 +284,24 @@ def execute_search(query_text, user_id=None, filters=None, page=1, page_size=25)
 
     # Prepend pinned documents on the first page only
     if pinned_ids and page == 1:
-        results = _prepend_pinned(results, pinned_ids, hidden_ids)
+        results = _prepend_pinned(results, pinned_ids, hidden_ids, document_ids)
 
     return results
 
 
-def execute_autocomplete(query_text, user_id=None, limit=10):
+def execute_autocomplete(query_text, user_id=None, document_ids=None, limit=10):
     """Execute an autocomplete search for typeahead suggestions."""
     client = get_client()
     if not client:
         return []
 
     filter_clauses = []
-    if user_id:
+    if document_ids is not None:
+        document_ids = list(document_ids)
+        if not document_ids:
+            return []
+        filter_clauses.append({"terms": {"id": document_ids}})
+    elif user_id:
         filter_clauses.append({"term": {"owner_id": user_id}})
 
     body = {
@@ -310,14 +341,19 @@ def execute_autocomplete(query_text, user_id=None, limit=10):
     ]
 
 
-def execute_more_like_this(document_id, user_id=None, limit=10):
+def execute_more_like_this(document_id, user_id=None, document_ids=None, limit=10):
     """Find documents similar to the given document."""
     client = get_client()
     if not client:
         return []
 
     filter_clauses = [{"bool": {"must_not": {"term": {"id": document_id}}}}]
-    if user_id:
+    if document_ids is not None:
+        document_ids = list(document_ids)
+        if not document_ids:
+            return []
+        filter_clauses.append({"terms": {"id": document_ids}})
+    elif user_id:
         filter_clauses.append({"term": {"owner_id": user_id}})
 
     body = {
@@ -445,7 +481,7 @@ def _format_results(response, page, page_size):
     }
 
 
-def _prepend_pinned(results, pinned_ids, hidden_ids):
+def _prepend_pinned(results, pinned_ids, hidden_ids, permitted_ids=None):
     """Prepend pinned documents to search results.
 
     Fetches pinned Document records and inserts them at the top of the first
@@ -455,15 +491,13 @@ def _prepend_pinned(results, pinned_ids, hidden_ids):
     """
     from documents.models import Document
 
-    # Build a lookup of existing result doc IDs to avoid duplicates
-    existing_ids = {r.get("id") for r in results["results"]}
-
-    # Fetch pinned documents in declared order (skip hidden ones)
+    # Fetch pinned documents in declared order (skip hidden or inaccessible ones)
+    qs = Document.objects.filter(id__in=pinned_ids)
+    if permitted_ids is not None:
+        qs = qs.filter(id__in=permitted_ids)
     pinned_docs = {
         d.id: d
-        for d in Document.objects.filter(
-            id__in=pinned_ids,
-        ).select_related("document_type", "correspondent")
+        for d in qs.select_related("document_type", "correspondent")
     }
 
     pinned_entries = []

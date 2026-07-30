@@ -42,6 +42,8 @@ IMPORTANT — Post-install steps:
   2. Run database migrations (if first install):
      kubectl exec -it deploy/{{ include "docvault.fullname" . }}-web -- python manage.py migrate
 
-  3. Change the DJANGO_SECRET_KEY in your values.yaml before going to production!
+  3. Change secretEnv.DJANGO_SECRET_KEY in your values file before going to production.
+     Keep DATABASE_URL, REDIS_URL, API keys, and storage credentials in secretEnv.
+     Set env.DJANGO_ALLOWED_HOSTS to your real ingress hosts and enable TLS before exposing the service.
 
 For more information visit: https://github.com/packetloss404/docvault

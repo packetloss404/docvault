@@ -9,7 +9,6 @@ from workflows.constants import (
     ACTION_ADD_TAG,
     ACTION_SET_TYPE,
     MATCH_LITERAL,
-    TRIGGER_CONSUMPTION,
     TRIGGER_DOCUMENT_ADDED,
     TRIGGER_DOCUMENT_UPDATED,
 )

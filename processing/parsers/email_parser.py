@@ -3,7 +3,6 @@
 import email
 import email.policy
 import logging
-from datetime import date
 from pathlib import Path
 
 from .base import DocumentParser, ParseResult

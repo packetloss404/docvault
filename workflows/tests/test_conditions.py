@@ -143,6 +143,11 @@ class ConditionsTest(TestCase):
         with self.assertRaises(UnsafeExpressionError):
             evaluate_condition("exec('import os')", instance)
 
+    def test_rejects_live_model_method_call(self):
+        instance = self._make_instance()
+        with self.assertRaises(UnsafeExpressionError):
+            evaluate_condition("document.delete()", instance)
+
     def test_syntax_error(self):
         instance = self._make_instance()
         with self.assertRaises(UnsafeExpressionError):

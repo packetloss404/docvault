@@ -168,7 +168,7 @@ class TestDocumentRelationship:
             target_document=doc_b,
             relationship_type=rel_type,
         )
-        expected = f"Document A --[Test Type]--> Document B"
+        expected = "Document A --[Test Type]--> Document B"
         assert str(rel) == expected
 
     @pytest.mark.django_db

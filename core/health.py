@@ -7,8 +7,7 @@ from django.conf import settings
 from django.db import connection
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
+from rest_framework.permissions import AllowAny, IsAdminUser
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +138,7 @@ def readiness_view(request):
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAdminUser])
 def metrics_view(request):
     """Prometheus-compatible metrics endpoint.
 

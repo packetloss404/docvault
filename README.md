@@ -138,9 +138,8 @@ cd docvault
 # Backend
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
-pip install -r docvault/requirements/dev.txt
-cp .env.example docvault/.env
-cd docvault
+pip install -r requirements/dev.txt
+cp .env.example .env
 python manage.py migrate
 python manage.py createsuperuser
 python manage.py runserver 5000
@@ -216,15 +215,12 @@ All endpoints are under `/api/v1/`:
 ## Testing
 
 ```bash
-# Backend — 1,029 tests
-cd docvault
-python manage.py test
+# Backend
+python -m pytest
 
-# Frontend — 525 tests
+# Frontend
 cd src-ui
-npx ng test
-
-# Total: 1,554 tests
+npm test
 ```
 
 ---

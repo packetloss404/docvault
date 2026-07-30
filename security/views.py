@@ -2,7 +2,6 @@
 
 import base64
 import csv
-import io
 import logging
 
 from django.contrib.auth.models import Group, User
@@ -10,9 +9,10 @@ from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.authtoken.models import Token
-from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from security.permissions import get_document_for_user
 
 from .models import AuditLogEntry, OTPDevice, Permission, Role, Signature, log_audit_event
 from .serializers import (
@@ -24,7 +24,6 @@ from .serializers import (
     LoginSerializer,
     OTPConfirmSerializer,
     OTPDisableSerializer,
-    OTPStatusSerializer,
     OTPVerifySerializer,
     PermissionSerializer,
     ProfileSerializer,
@@ -53,6 +52,36 @@ class LoginView(APIView):
         serializer = LoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data["user"]
+        otp_code = serializer.validated_data.get("otp_code", "")
+
+        try:
+            device = OTPDevice.objects.get(user=user, confirmed=True)
+        except OTPDevice.DoesNotExist:
+            device = None
+
+        if device is not None:
+            if not otp_code:
+                return Response(
+                    {
+                        "otp_required": True,
+                        "user_id": user.pk,
+                        "username": user.username,
+                    },
+                    status=status.HTTP_202_ACCEPTED,
+                )
+
+            from .otp import verify_backup_code, verify_totp
+
+            if not verify_totp(device.secret, otp_code):
+                idx = verify_backup_code(otp_code, device.backup_codes)
+                if idx < 0:
+                    return Response(
+                        {"otp_code": ["Invalid OTP code."]},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                device.backup_codes.pop(idx)
+                device.save(update_fields=["backup_codes"])
+
         token, _ = Token.objects.get_or_create(user=user)
         return Response({
             "token": token.key,
@@ -178,14 +207,11 @@ class DocumentSignView(APIView):
     """Sign a document with GPG."""
 
     def post(self, request, document_id):
-        from documents.models import Document
         from storage.utils import get_storage_backend
+
         from .signing import sign_data
 
-        try:
-            document = Document.objects.get(pk=document_id)
-        except Document.DoesNotExist:
-            return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
+        document = get_document_for_user(request.user, document_id, action="change")
 
         serializer = SignDocumentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -232,6 +258,7 @@ class DocumentSignatureListView(APIView):
     """List signatures for a document."""
 
     def get(self, request, document_id):
+        get_document_for_user(request.user, document_id, action="view")
         signatures = Signature.objects.filter(document_id=document_id).select_related("signer")
         serializer = SignatureSerializer(signatures, many=True)
         return Response(serializer.data)
@@ -241,14 +268,11 @@ class DocumentVerifyView(APIView):
     """Verify document signatures."""
 
     def post(self, request, document_id):
-        from documents.models import Document
         from storage.utils import get_storage_backend
+
         from .signing import verify_signature
 
-        try:
-            document = Document.objects.get(pk=document_id)
-        except Document.DoesNotExist:
-            return Response({"error": "Document not found."}, status=status.HTTP_404_NOT_FOUND)
+        document = get_document_for_user(request.user, document_id, action="change")
 
         serializer = VerifyDocumentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -351,7 +375,7 @@ class OTPSetupView(APIView):
     """Begin OTP setup: generate secret and QR code."""
 
     def post(self, request):
-        from .otp import generate_totp_secret, get_provisioning_uri, generate_qr_code
+        from .otp import generate_qr_code, generate_totp_secret, get_provisioning_uri
 
         # Delete existing unconfirmed device
         OTPDevice.objects.filter(user=request.user, confirmed=False).delete()
@@ -388,7 +412,7 @@ class OTPConfirmView(APIView):
     """Confirm OTP setup by verifying the first code."""
 
     def post(self, request):
-        from .otp import verify_totp, hash_backup_code
+        from .otp import hash_backup_code, verify_totp
 
         serializer = OTPConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -455,7 +479,7 @@ class OTPVerifyView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        from .otp import verify_totp, verify_backup_code
+        from .otp import verify_backup_code, verify_totp
 
         serializer = OTPVerifySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

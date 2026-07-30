@@ -32,11 +32,10 @@ def configure_ldap_backend():
         return
 
     try:
-        import ldap
-        from django_auth_ldap.config import GroupOfNamesType, LDAPSearch
-
-        from django.conf import settings as django_settings
         import environ
+        import ldap
+        from django.conf import settings as django_settings
+        from django_auth_ldap.config import GroupOfNamesType, LDAPSearch
 
         env = environ.Env()
 

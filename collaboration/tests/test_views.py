@@ -1,6 +1,7 @@
 """Tests for collaboration module API views."""
 
 from datetime import timedelta
+from io import BytesIO
 from unittest.mock import patch
 
 import pytest
@@ -136,7 +137,7 @@ class TestDocumentCommentDetailView:
     def test_patch_comment_by_non_owner_returns_403(
         self, api_client, user, other_user, document
     ):
-        """PATCH by a user who is not the comment owner returns 403."""
+        """PATCH by a user without document access returns 404."""
         comment = Comment.objects.create(
             document=document, user=user, text="Owner's comment.", created_by=user,
         )
@@ -146,7 +147,7 @@ class TestDocumentCommentDetailView:
             {"text": "Hijack attempt."},
             format="json",
         )
-        assert resp.status_code == status.HTTP_403_FORBIDDEN
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
 
     def test_delete_comment_soft_deletes(self, api_client, user, document):
         """DELETE soft-deletes the comment (hidden from default manager)."""
@@ -378,7 +379,25 @@ class TestPublicShareAccessView:
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data["document_id"] == document.pk
         assert resp.data["document_title"] == document.title
-        # download_count should have incremented
+        # Metadata access does not count as a download.
+        link.refresh_from_db()
+        assert link.download_count == 0
+
+    @patch("storage.utils.get_storage_backend")
+    def test_download_public_share_no_password(
+        self, mock_get_storage_backend, api_client, user, document
+    ):
+        """Public download streams through the share URL and increments count."""
+        backend = mock_get_storage_backend.return_value
+        backend.exists.return_value = True
+        backend.open.return_value = BytesIO(b"file-content")
+        link = ShareLink.objects.create(
+            document=document, created_by=user, slug="download-open",
+        )
+
+        resp = api_client.get("/api/v1/share/download-open/download/")
+
+        assert resp.status_code == status.HTTP_200_OK
         link.refresh_from_db()
         assert link.download_count == 1
 
@@ -420,6 +439,35 @@ class TestPublicShareAccessView:
             format="json",
         )
         assert resp_bad.status_code == status.HTTP_403_FORBIDDEN
+
+    @patch("storage.utils.get_storage_backend")
+    def test_password_share_download_requires_verified_token(
+        self, mock_get_storage_backend, api_client, user, document
+    ):
+        """Password-protected shares require a verified download token."""
+        backend = mock_get_storage_backend.return_value
+        backend.exists.return_value = True
+        backend.open.return_value = BytesIO(b"file-content")
+        link = ShareLink.objects.create(
+            document=document, created_by=user, slug="download-pwd",
+        )
+        link.set_password("mypass")
+        link.save()
+
+        denied = api_client.get("/api/v1/share/download-pwd/download/")
+        assert denied.status_code == status.HTTP_403_FORBIDDEN
+
+        verified = api_client.post(
+            "/api/v1/share/download-pwd/",
+            {"password": "mypass"},
+            format="json",
+        )
+        token = verified.data["download_token"]
+        resp = api_client.get(f"/api/v1/share/download-pwd/download/?token={token}")
+
+        assert resp.status_code == status.HTTP_200_OK
+        link.refresh_from_db()
+        assert link.download_count == 1
 
     def test_get_expired_share_returns_404(self, api_client, user, document):
         """GET on an expired share link returns 404."""

@@ -1,6 +1,5 @@
 """Local filesystem storage backend."""
 
-import os
 import shutil
 from pathlib import Path
 from typing import BinaryIO
@@ -23,7 +22,18 @@ class LocalStorageBackend(StorageBackend):
             (self.base_dir / subdir).mkdir(parents=True, exist_ok=True)
 
     def _full_path(self, name: str) -> Path:
-        return self.base_dir / name
+        if not name:
+            raise ValueError("Storage name must not be empty.")
+
+        candidate = Path(name)
+        if candidate.is_absolute() or ".." in candidate.parts:
+            raise ValueError("Storage name must be a relative path inside storage.")
+
+        base = self.base_dir.resolve()
+        resolved = (base / candidate).resolve()
+        if not resolved.is_relative_to(base):
+            raise ValueError("Storage name resolves outside the storage directory.")
+        return resolved
 
     def save(self, name: str, content: BinaryIO) -> str:
         path = self._full_path(name)
@@ -54,8 +64,9 @@ class LocalStorageBackend(StorageBackend):
         search_dir = self._full_path(prefix) if prefix else self.base_dir
         if not search_dir.is_dir():
             return []
+        base = self.base_dir.resolve()
         return [
-            str(p.relative_to(self.base_dir))
+            str(p.resolve().relative_to(base))
             for p in search_dir.rglob("*")
             if p.is_file()
         ]

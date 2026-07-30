@@ -271,6 +271,37 @@ class MetadataAPITest(TestCase):
         self.assertEqual(resp.data[0]["value"], "2026-01-15")
         self.assertEqual(resp.data[0]["metadata_type_label"], "Date")
 
+    def test_document_metadata_nested_list_unpermitted_document_is_denied(self):
+        other_user = User.objects.create_user(username="mt-other", password="pass!")
+        other_doc = Document.objects.create(
+            title="Other", owner=other_user, filename="o/mt-other.txt",
+        )
+        resp = self.client.get(f"/api/v1/documents/{other_doc.pk}/metadata/")
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_document_metadata_flat_list_excludes_unpermitted_documents(self):
+        doc = Document.objects.create(
+            title="Owned", owner=self.user, filename="o/mt-owned.txt",
+        )
+        other_user = User.objects.create_user(username="mt-flat-other", password="pass!")
+        other_doc = Document.objects.create(
+            title="Other", owner=other_user, filename="o/mt-flat-other.txt",
+        )
+        mt = MetadataType.objects.create(name="flat", owner=self.user)
+        own_meta = DocumentMetadata.objects.create(
+            document=doc, metadata_type=mt, value="owned",
+        )
+        other_meta = DocumentMetadata.objects.create(
+            document=other_doc, metadata_type=mt, value="other",
+        )
+
+        resp = self.client.get("/api/v1/document-metadata/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        results = resp.data["results"] if isinstance(resp.data, dict) else resp.data
+        metadata_ids = {item["id"] for item in results}
+        self.assertIn(own_meta.pk, metadata_ids)
+        self.assertNotIn(other_meta.pk, metadata_ids)
+
     def test_document_metadata_nested_create(self):
         doc = Document.objects.create(
             title="Test", owner=self.user, filename="o/mapi2.txt",
@@ -287,6 +318,37 @@ class MetadataAPITest(TestCase):
             "Important",
         )
 
+    def test_document_metadata_nested_create_unpermitted_document_is_denied(self):
+        other_user = User.objects.create_user(username="mt-create-other", password="pass!")
+        other_doc = Document.objects.create(
+            title="Other", owner=other_user, filename="o/mt-create-other.txt",
+        )
+        mt = MetadataType.objects.create(name="blocked", owner=self.user)
+        resp = self.client.post(f"/api/v1/documents/{other_doc.pk}/metadata/", {
+            "document": other_doc.pk,
+            "metadata_type": mt.pk,
+            "value": "nope",
+        })
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertFalse(
+            DocumentMetadata.objects.filter(document=other_doc, metadata_type=mt).exists()
+        )
+
+    def test_document_metadata_nested_create_rejects_url_mismatch(self):
+        doc = Document.objects.create(
+            title="Test", owner=self.user, filename="o/mapi-mismatch-1.txt",
+        )
+        other_doc = Document.objects.create(
+            title="Other", owner=self.user, filename="o/mapi-mismatch-2.txt",
+        )
+        mt = MetadataType.objects.create(name="mismatch", owner=self.user)
+        resp = self.client.post(f"/api/v1/documents/{doc.pk}/metadata/", {
+            "document": other_doc.pk,
+            "metadata_type": mt.pk,
+            "value": "wrong path",
+        })
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_document_metadata_nested_delete(self):
         doc = Document.objects.create(
             title="Test", owner=self.user, filename="o/mapi3.txt",
@@ -299,6 +361,21 @@ class MetadataAPITest(TestCase):
             f"/api/v1/documents/{doc.pk}/metadata/{dm.pk}/",
         )
         self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_document_metadata_nested_delete_unpermitted_document_is_denied(self):
+        other_user = User.objects.create_user(username="mt-delete-other", password="pass!")
+        other_doc = Document.objects.create(
+            title="Other", owner=other_user, filename="o/mt-delete-other.txt",
+        )
+        mt = MetadataType.objects.create(name="delete_blocked", owner=self.user)
+        dm = DocumentMetadata.objects.create(
+            document=other_doc, metadata_type=mt, value="secret",
+        )
+        resp = self.client.delete(
+            f"/api/v1/documents/{other_doc.pk}/metadata/{dm.pk}/",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertTrue(DocumentMetadata.objects.filter(pk=dm.pk).exists())
 
     def test_doctype_metadata_assignment_api(self):
         dt = DocumentType.objects.create(name="Invoice", owner=self.user)

@@ -17,7 +17,7 @@ class ClassificationPluginTest(TestCase):
     def test_name_and_order(self):
         """Plugin has the expected name and order."""
         self.assertEqual(self.plugin.name, "ClassificationPlugin")
-        self.assertEqual(self.plugin.order, 100)
+        self.assertEqual(self.plugin.order, 80)
 
     def test_can_run_with_content(self):
         """can_run returns True when context has non-empty content."""

@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 
-from django.db.models import Avg, Count, F, Q
+from django.db.models import Count
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 from rest_framework import permissions, status, viewsets
@@ -10,7 +10,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from documents.models import Document
 from documents.serializers import DocumentListSerializer
+from security.permissions import get_document_for_user, get_objects_for_user_with_ownership
 
 from .models import SavedView, SearchCuration, SearchQuery, SearchSynonym
 from .query import execute_autocomplete, execute_more_like_this, execute_search
@@ -22,6 +24,19 @@ from .serializers import (
     SearchCurationSerializer,
     SearchSynonymSerializer,
 )
+
+
+def _permitted_document_ids(user):
+    """Return document IDs the user may search, or None for all-access users."""
+    if user.is_superuser or user.is_staff:
+        return None
+    return list(
+        get_objects_for_user_with_ownership(
+            user,
+            "documents.view_document",
+            Document.objects.all(),
+        ).values_list("id", flat=True)
+    )
 
 
 class SearchView(APIView):
@@ -66,14 +81,11 @@ class SearchView(APIView):
         if request.query_params.get("mime_type"):
             filters["mime_type"] = request.query_params["mime_type"]
 
-        # Permission: non-superusers only see their own docs
-        user_id = None
-        if not request.user.is_superuser:
-            user_id = request.user.id
+        document_ids = _permitted_document_ids(request.user)
 
         results = execute_search(
             query_text=query,
-            user_id=user_id,
+            document_ids=document_ids,
             filters=filters,
             page=page,
             page_size=page_size,
@@ -99,13 +111,11 @@ class SearchAutocompleteView(APIView):
         if len(query) < 2:
             return Response([])
 
-        user_id = None
-        if not request.user.is_superuser:
-            user_id = request.user.id
+        document_ids = _permitted_document_ids(request.user)
 
         suggestions = execute_autocomplete(
             query_text=query,
-            user_id=user_id,
+            document_ids=document_ids,
             limit=limit,
         )
 
@@ -125,13 +135,12 @@ class SimilarDocumentsView(APIView):
         limit = int(request.query_params.get("limit", 10))
         limit = min(limit, 20)
 
-        user_id = None
-        if not request.user.is_superuser:
-            user_id = request.user.id
+        get_document_for_user(request.user, pk, action="view")
+        document_ids = _permitted_document_ids(request.user)
 
         results = execute_more_like_this(
             document_id=pk,
-            user_id=user_id,
+            document_ids=document_ids,
             limit=limit,
         )
 
@@ -156,6 +165,8 @@ class SavedViewViewSet(viewsets.ModelViewSet):
     ordering = ["name"]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return SavedView.objects.none()
         return SavedView.objects.filter(owner=self.request.user)
 
     def get_serializer_class(self):
@@ -174,7 +185,6 @@ class SavedViewViewSet(viewsets.ModelViewSet):
 
         # Apply pagination
         page_size = saved_view.page_size or 25
-        page_num = int(request.query_params.get("page", 1))
 
         from core.pagination import StandardPagination
 

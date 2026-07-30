@@ -5,7 +5,7 @@ from django.contrib.auth.models import Group, User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
-from .models import AuditLogEntry, OTPDevice, Permission, Role, Signature
+from .models import AuditLogEntry, Permission, Role, Signature
 
 
 class PermissionSerializer(serializers.ModelSerializer):
@@ -81,13 +81,19 @@ class GroupSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "user_count"]
         read_only_fields = ["id"]
 
-    def get_user_count(self, obj):
+    def get_user_count(self, obj) -> int:
         return obj.user_set.count()
 
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
     password = serializers.CharField(write_only=True)
+    otp_code = serializers.CharField(
+        max_length=8,
+        required=False,
+        allow_blank=True,
+        write_only=True,
+    )
 
     def validate(self, data):
         user = authenticate(username=data["username"], password=data["password"])

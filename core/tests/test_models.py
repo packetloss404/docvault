@@ -1,13 +1,8 @@
 """Tests for core abstract base models."""
 
 from django.contrib.auth.models import User
-from django.db import models
 from django.test import TestCase
 from django.utils import timezone
-
-from core.managers import AllObjectsManager, SoftDeleteManager
-from core.models import AuditableModel, OwnedModel, SoftDeleteModel
-
 
 # Concrete test models (these use the abstract bases)
 # We test via the Document model which inherits all three base classes.

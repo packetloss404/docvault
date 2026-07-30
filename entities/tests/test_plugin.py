@@ -1,8 +1,8 @@
 """Tests for the NERPlugin."""
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
+import pytest
 from django.contrib.auth.models import User
 from django.test import override_settings
 

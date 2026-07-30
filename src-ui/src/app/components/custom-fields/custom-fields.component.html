@@ -77,7 +77,7 @@
               <span class="badge bg-secondary">{{ field.data_type }}</span>
             </td>
             <td>
-              @if (field.extra_data?.['options']) {
+              @if (field.extra_data['options']) {
                 {{ $any(field.extra_data['options']).join(', ') }}
               } @else {
                 -

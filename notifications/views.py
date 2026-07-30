@@ -1,6 +1,6 @@
 """API views for the notifications module."""
 
-from rest_framework import generics, permissions, status, viewsets
+from rest_framework import generics, permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -27,6 +27,8 @@ class NotificationViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "post", "delete"]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return Notification.objects.none()
         qs = Notification.objects.filter(user=self.request.user)
         # Optional filter: unread only
         unread = self.request.query_params.get("unread")
@@ -70,6 +72,8 @@ class NotificationPreferenceViewSet(viewsets.ModelViewSet):
     serializer_class = NotificationPreferenceSerializer
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return NotificationPreference.objects.none()
         return NotificationPreference.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):

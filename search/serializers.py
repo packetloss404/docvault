@@ -81,7 +81,7 @@ class SavedViewListSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "owner", "created_at", "updated_at"]
 
-    def get_rule_count(self, obj):
+    def get_rule_count(self, obj) -> int:
         return obj.filter_rules.count()
 
 

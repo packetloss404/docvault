@@ -4,8 +4,10 @@ import hashlib
 import secrets
 
 from django.conf import settings
+from django.contrib.auth.hashers import check_password, make_password
 from django.db import models
 from django.utils import timezone
+from django.utils.crypto import constant_time_compare
 
 from core.models import AuditableModel, SoftDeleteModel
 
@@ -145,7 +147,14 @@ class ShareLink(AuditableModel):
         return bool(self.password_hash)
 
     def set_password(self, password: str):
-        self.password_hash = hashlib.sha256(password.encode()).hexdigest()
+        self.password_hash = make_password(password)
 
     def check_password(self, password: str) -> bool:
-        return self.password_hash == hashlib.sha256(password.encode()).hexdigest()
+        if not self.password_hash:
+            return False
+
+        legacy_hash = hashlib.sha256(password.encode()).hexdigest()
+        if len(self.password_hash) == 64 and "$" not in self.password_hash:
+            return constant_time_compare(self.password_hash, legacy_hash)
+
+        return check_password(password, self.password_hash)

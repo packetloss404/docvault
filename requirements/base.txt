@@ -13,6 +13,7 @@ celery>=5.6
 redis>=5.2
 channels>=4.2
 channels-redis>=4.2
+daphne>=4.1
 django-storages>=1.14
 boto3>=1.40
 python-magic-bin>=0.4

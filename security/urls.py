@@ -26,7 +26,11 @@ urlpatterns = [
     path("auth/otp/status/", views.OTPStatusView.as_view(), name="otp-status"),
     # Document signing
     path("documents/<int:document_id>/sign/", views.DocumentSignView.as_view(), name="document-sign"),
-    path("documents/<int:document_id>/signatures/", views.DocumentSignatureListView.as_view(), name="document-signatures"),
+    path(
+        "documents/<int:document_id>/signatures/",
+        views.DocumentSignatureListView.as_view(),
+        name="document-signatures",
+    ),
     path("documents/<int:document_id>/verify/", views.DocumentVerifyView.as_view(), name="document-verify"),
     # GPG key management
     path("gpg-keys/", views.GPGKeyListView.as_view(), name="gpg-key-list"),

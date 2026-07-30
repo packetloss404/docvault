@@ -108,7 +108,7 @@ ENV DJANGO_SETTINGS_MODULE=docvault.settings.production \
     STATIC_ROOT=/app/staticfiles
 
 # Collect static files (Django admin, DRF, etc.)
-RUN DJANGO_SECRET_KEY=build-placeholder \
+RUN DJANGO_SECRET_KEY=build-time-secret-for-static-collection-only \
     DATABASE_URL=sqlite:////tmp/db.sqlite3 \
     python manage.py collectstatic --noinput
 
@@ -127,18 +127,5 @@ EXPOSE 8000
 # Drop to non-root user
 USER docvault
 
-# Run gunicorn with sensible production defaults
-CMD ["gunicorn", "docvault.wsgi:application", \
-     "--bind", "0.0.0.0:8000", \
-     "--workers", "4", \
-     "--threads", "2", \
-     "--worker-class", "gthread", \
-     "--worker-tmp-dir", "/dev/shm", \
-     "--timeout", "120", \
-     "--graceful-timeout", "30", \
-     "--keep-alive", "5", \
-     "--max-requests", "1000", \
-     "--max-requests-jitter", "50", \
-     "--access-logfile", "-", \
-     "--error-logfile", "-", \
-     "--log-level", "info"]
+# Run ASGI so HTTP and WebSocket routes are both served.
+CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "docvault.asgi:application"]

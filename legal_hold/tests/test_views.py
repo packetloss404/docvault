@@ -6,7 +6,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
-from legal_hold.constants import ACTIVE, DRAFT
+from legal_hold.constants import ACTIVE
 from legal_hold.models import (
     LegalHold,
     LegalHoldCriteria,
@@ -322,7 +322,7 @@ class TestCustodianAcknowledge:
     def test_acknowledge_already_acknowledged(self, client, staff_user, hold):
         from django.utils import timezone
 
-        custodian = LegalHoldCustodian.objects.create(
+        LegalHoldCustodian.objects.create(
             hold=hold, user=staff_user, acknowledged=True, acknowledged_at=timezone.now()
         )
         client.force_authenticate(user=staff_user)

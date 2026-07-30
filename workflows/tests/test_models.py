@@ -430,10 +430,10 @@ class WorkflowInstanceLogEntryModelTest(TestCase):
         self.assertEqual(WorkflowInstanceLogEntry.objects.count(), 0)
 
     def test_ordering(self):
-        e1 = WorkflowInstanceLogEntry.objects.create(
+        WorkflowInstanceLogEntry.objects.create(
             instance=self.instance, comment="First"
         )
-        e2 = WorkflowInstanceLogEntry.objects.create(
+        WorkflowInstanceLogEntry.objects.create(
             instance=self.instance, comment="Second"
         )
         entries = list(

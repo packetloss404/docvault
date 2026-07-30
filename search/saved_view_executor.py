@@ -1,8 +1,7 @@
 """Execute saved views by applying filter rules to Django querysets."""
 
-from django.db.models import Q
-
 from documents.models import Document
+from security.permissions import get_objects_for_user_with_ownership
 
 from .models import (
     RULE_ADDED_AFTER,
@@ -43,11 +42,14 @@ def execute_saved_view(saved_view, user=None):
 
     Applies all filter rules with AND logic.
     """
-    qs = Document.objects.all()
-
-    # Permission: non-superusers only see their own documents
-    if user and not user.is_superuser:
-        qs = qs.filter(owner=user)
+    if user:
+        qs = get_objects_for_user_with_ownership(
+            user,
+            "documents.view_document",
+            Document.objects.all(),
+        )
+    else:
+        qs = Document.objects.all()
 
     rules = saved_view.get_filter_rules_dict()
 

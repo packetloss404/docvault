@@ -96,6 +96,17 @@ class BuildSearchQueryTest(TestCase):
         self.assertEqual(len(owner_filter), 1)
         self.assertEqual(owner_filter[0]["term"]["owner_id"], 42)
 
+    def test_document_ids_permission_filter(self):
+        body = build_search_query("test", document_ids=[10, 20])
+        filters = body["query"]["bool"]["filter"]
+        id_filter = [f for f in filters if "terms" in f and "id" in f["terms"]]
+        self.assertEqual(len(id_filter), 1)
+        self.assertEqual(id_filter[0]["terms"]["id"], [10, 20])
+
+    def test_empty_document_ids_match_none(self):
+        body = build_search_query("test", document_ids=[])
+        self.assertEqual(body["query"], {"match_none": {}})
+
     def test_no_permission_filter_when_none(self):
         body = build_search_query("test")
         # Should have must but may not have filter

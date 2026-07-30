@@ -14,7 +14,6 @@ from workflows.actions.launch_workflow import LaunchWorkflowAction
 from workflows.actions.metadata import SetMetadataAction
 from workflows.actions.tags import AddTagAction
 from workflows.actions.webhook import WebhookAction
-from workflows.engine import launch
 from workflows.models import (
     WorkflowInstance,
     WorkflowState,

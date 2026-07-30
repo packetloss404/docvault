@@ -15,6 +15,13 @@ class DocumentConsumer:
 
     def _discover_plugins(self) -> list:
         """Discover and instantiate plugins sorted by order."""
+        from ai.plugin import AIPlugin
+        from entities.plugin import NERPlugin
+        from ml.plugin import ClassificationPlugin
+        from workflows.plugins import WorkflowTriggerPlugin
+        from zone_ocr.plugin import ZoneOCRPlugin
+
+        from .plugins.barcode import BarcodePlugin
         from .plugins.date_extraction import DateExtractionPlugin
         from .plugins.hooks import PostConsumeHookPlugin, PreConsumeHookPlugin
         from .plugins.language import LanguageDetectionPlugin
@@ -22,13 +29,6 @@ class DocumentConsumer:
         from .plugins.preflight import PreflightPlugin
         from .plugins.store import StorePlugin
         from .plugins.thumbnail import ThumbnailPlugin
-        from ai.plugin import AIPlugin
-        from ml.plugin import ClassificationPlugin
-        from workflows.plugins import WorkflowTriggerPlugin
-
-        from .plugins.barcode import BarcodePlugin
-        from entities.plugin import NERPlugin
-        from zone_ocr.plugin import ZoneOCRPlugin
 
         plugin_classes = [
             PreflightPlugin,         # order=10
@@ -38,8 +38,8 @@ class DocumentConsumer:
             ParserPlugin,            # order=50
             LanguageDetectionPlugin, # order=60
             DateExtractionPlugin,    # order=70
+            ClassificationPlugin,    # order=80
             StorePlugin,             # order=90
-            ClassificationPlugin,   # order=100
             ZoneOCRPlugin,           # order=107
             AIPlugin,               # order=110
             NERPlugin,              # order=115

@@ -106,6 +106,23 @@ describe('AuthService', () => {
       expect(service.token()).toBe('tok-stored');
     });
 
+    it('should not store a token when OTP is required', () => {
+      const credentials: LoginRequest = { username: 'alice', password: 'secret' };
+      const mockResponse: LoginResponse = {
+        otp_required: true,
+        user_id: 1,
+        username: 'alice',
+      };
+
+      service.login(credentials).subscribe((res) => {
+        expect(res.otp_required).toBe(true);
+      });
+      httpMock.expectOne(`${API}/auth/login/`).flush(mockResponse);
+
+      expect(localStorage.getItem('docvault_token')).toBeNull();
+      expect(service.isAuthenticated()).toBe(false);
+    });
+
     it('should propagate HTTP errors from login', () => {
       const credentials: LoginRequest = { username: 'bad', password: 'wrong' };
       let caughtError: unknown;

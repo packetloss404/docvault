@@ -87,6 +87,32 @@ class TestSemanticSearch:
         assert doc1.pk in result_ids
         assert doc2.pk not in result_ids
 
+    @override_settings(LLM_ENABLED=True, LLM_PROVIDER="openai", LLM_API_KEY="test-key")
+    @patch("ai.search.get_vector_store")
+    @patch("ai.search.generate_query_embedding")
+    def test_filters_by_document_ids(self, mock_gen_embed, mock_get_store):
+        """Explicit permitted document IDs include shared documents."""
+        user1 = User.objects.create_user("docids1", password="pass123!")
+        user2 = User.objects.create_user("docids2", password="pass123!")
+        doc1 = Document.objects.create(title="Visible 1", content="C", owner=user1)
+        doc2 = Document.objects.create(title="Visible 2", content="C", owner=user2)
+        hidden = Document.objects.create(title="Hidden", content="C", owner=user2)
+
+        mock_gen_embed.return_value = [0.1] * 128
+        mock_store = MagicMock()
+        mock_store.search.return_value = [
+            (doc1.pk, 0.9), (doc2.pk, 0.8), (hidden.pk, 0.7),
+        ]
+        mock_get_store.return_value = mock_store
+
+        from ai.search import semantic_search
+
+        results = semantic_search("test", k=10, document_ids=[doc1.pk, doc2.pk])
+        result_ids = [r["id"] for r in results]
+        assert doc1.pk in result_ids
+        assert doc2.pk in result_ids
+        assert hidden.pk not in result_ids
+
 
 @pytest.mark.django_db
 class TestFindSimilarDocuments:
@@ -119,6 +145,33 @@ class TestFindSimilarDocuments:
         result_ids = [r["id"] for r in results]
         assert source.pk not in result_ids
         assert similar.pk in result_ids
+
+    @override_settings(LLM_ENABLED=True, LLM_PROVIDER="openai", LLM_API_KEY="test-key")
+    @patch("ai.search.get_vector_store")
+    @patch("ai.embeddings.generate_document_embedding")
+    def test_filters_similar_by_document_ids(self, mock_gen_embed, mock_get_store):
+        user = User.objects.create_user("simdocids", password="pass123!")
+        source = Document.objects.create(title="Source", content="A", owner=user)
+        visible = Document.objects.create(title="Visible", content="B", owner=user)
+        hidden = Document.objects.create(title="Hidden", content="C", owner=user)
+
+        mock_gen_embed.return_value = [0.1] * 128
+        mock_store = MagicMock()
+        mock_store.search.return_value = [
+            (source.pk, 1.0), (visible.pk, 0.85), (hidden.pk, 0.75),
+        ]
+        mock_get_store.return_value = mock_store
+
+        from ai.search import find_similar_documents
+
+        results = find_similar_documents(
+            source.pk,
+            k=5,
+            document_ids=[source.pk, visible.pk],
+        )
+        result_ids = [r["id"] for r in results]
+        assert visible.pk in result_ids
+        assert hidden.pk not in result_ids
 
     def test_returns_empty_for_nonexistent_doc(self):
         """Returns empty when the document ID does not exist."""
@@ -161,7 +214,7 @@ class TestHybridSearch:
 
         from ai.search import hybrid_search
 
-        results = hybrid_search("test query", k=10)
+        results = hybrid_search("test query", k=10, document_ids=[doc1.pk, doc2.pk, doc3.pk])
         assert len(results) > 0
         # doc2 appears in both, so it should rank highest
         result_ids = [r["id"] for r in results]
@@ -170,6 +223,12 @@ class TestHybridSearch:
         for r in results:
             assert "hybrid_score" in r
             assert r["hybrid_score"] > 0
+        mock_keyword.assert_called_once()
+        assert mock_keyword.call_args.kwargs["document_ids"] == [
+            doc1.pk,
+            doc2.pk,
+            doc3.pk,
+        ]
 
     @override_settings(LLM_ENABLED=True, LLM_PROVIDER="openai", LLM_API_KEY="test-key")
     @patch("ai.search.semantic_search")

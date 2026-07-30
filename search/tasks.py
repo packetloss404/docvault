@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 def index_document_task(document_id):
     """Index a single document asynchronously."""
     from documents.models import Document
+
     from .indexing import index_document
 
     try:

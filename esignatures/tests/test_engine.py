@@ -351,7 +351,7 @@ class TestCompleteSigning:
     @pytest.mark.django_db
     def test_complete_signing_missing_required_field_raises(self, seq_request):
         s = _add_signer(seq_request, "Alice", "alice@example.com")
-        f = _add_field(seq_request, s, required=True)
+        _add_field(seq_request, s, required=True)
         s.status = SIGNER_VIEWED
         s.save(update_fields=["status"])
 
@@ -523,7 +523,7 @@ class TestHelperFunctions:
     @pytest.mark.django_db
     def test_get_next_signer_returns_lowest_order(self, seq_request):
         s1 = _add_signer(seq_request, "Alice", "alice@example.com", order=0)
-        s2 = _add_signer(seq_request, "Bob", "bob@example.com", order=1)
+        _add_signer(seq_request, "Bob", "bob@example.com", order=1)
 
         assert get_next_signer(seq_request) == s1
 

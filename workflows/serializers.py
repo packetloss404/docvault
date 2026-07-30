@@ -37,10 +37,10 @@ class WorkflowTemplateSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "internal_name", "created_at", "updated_at"]
 
-    def get_state_count(self, obj):
+    def get_state_count(self, obj) -> int:
         return obj.states.count()
 
-    def get_transition_count(self, obj):
+    def get_transition_count(self, obj) -> int:
         return obj.transitions.count()
 
 
@@ -230,8 +230,8 @@ class WorkflowRuleSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
-    def get_trigger_count(self, obj):
+    def get_trigger_count(self, obj) -> int:
         return obj.triggers.count()
 
-    def get_action_count(self, obj):
+    def get_action_count(self, obj) -> int:
         return obj.actions.count()

@@ -6,7 +6,8 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient
 
-from security.models import Permission, Role
+from security.models import OTPDevice, Permission, Role
+from security.otp import hash_backup_code
 
 
 class AuthViewTests(TestCase):
@@ -55,6 +56,60 @@ class AuthViewTests(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertIn("token", resp.data)
         self.assertEqual(resp.data["username"], "testuser")
+
+    def test_login_requires_otp_when_enabled(self):
+        OTPDevice.objects.create(
+            user=self.user,
+            secret="JBSWY3DPEHPK3PXP",
+            confirmed=True,
+            backup_codes=[hash_backup_code("backup01")],
+        )
+
+        resp = self.client.post("/api/v1/auth/login/", {
+            "username": "testuser",
+            "password": "testpass123!",
+        })
+
+        self.assertEqual(resp.status_code, status.HTTP_202_ACCEPTED)
+        self.assertTrue(resp.data["otp_required"])
+        self.assertNotIn("token", resp.data)
+
+    def test_login_accepts_valid_backup_otp(self):
+        OTPDevice.objects.create(
+            user=self.user,
+            secret="JBSWY3DPEHPK3PXP",
+            confirmed=True,
+            backup_codes=[hash_backup_code("backup01")],
+        )
+
+        resp = self.client.post("/api/v1/auth/login/", {
+            "username": "testuser",
+            "password": "testpass123!",
+            "otp_code": "backup01",
+        })
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        self.assertIn("token", resp.data)
+        self.user.otp_device.refresh_from_db()
+        self.assertEqual(self.user.otp_device.backup_codes, [])
+
+    def test_login_rejects_invalid_otp(self):
+        OTPDevice.objects.create(
+            user=self.user,
+            secret="JBSWY3DPEHPK3PXP",
+            confirmed=True,
+            backup_codes=[hash_backup_code("backup01")],
+        )
+
+        resp = self.client.post("/api/v1/auth/login/", {
+            "username": "testuser",
+            "password": "testpass123!",
+            "otp_code": "wrong",
+        })
+
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("otp_code", resp.data)
+        self.assertFalse(Token.objects.filter(user=self.user).exists())
 
     def test_login_wrong_password(self):
         resp = self.client.post("/api/v1/auth/login/", {

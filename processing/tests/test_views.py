@@ -119,7 +119,6 @@ class DocumentUploadViewTest(TestCase):
 
     def test_upload_creates_task(self):
         """Uploading a file should create a ProcessingTask and return 202."""
-        from io import BytesIO
         from django.core.files.uploadedfile import SimpleUploadedFile
 
         file = SimpleUploadedFile("test.txt", b"file contents", content_type="text/plain")

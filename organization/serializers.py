@@ -1,5 +1,7 @@
 """Serializers for the organization module."""
 
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from .models import (
@@ -34,10 +36,10 @@ class TagSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "slug", "owner", "created_at", "updated_at"]
 
-    def get_document_count(self, obj):
+    def get_document_count(self, obj) -> int:
         return obj.documents.count()
 
-    def get_children_count(self, obj):
+    def get_children_count(self, obj) -> int:
         return obj.get_children().count()
 
 
@@ -59,7 +61,7 @@ class TagTreeSerializer(serializers.ModelSerializer):
         children = obj.get_children()
         return TagTreeSerializer(children, many=True).data
 
-    def get_document_count(self, obj):
+    def get_document_count(self, obj) -> int:
         return obj.documents.count()
 
 
@@ -79,7 +81,7 @@ class CorrespondentSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "slug", "owner", "created_at", "updated_at"]
 
-    def get_document_count(self, obj):
+    def get_document_count(self, obj) -> int:
         return obj.documents.count()
 
 
@@ -99,10 +101,10 @@ class CabinetSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "slug", "owner", "created_at", "updated_at"]
 
-    def get_document_count(self, obj):
+    def get_document_count(self, obj) -> int:
         return obj.documents.count()
 
-    def get_children_count(self, obj):
+    def get_children_count(self, obj) -> int:
         return obj.get_children().count()
 
 
@@ -123,7 +125,7 @@ class CabinetTreeSerializer(serializers.ModelSerializer):
         children = obj.get_children()
         return CabinetTreeSerializer(children, many=True).data
 
-    def get_document_count(self, obj):
+    def get_document_count(self, obj) -> int:
         return obj.documents.count()
 
 
@@ -143,7 +145,7 @@ class StoragePathSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "slug", "owner", "created_at", "updated_at"]
 
-    def get_document_count(self, obj):
+    def get_document_count(self, obj) -> int:
         return obj.documents.count()
 
 
@@ -162,7 +164,7 @@ class CustomFieldSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "slug", "owner", "created_at", "updated_at"]
 
-    def get_instance_count(self, obj):
+    def get_instance_count(self, obj) -> int:
         return obj.instances.count()
 
 
@@ -186,7 +188,8 @@ class CustomFieldInstanceSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
-    def get_value(self, obj):
+    @extend_schema_field(OpenApiTypes.ANY)
+    def get_value(self, obj) -> object:
         return obj.value
 
 
@@ -258,7 +261,7 @@ class MetadataTypeSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "slug", "owner", "created_at", "updated_at"]
 
-    def get_instance_count(self, obj):
+    def get_instance_count(self, obj) -> int:
         return obj.instances.count()
 
 
@@ -283,7 +286,8 @@ class DocumentMetadataSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
 
-    def get_parsed_value(self, obj):
+    @extend_schema_field(OpenApiTypes.ANY)
+    def get_parsed_value(self, obj) -> object:
         parsed = obj.parsed_value
         # Ensure JSON-serializable
         if hasattr(parsed, "isoformat"):

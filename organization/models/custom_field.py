@@ -1,13 +1,11 @@
 """CustomField and CustomFieldInstance models for extensible metadata."""
 
-import json
 
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.text import slugify
 
 from core.models import AuditableModel, OwnedModel
-
 
 # Custom field data types
 FIELD_STRING = "string"

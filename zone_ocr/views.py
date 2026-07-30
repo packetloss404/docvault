@@ -7,12 +7,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from documents.models import Document
+from security.permissions import get_document_for_user, get_objects_for_user_with_ownership
 
 from .extraction import (
-    apply_preprocessing,
     extract_field_from_content,
-    match_template,
-    populate_custom_field,
     validate_value,
 )
 from .models import ZoneOCRField, ZoneOCRResult, ZoneOCRTemplate
@@ -68,6 +66,8 @@ class ZoneOCRFieldListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return ZoneOCRField.objects.none()
         return ZoneOCRField.objects.filter(
             template_id=self.kwargs["template_id"],
         ).select_related("template", "custom_field")
@@ -108,9 +108,17 @@ class ZoneOCRResultListView(generics.ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return ZoneOCRResult.objects.none()
         qs = ZoneOCRResult.objects.select_related(
             "template", "field", "document", "reviewed_by",
         ).all()
+        permitted_documents = get_objects_for_user_with_ownership(
+            self.request.user,
+            "documents.view_document",
+            Document.objects.all(),
+        )
+        qs = qs.filter(document__in=permitted_documents)
 
         # Filter by document
         document_id = self.request.query_params.get("document_id")
@@ -151,10 +159,17 @@ class ZoneOCRResultCorrectionView(generics.RetrieveUpdateAPIView):
     marked as reviewed and the reviewing user is recorded.
     """
 
-    queryset = ZoneOCRResult.objects.select_related(
-        "template", "field", "document", "reviewed_by",
-    ).all()
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        permitted_documents = get_objects_for_user_with_ownership(
+            self.request.user,
+            "documents.view_document",
+            Document.objects.all(),
+        )
+        return ZoneOCRResult.objects.select_related(
+            "template", "field", "document", "reviewed_by",
+        ).filter(document__in=permitted_documents)
 
     def get_serializer_class(self):
         if self.request.method in ("PATCH", "PUT"):
@@ -196,13 +211,7 @@ class TestTemplateView(APIView):
 
         # Load the document
         document_id = serializer.validated_data["document_id"]
-        try:
-            document = Document.objects.get(pk=document_id)
-        except Document.DoesNotExist:
-            return Response(
-                {"error": "Document not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+        document = get_document_for_user(request.user, document_id, action="view")
 
         # Run extraction on each field
         results = []

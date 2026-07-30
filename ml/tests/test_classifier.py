@@ -1,11 +1,8 @@
 """Tests for the DocumentClassifier."""
 
 import os
-import pickle
 import tempfile
-from unittest.mock import patch
 
-from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 
@@ -347,10 +344,10 @@ class DocumentClassifierInsufficientDataTest(TestCase):
                 correspondent=corr,
                 filename=f"single_label_doc_{i}.pdf",
                 owner=self.user,
-            )
+        )
 
         classifier = DocumentClassifier()
-        metrics = classifier.train()
+        classifier.train()
         self.assertIsNone(classifier.correspondent_classifier)
 
 

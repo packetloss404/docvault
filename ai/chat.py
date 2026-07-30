@@ -94,7 +94,12 @@ def chat_with_document(document_id: int, question: str, history: list[dict] | No
     }
 
 
-def chat_across_documents(question: str, user_id: int | None = None, history: list[dict] | None = None) -> dict:
+def chat_across_documents(
+    question: str,
+    user_id: int | None = None,
+    history: list[dict] | None = None,
+    document_ids: list[int] | None = None,
+) -> dict:
     """Ask a question across all documents using RAG.
 
     1. Embed the question.
@@ -122,7 +127,9 @@ def chat_across_documents(question: str, user_id: int | None = None, history: li
     doc_ids = [doc_id for doc_id, _ in raw_results]
 
     qs = Document.objects.filter(pk__in=doc_ids)
-    if user_id:
+    if document_ids is not None:
+        qs = qs.filter(pk__in=document_ids)
+    elif user_id:
         qs = qs.filter(owner_id=user_id)
 
     documents = {doc.pk: doc for doc in qs}

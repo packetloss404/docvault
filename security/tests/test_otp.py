@@ -10,7 +10,6 @@ from django.test import override_settings
 
 from security.models import OTPDevice
 
-
 # ---------------------------------------------------------------------------
 # Fixtures for mocking lazy imports
 # ---------------------------------------------------------------------------

@@ -7,7 +7,6 @@ from django_filters import rest_framework as filters
 
 from .models import Document
 
-
 # Operator map for custom field filtering
 CUSTOM_FIELD_OPS = {
     "exact": "exact",

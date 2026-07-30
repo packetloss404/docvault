@@ -2,9 +2,11 @@
 
 import logging
 
-from rest_framework import permissions, status
+from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+from security.permissions import get_objects_for_user_with_ownership
 
 from .preferences import UserPreferences
 
@@ -58,13 +60,28 @@ class BulkOperationView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        documents = Document.objects.filter(pk__in=document_ids)
+        unique_ids = set(document_ids)
+        documents = get_objects_for_user_with_ownership(
+            request.user,
+            "documents.change_document",
+            Document.objects.all(),
+        ).filter(pk__in=unique_ids)
         count = documents.count()
 
-        if count == 0:
+        if count == 0 or count != len(unique_ids):
             return Response(
                 {"error": "No documents found."},
                 status=status.HTTP_404_NOT_FOUND,
+            )
+
+        held_documents = [
+            doc.pk for doc in documents
+            if doc.is_held and not request.user.has_perm("legal_hold.override_hold")
+        ]
+        if held_documents:
+            return Response(
+                {"error": "One or more documents are under legal hold."},
+                status=status.HTTP_409_CONFLICT,
             )
 
         if action == "add_tags":

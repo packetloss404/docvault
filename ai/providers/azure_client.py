@@ -9,7 +9,6 @@ from django.conf import settings
 
 from ..client import LLMClient
 from ..constants import (
-    DEFAULT_EMBEDDING_MODEL_OPENAI,
     EMBEDDING_DIM_OPENAI,
 )
 

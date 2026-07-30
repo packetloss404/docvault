@@ -1,12 +1,16 @@
 """Views for the organization module."""
 
-import json
 
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from documents.models import Document
+from security.permissions import (
+    get_document_for_user,
+    get_objects_for_user_with_ownership,
+)
 
 from .models import (
     Cabinet,
@@ -37,6 +41,25 @@ from .serializers import (
     TagSerializer,
     TagTreeSerializer,
 )
+
+
+def _document_action_for_viewset_action(action):
+    return "change" if action in {"create", "update", "partial_update", "destroy"} else "view"
+
+
+def _permitted_documents(user, action="view"):
+    return get_objects_for_user_with_ownership(
+        user,
+        f"documents.{action}_document",
+        Document.objects.all(),
+    )
+
+
+def _validate_nested_document(view, document):
+    document_pk = view.kwargs.get("document_pk")
+    if document_pk is not None and document.pk != int(document_pk):
+        raise ValidationError({"document": "Document does not match the URL."})
+    get_document_for_user(view.request.user, document.pk, action="change")
 
 
 class TagViewSet(viewsets.ModelViewSet):
@@ -179,16 +202,29 @@ class CustomFieldInstanceViewSet(viewsets.ModelViewSet):
     ordering = ["field__name"]
 
     def get_queryset(self):
-        qs = CustomFieldInstance.objects.select_related("field")
+        if getattr(self, "swagger_fake_view", False):
+            return CustomFieldInstance.objects.none()
+        action = _document_action_for_viewset_action(self.action)
+        qs = CustomFieldInstance.objects.select_related("field", "document")
         doc_id = self.kwargs.get("document_pk")
         if doc_id:
-            qs = qs.filter(document_id=doc_id)
-        return qs
+            document = get_document_for_user(self.request.user, doc_id, action=action)
+            return qs.filter(document=document)
+        return qs.filter(document__in=_permitted_documents(self.request.user, action=action))
 
     def get_serializer_class(self):
         if self.action in ("create", "update", "partial_update"):
             return CustomFieldInstanceWriteSerializer
         return CustomFieldInstanceSerializer
+
+    def perform_create(self, serializer):
+        _validate_nested_document(self, serializer.validated_data["document"])
+        serializer.save()
+
+    def perform_update(self, serializer):
+        if "document" in serializer.validated_data:
+            _validate_nested_document(self, serializer.validated_data["document"])
+        serializer.save()
 
 
 class MetadataTypeViewSet(viewsets.ModelViewSet):
@@ -226,11 +262,24 @@ class DocumentMetadataViewSet(viewsets.ModelViewSet):
     ordering = ["metadata_type__name"]
 
     def get_queryset(self):
-        qs = DocumentMetadata.objects.select_related("metadata_type")
+        if getattr(self, "swagger_fake_view", False):
+            return DocumentMetadata.objects.none()
+        action = _document_action_for_viewset_action(self.action)
+        qs = DocumentMetadata.objects.select_related("metadata_type", "document")
         doc_id = self.kwargs.get("document_pk")
         if doc_id:
-            qs = qs.filter(document_id=doc_id)
-        return qs
+            document = get_document_for_user(self.request.user, doc_id, action=action)
+            return qs.filter(document=document)
+        return qs.filter(document__in=_permitted_documents(self.request.user, action=action))
+
+    def perform_create(self, serializer):
+        _validate_nested_document(self, serializer.validated_data["document"])
+        serializer.save()
+
+    def perform_update(self, serializer):
+        if "document" in serializer.validated_data:
+            _validate_nested_document(self, serializer.validated_data["document"])
+        serializer.save()
 
 
 class DocumentTypeCustomFieldViewSet(viewsets.ModelViewSet):
@@ -273,13 +322,15 @@ class BulkSetCustomFieldsView(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        docs = Document.objects.filter(
-            pk__in=data["document_ids"],
-            owner=request.user,
+        document_ids = set(data["document_ids"])
+        docs = get_objects_for_user_with_ownership(
+            request.user,
+            "documents.change_document",
+            Document.objects.filter(pk__in=document_ids),
         )
-        if not docs.exists():
+        if docs.count() != len(document_ids):
             return Response(
-                {"error": "No matching documents found."},
+                {"error": "One or more documents were not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
@@ -313,13 +364,15 @@ class BulkAssignView(viewsets.ViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        docs = Document.objects.filter(
-            pk__in=data["document_ids"],
-            owner=request.user,
+        document_ids = set(data["document_ids"])
+        docs = get_objects_for_user_with_ownership(
+            request.user,
+            "documents.change_document",
+            Document.objects.filter(pk__in=document_ids),
         )
-        if not docs.exists():
+        if docs.count() != len(document_ids):
             return Response(
-                {"error": "No matching documents found."},
+                {"error": "One or more documents were not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
 

@@ -1,6 +1,5 @@
 """Tests for ML text preprocessing."""
 
-from unittest.mock import MagicMock, patch
 
 from django.test import TestCase
 
@@ -8,7 +7,6 @@ from ml.preprocessing import (
     CONTENT_HEAD,
     CONTENT_TAIL,
     MAX_CONTENT_LENGTH,
-    STOP_WORDS,
     StemmerCache,
     crop_content,
     get_stemmer_cache,

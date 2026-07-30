@@ -1,6 +1,6 @@
 """Views for the processing module."""
 
-from rest_framework import permissions, status, viewsets
+from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -15,6 +15,8 @@ class ProcessingTaskViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return ProcessingTask.objects.none()
         user = self.request.user
         if user.is_superuser:
             return ProcessingTask.objects.all()

@@ -2,6 +2,7 @@
 
 import logging
 import os
+import shutil
 import tempfile
 import uuid
 from pathlib import Path
@@ -9,6 +10,14 @@ from pathlib import Path
 from celery import shared_task
 
 logger = logging.getLogger(__name__)
+
+
+def _stage_file(filepath: Path, prefix: str = "docvault_source_") -> Path:
+    """Copy a source file to a stable temp path for async processing."""
+    staging_dir = Path(tempfile.mkdtemp(prefix=prefix))
+    staged_path = staging_dir / filepath.name
+    shutil.copy2(filepath, staged_path)
+    return staged_path
 
 
 @shared_task
@@ -119,16 +128,19 @@ def poll_staging_sources():
                 overrides["override_tags"] = tag_ids
 
             try:
+                staged_path = _stage_file(filepath)
                 ProcessingTask.objects.create(
                     task_id=task_id,
-                    filename=filepath.name,
-                    user_id=source.owner_id,
+                    task_name="document_consumption",
+                    owner=source.owner,
+                    status_message="Queued staging file for processing",
                 )
                 consume_document.delay(
-                    str(filepath),
+                    str(staged_path),
                     filepath.name,
                     task_id,
                     source.owner_id,
+                    cleanup_source_path=True,
                     **overrides,
                 )
                 processed_paths.add(file_key)
@@ -255,14 +267,16 @@ def poll_s3_sources():
                 try:
                     ProcessingTask.objects.create(
                         task_id=task_id,
-                        filename=filename,
-                        user_id=source.owner_id,
+                        task_name="document_consumption",
+                        owner=source.owner,
+                        status_message="Queued S3 object for processing",
                     )
                     consume_document.delay(
                         tmp_path,
                         filename,
                         task_id,
                         source.owner_id,
+                        cleanup_source_path=True,
                         **overrides,
                     )
                     processed_keys.add(key)

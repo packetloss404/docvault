@@ -5,10 +5,8 @@ metadata:
   labels:
     {{- include "docvault.labels" . | nindent 4 }}
 data:
-  DATABASE_URL: {{ include "docvault.databaseUrl" . | quote }}
-  REDIS_URL: {{ include "docvault.redisUrl" . | quote }}
   DJANGO_SETTINGS_MODULE: {{ .Values.env.DJANGO_SETTINGS_MODULE | default "docvault.settings.production" | quote }}
-  DJANGO_ALLOWED_HOSTS: {{ .Values.env.DJANGO_ALLOWED_HOSTS | default "*" | quote }}
+  DJANGO_ALLOWED_HOSTS: {{ .Values.env.DJANGO_ALLOWED_HOSTS | default "docvault.local,127.0.0.1,localhost" | quote }}
   DJANGO_SECURE_SSL_REDIRECT: {{ .Values.env.DJANGO_SECURE_SSL_REDIRECT | default "false" | quote }}
   STORAGE_BACKEND: {{ .Values.env.STORAGE_BACKEND | default "local" | quote }}
   MEDIA_ROOT: "/data/media"
@@ -18,7 +16,7 @@ data:
   ELASTICSEARCH_URL: {{ .Values.elasticsearch.url | quote }}
   {{- end }}
   {{- range $key, $value := .Values.env }}
-  {{- if and (ne $key "DJANGO_SECRET_KEY") (ne $key "DJANGO_SETTINGS_MODULE") (ne $key "DJANGO_ALLOWED_HOSTS") (ne $key "DJANGO_SECURE_SSL_REDIRECT") (ne $key "STORAGE_BACKEND") }}
+  {{- if and (ne $key "DJANGO_SECRET_KEY") (ne $key "DATABASE_URL") (ne $key "REDIS_URL") (ne $key "DJANGO_SETTINGS_MODULE") (ne $key "DJANGO_ALLOWED_HOSTS") (ne $key "DJANGO_SECURE_SSL_REDIRECT") (ne $key "STORAGE_BACKEND") }}
   {{ $key }}: {{ $value | quote }}
   {{- end }}
   {{- end }}

@@ -2,13 +2,11 @@
 
 import uuid
 from datetime import date
-from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError
 from django.test import TestCase
-from django.utils import timezone
 
 from documents.models import (
     Document,

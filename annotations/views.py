@@ -9,12 +9,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
 
-from documents.models import Document
+from security.permissions import get_document_for_user
 
 from .models import Annotation, AnnotationReply
 from .serializers import (
     AnnotationCreateSerializer,
-    AnnotationExportSerializer,
     AnnotationReplyCreateSerializer,
     AnnotationReplySerializer,
     AnnotationSerializer,
@@ -39,10 +38,7 @@ class DocumentAnnotationViewSet(ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def _get_document(self, document_id):
-        try:
-            return Document.objects.get(pk=document_id)
-        except Document.DoesNotExist:
-            raise Http404("Document not found.")
+        return get_document_for_user(self.request.user, document_id, action="view")
 
     def _filter_private(self, queryset, user):
         """Filter out private annotations unless the user is the author or staff."""
@@ -183,6 +179,7 @@ class AnnotationReplyListCreateView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def _get_annotation(self, document_id, annotation_id, user):
+        get_document_for_user(user, document_id, action="view")
         try:
             annotation = Annotation.objects.get(
                 pk=annotation_id, document_id=document_id,

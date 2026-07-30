@@ -350,6 +350,39 @@ class CustomFieldAPITest(TestCase):
         self.assertEqual(resp.data[0]["field_name"], "Note")
         self.assertEqual(resp.data[0]["value"], "hello")
 
+    def test_document_custom_fields_nested_list_unpermitted_document_is_denied(self):
+        other_user = User.objects.create_user(username="cf-other", password="pass!")
+        other_doc = Document.objects.create(
+            title="Other", owner=other_user, filename="o/cf-other.txt",
+        )
+        resp = self.client.get(f"/api/v1/documents/{other_doc.pk}/custom-fields/")
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_custom_field_instances_flat_list_excludes_unpermitted_documents(self):
+        doc = Document.objects.create(
+            title="Owned", owner=self.user, filename="o/cf-owned.txt",
+        )
+        other_user = User.objects.create_user(username="cf-flat-other", password="pass!")
+        other_doc = Document.objects.create(
+            title="Other", owner=other_user, filename="o/cf-flat-other.txt",
+        )
+        cf = CustomField.objects.create(
+            name="Flat", data_type=FIELD_STRING, owner=self.user,
+        )
+        own_instance = CustomFieldInstance.objects.create(
+            document=doc, field=cf, value_text="owned",
+        )
+        other_instance = CustomFieldInstance.objects.create(
+            document=other_doc, field=cf, value_text="other",
+        )
+
+        resp = self.client.get("/api/v1/custom-field-instances/")
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        results = resp.data["results"] if isinstance(resp.data, dict) else resp.data
+        instance_ids = {item["id"] for item in results}
+        self.assertIn(own_instance.pk, instance_ids)
+        self.assertNotIn(other_instance.pk, instance_ids)
+
     def test_document_custom_fields_nested_create(self):
         doc = Document.objects.create(
             title="Test", owner=self.user, filename="o/cfapi2.txt",
@@ -368,6 +401,41 @@ class CustomFieldAPITest(TestCase):
             42,
         )
 
+    def test_document_custom_fields_nested_create_unpermitted_document_is_denied(self):
+        other_user = User.objects.create_user(username="cf-create-other", password="pass!")
+        other_doc = Document.objects.create(
+            title="Other", owner=other_user, filename="o/cf-create-other.txt",
+        )
+        cf = CustomField.objects.create(
+            name="Blocked", data_type=FIELD_STRING, owner=self.user,
+        )
+        resp = self.client.post(f"/api/v1/documents/{other_doc.pk}/custom-fields/", {
+            "document": other_doc.pk,
+            "field": cf.pk,
+            "value": "nope",
+        }, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertFalse(
+            CustomFieldInstance.objects.filter(document=other_doc, field=cf).exists()
+        )
+
+    def test_document_custom_fields_nested_create_rejects_url_mismatch(self):
+        doc = Document.objects.create(
+            title="Test", owner=self.user, filename="o/cfapi-mismatch-1.txt",
+        )
+        other_doc = Document.objects.create(
+            title="Other", owner=self.user, filename="o/cfapi-mismatch-2.txt",
+        )
+        cf = CustomField.objects.create(
+            name="Mismatch", data_type=FIELD_STRING, owner=self.user,
+        )
+        resp = self.client.post(f"/api/v1/documents/{doc.pk}/custom-fields/", {
+            "document": other_doc.pk,
+            "field": cf.pk,
+            "value": "wrong path",
+        }, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_document_custom_fields_nested_delete(self):
         doc = Document.objects.create(
             title="Test", owner=self.user, filename="o/cfapi3.txt",
@@ -383,6 +451,23 @@ class CustomFieldAPITest(TestCase):
         )
         self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(CustomFieldInstance.objects.filter(pk=inst.pk).exists())
+
+    def test_document_custom_fields_nested_delete_unpermitted_document_is_denied(self):
+        other_user = User.objects.create_user(username="cf-delete-other", password="pass!")
+        other_doc = Document.objects.create(
+            title="Other", owner=other_user, filename="o/cf-delete-other.txt",
+        )
+        cf = CustomField.objects.create(
+            name="Delete Blocked", data_type=FIELD_STRING, owner=self.user,
+        )
+        inst = CustomFieldInstance.objects.create(
+            document=other_doc, field=cf, value_text="secret",
+        )
+        resp = self.client.delete(
+            f"/api/v1/documents/{other_doc.pk}/custom-fields/{inst.pk}/",
+        )
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertTrue(CustomFieldInstance.objects.filter(pk=inst.pk).exists())
 
     def test_bulk_set_custom_fields(self):
         doc1 = Document.objects.create(
@@ -409,6 +494,25 @@ class CustomFieldAPITest(TestCase):
             CustomFieldInstance.objects.get(document=doc2, field=cf).value_text,
             "reviewed",
         )
+
+    def test_bulk_set_custom_fields_rejects_mixed_unpermitted_documents(self):
+        doc = Document.objects.create(
+            title="D1", owner=self.user, filename="o/bulk_cf_owned.txt",
+        )
+        other_user = User.objects.create_user(username="cf-bulk-other", password="pass!")
+        other_doc = Document.objects.create(
+            title="Other", owner=other_user, filename="o/bulk_cf_other.txt",
+        )
+        cf = CustomField.objects.create(
+            name="Bulk Block", data_type=FIELD_STRING, owner=self.user,
+        )
+        resp = self.client.post("/api/v1/bulk-set-custom-fields/", {
+            "document_ids": [doc.pk, other_doc.pk],
+            "field_id": cf.pk,
+            "value": "blocked",
+        }, format="json")
+        self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertFalse(CustomFieldInstance.objects.filter(field=cf).exists())
 
     def test_doctype_custom_field_assignment_api(self):
         dt = DocumentType.objects.create(name="Invoice", owner=self.user)

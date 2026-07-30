@@ -11,10 +11,11 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
+from security.permissions import get_document_for_user
+
 from .constants import REQUEST_CANCELLED, REQUEST_COMPLETED, REQUEST_EXPIRED
 from .engine import (
     InvalidStateError,
-    ValidationError as EngineValidationError,
     cancel_request,
     complete_signing,
     decline_signing,
@@ -22,7 +23,10 @@ from .engine import (
     record_view,
     send_request,
 )
-from .models import SignatureAuditEvent, SignatureRequest, Signer
+from .engine import (
+    ValidationError as EngineValidationError,
+)
+from .models import SignatureRequest, Signer
 from .serializers import (
     DeclineSerializer,
     ExternalSignerVerifySerializer,
@@ -73,6 +77,8 @@ class SignatureRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return SignatureRequest.objects.none()
         return (
             SignatureRequest.objects
             .filter(created_by=self.request.user)
@@ -86,12 +92,23 @@ class SignatureRequestViewSet(viewsets.ModelViewSet):
         return SignatureRequestSerializer
 
     def perform_create(self, serializer):
+        get_document_for_user(
+            self.request.user,
+            serializer.validated_data["document"].pk,
+            action="change",
+        )
         serializer.save(
             created_by=self.request.user,
             updated_by=self.request.user,
         )
 
     def perform_update(self, serializer):
+        if "document" in serializer.validated_data:
+            get_document_for_user(
+                self.request.user,
+                serializer.validated_data["document"].pk,
+                action="change",
+            )
         serializer.save(updated_by=self.request.user)
 
     @action(detail=True, methods=["post"])

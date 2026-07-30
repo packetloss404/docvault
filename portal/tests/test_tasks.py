@@ -187,7 +187,7 @@ class TestExpireOverdueRequests:
 
     @pytest.mark.django_db
     def test_does_not_expire_already_expired(self, portal):
-        req = DocumentRequest.objects.create(
+        DocumentRequest.objects.create(
             portal=portal,
             title="Already Expired",
             assignee_email="a@b.com",

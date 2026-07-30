@@ -5,7 +5,6 @@ from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError
 
-from documents.models import Document
 from portal.constants import (
     REQUEST_PENDING,
     SUBMISSION_PENDING,

@@ -4,10 +4,10 @@ from datetime import date
 
 from django.contrib.auth.models import User
 from django.test import TestCase
+from guardian.shortcuts import assign_perm
 
 from documents.models import Document
-from organization.models import Cabinet, Correspondent, Tag
-
+from organization.models import Correspondent, Tag
 from search.models import (
     RULE_CORRESPONDENT_IS,
     RULE_CREATED_AFTER,
@@ -90,6 +90,13 @@ class SavedViewExecutorTest(TestCase):
         view = SavedView.objects.create(name="All", owner=self.user)
         qs = execute_saved_view(view, user=self.user)
         self.assertEqual(qs.count(), 3)
+
+    def test_empty_view_includes_guardian_shared_docs(self):
+        assign_perm("documents.view_document", self.user, self.doc4)
+        view = SavedView.objects.create(name="All", owner=self.user)
+        qs = execute_saved_view(view, user=self.user)
+        self.assertEqual(qs.count(), 4)
+        self.assertIn(self.doc4.pk, set(qs.values_list("pk", flat=True)))
 
     def test_superuser_sees_all_docs(self):
         view = SavedView.objects.create(name="All", owner=self.admin)

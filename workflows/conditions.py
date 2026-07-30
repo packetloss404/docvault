@@ -1,6 +1,38 @@
 """Safe expression evaluator for workflow conditions."""
 
 import ast
+from datetime import date, datetime
+from decimal import Decimal
+
+
+class SafeExpressionObject:
+    """Attribute-access wrapper around primitive expression data."""
+
+    def __init__(self, data):
+        self._data = data
+
+    def __getattr__(self, name):
+        if name.startswith("_"):
+            raise AttributeError(name)
+        try:
+            return self._data[name]
+        except KeyError:
+            raise AttributeError(name)
+
+    def __getitem__(self, key):
+        return self._data[key]
+
+    def get(self, key, default=None):
+        return self._data.get(key, default)
+
+    def keys(self):
+        return self._data.keys()
+
+    def values(self):
+        return self._data.values()
+
+    def items(self):
+        return self._data.items()
 
 
 # Whitelisted AST node types for safe evaluation
@@ -108,10 +140,10 @@ def evaluate_condition(expression, instance):
     """
     Safely evaluate a condition expression in the context of a workflow instance.
 
-    Available variables:
-    - document: the instance's document object
-    - context: the instance's context dict
-    - instance: the workflow instance itself
+    Available variables are primitive snapshots, not live Django model objects:
+    - document: selected document fields
+    - context: workflow context dict
+    - instance: selected workflow instance fields
     - True, False, None, len
 
     Returns the boolean result of the expression.
@@ -130,9 +162,101 @@ def evaluate_condition(expression, instance):
     code = compile(tree, "<condition>", "eval")
 
     namespace = dict(SAFE_NAMES)
-    namespace["document"] = instance.document
-    namespace["context"] = instance.context or {}
-    namespace["instance"] = instance
+    namespace["document"] = _build_document_context(instance.document)
+    namespace["context"] = _to_safe_value(instance.context or {})
+    namespace["instance"] = _build_instance_context(instance)
 
     result = eval(code, {"__builtins__": {}}, namespace)
     return bool(result)
+
+
+def _to_safe_value(value, depth=0):
+    """Convert values exposed to condition expressions into primitives."""
+    if depth > 5:
+        return None
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return SafeExpressionObject({
+            str(key): _to_safe_value(item, depth + 1)
+            for key, item in value.items()
+        })
+    if isinstance(value, (list, tuple, set)):
+        return [_to_safe_value(item, depth + 1) for item in value]
+    return str(value)
+
+
+def _safe_attr(obj, name, default=None):
+    """Read a simple attribute without exposing the object itself."""
+    try:
+        return _to_safe_value(getattr(obj, name, default))
+    except Exception:
+        return default
+
+
+def _safe_related(obj, name, fields):
+    """Return primitive fields from a related object if present."""
+    try:
+        related = getattr(obj, name, None)
+    except Exception:
+        return None
+    if related is None:
+        return None
+    return SafeExpressionObject({
+        field: _safe_attr(related, field)
+        for field in fields
+    })
+
+
+def _build_document_context(document):
+    """Build the document snapshot available to workflow conditions."""
+    return SafeExpressionObject({
+        "id": _safe_attr(document, "id"),
+        "title": _safe_attr(document, "title"),
+        "original_filename": _safe_attr(document, "original_filename"),
+        "filename": _safe_attr(document, "filename"),
+        "content": _safe_attr(document, "content"),
+        "mime_type": _safe_attr(document, "mime_type"),
+        "language": _safe_attr(document, "language"),
+        "checksum": _safe_attr(document, "checksum"),
+        "archive_serial_number": _safe_attr(document, "archive_serial_number"),
+        "page_count": _safe_attr(document, "page_count"),
+        "created": _safe_attr(document, "created"),
+        "modified": _safe_attr(document, "modified"),
+        "added": _safe_attr(document, "added"),
+        "is_held": _safe_attr(document, "is_held"),
+        "owner_id": _safe_attr(document, "owner_id"),
+        "document_type_id": _safe_attr(document, "document_type_id"),
+        "correspondent_id": _safe_attr(document, "correspondent_id"),
+        "cabinet_id": _safe_attr(document, "cabinet_id"),
+        "storage_path_id": _safe_attr(document, "storage_path_id"),
+        "document_type": _safe_related(document, "document_type", ("id", "name")),
+        "correspondent": _safe_related(document, "correspondent", ("id", "name")),
+        "cabinet": _safe_related(document, "cabinet", ("id", "name")),
+        "storage_path": _safe_related(document, "storage_path", ("id", "name", "path")),
+    })
+
+
+def _build_instance_context(instance):
+    """Build the workflow instance snapshot available to conditions."""
+    return SafeExpressionObject({
+        "id": _safe_attr(instance, "id"),
+        "context": _to_safe_value(getattr(instance, "context", {}) or {}),
+        "launched_at": _safe_attr(instance, "launched_at"),
+        "state_changed_at": _safe_attr(instance, "state_changed_at"),
+        "is_complete": _safe_attr(instance, "is_complete", False),
+        "workflow": _safe_related(
+            instance,
+            "workflow",
+            ("id", "label", "internal_name", "auto_launch"),
+        ),
+        "current_state": _safe_related(
+            instance,
+            "current_state",
+            ("id", "label", "initial", "final", "order"),
+        ),
+    })

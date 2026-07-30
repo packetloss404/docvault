@@ -1,6 +1,5 @@
 """Tests for Zone OCR extraction helpers."""
 
-import pytest
 
 from zone_ocr.constants import (
     FIELD_BOOLEAN,

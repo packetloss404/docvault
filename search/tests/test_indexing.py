@@ -1,14 +1,13 @@
 """Tests for search indexing (ES mocked)."""
 
 from datetime import date
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 
 from documents.models import Document, DocumentType
 from organization.models import Correspondent, Tag
-
 from search.client import reset_client
 from search.indexing import document_to_index_body
 

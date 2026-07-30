@@ -7,8 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from documents.models import Document
-from security.permissions import IsAdminOrReadOnly
+from security.permissions import IsAdminOrReadOnly, get_document_for_user
 
 from . import engine
 from .actions import BUILTIN_ACTIONS
@@ -66,6 +65,8 @@ class WorkflowStateViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return WorkflowState.objects.none()
         return WorkflowState.objects.filter(
             workflow_id=self.kwargs["template_pk"]
         )
@@ -82,6 +83,8 @@ class WorkflowTransitionViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return WorkflowTransition.objects.none()
         return WorkflowTransition.objects.filter(
             workflow_id=self.kwargs["template_pk"]
         ).select_related("origin_state", "destination_state")
@@ -98,6 +101,8 @@ class WorkflowTransitionFieldViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return WorkflowTransitionField.objects.none()
         return WorkflowTransitionField.objects.filter(
             transition_id=self.kwargs["transition_pk"],
             transition__workflow_id=self.kwargs["template_pk"],
@@ -115,6 +120,8 @@ class WorkflowStateActionViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return WorkflowStateAction.objects.none()
         return WorkflowStateAction.objects.filter(
             state_id=self.kwargs["state_pk"],
             state__workflow_id=self.kwargs["template_pk"],
@@ -132,6 +139,8 @@ class WorkflowStateEscalationViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return WorkflowStateEscalation.objects.none()
         return WorkflowStateEscalation.objects.filter(
             state_id=self.kwargs["state_pk"],
             state__workflow_id=self.kwargs["template_pk"],
@@ -150,11 +159,12 @@ class DocumentWorkflowViewSet(viewsets.ViewSet):
 
     permission_classes = [permissions.IsAuthenticated]
 
-    def _get_document(self, document_pk):
-        return Document.objects.get(pk=document_pk)
+    def _get_document(self, document_pk, action="view"):
+        return get_document_for_user(self.request.user, document_pk, action=action)
 
     def list(self, request, document_pk=None):
         """List all workflow instances for a document."""
+        self._get_document(document_pk, action="view")
         instances = WorkflowInstance.objects.filter(
             document_id=document_pk,
         ).select_related("workflow", "current_state")
@@ -164,6 +174,7 @@ class DocumentWorkflowViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["post"])
     def launch(self, request, document_pk=None):
         """Launch a workflow for a document."""
+        document = self._get_document(document_pk, action="change")
         template_id = request.data.get("workflow_template_id")
         if not template_id:
             return Response(
@@ -172,9 +183,8 @@ class DocumentWorkflowViewSet(viewsets.ViewSet):
             )
 
         try:
-            document = self._get_document(document_pk)
             template = WorkflowTemplate.objects.get(pk=template_id)
-        except (Document.DoesNotExist, WorkflowTemplate.DoesNotExist) as e:
+        except WorkflowTemplate.DoesNotExist as e:
             return Response(
                 {"error": str(e)},
                 status=status.HTTP_404_NOT_FOUND,
@@ -201,6 +211,7 @@ class DocumentWorkflowViewSet(viewsets.ViewSet):
     def execute_transition(self, request, document_pk=None,
                            instance_pk=None, transition_pk=None):
         """Execute a transition on a workflow instance."""
+        self._get_document(document_pk, action="change")
         try:
             instance = WorkflowInstance.objects.get(
                 pk=instance_pk, document_id=document_pk,
@@ -240,6 +251,7 @@ class DocumentWorkflowViewSet(viewsets.ViewSet):
     )
     def log(self, request, document_pk=None, instance_pk=None):
         """Get the audit log for a workflow instance."""
+        self._get_document(document_pk, action="view")
         entries = WorkflowInstanceLogEntry.objects.filter(
             instance_id=instance_pk,
             instance__document_id=document_pk,
@@ -254,6 +266,7 @@ class DocumentWorkflowViewSet(viewsets.ViewSet):
     )
     def available_transitions(self, request, document_pk=None, instance_pk=None):
         """Get available transitions for a workflow instance."""
+        self._get_document(document_pk, action="view")
         try:
             instance = WorkflowInstance.objects.get(
                 pk=instance_pk, document_id=document_pk,
@@ -292,6 +305,8 @@ class WorkflowRuleTriggerViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return WorkflowTrigger.objects.none()
         return WorkflowTrigger.objects.filter(
             rules=self.kwargs["rule_pk"],
         )
@@ -310,6 +325,8 @@ class WorkflowRuleActionViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return WorkflowAction.objects.none()
         return WorkflowAction.objects.filter(
             rules=self.kwargs["rule_pk"],
         )

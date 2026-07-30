@@ -41,7 +41,6 @@ class ZoneOCRPlugin(ProcessingPlugin):
         from documents.models import Document
 
         from .extraction import (
-            apply_preprocessing,
             compare_zone_similarity,
             extract_field_from_content,
             extract_field_value,

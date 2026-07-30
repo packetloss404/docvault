@@ -13,13 +13,15 @@ export interface User {
 export interface LoginRequest {
   username: string;
   password: string;
+  otp_code?: string;
 }
 
 export interface LoginResponse {
-  token: string;
-  user_id: number;
+  token?: string;
+  otp_required?: boolean;
+  user_id?: number;
   username: string;
-  email: string;
+  email?: string;
 }
 
 export interface RegisterRequest {

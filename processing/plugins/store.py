@@ -1,6 +1,7 @@
 """Store plugin - saves original file to storage backend and creates Document record."""
 
 import hashlib
+import json
 import logging
 import uuid
 from pathlib import Path
@@ -74,11 +75,18 @@ class StorePlugin(ProcessingPlugin):
             from documents.models import DocumentType
             document_type = DocumentType.objects.filter(pk=type_id).first()
 
+        # Resolve correspondent and storage path from explicit overrides first,
+        # then classifier suggestions.
+        correspondent_id = context.override_correspondent or context.suggested_correspondent
+        storage_path_id = context.override_storage_path or context.suggested_storage_path
+
         # Create the document
         doc = Document.objects.create(
             title=context.title,
             content=context.content,
             document_type=document_type,
+            correspondent_id=correspondent_id,
+            storage_path_id=storage_path_id,
             original_filename=context.original_filename,
             mime_type=context.mime_type,
             checksum=context.checksum,
@@ -91,6 +99,12 @@ class StorePlugin(ProcessingPlugin):
             owner=owner,
             created_by=owner,
         )
+
+        tag_ids = self._normalize_id_list(
+            context.override_tags if context.override_tags is not None else context.suggested_tags
+        )
+        if tag_ids:
+            doc.tags.set(tag_ids)
 
         if context.date_created:
             doc.created = context.date_created
@@ -134,3 +148,30 @@ class StorePlugin(ProcessingPlugin):
             for chunk in iter(lambda: f.read(65536), b""):
                 sha256.update(chunk)
         return sha256.hexdigest()
+
+    @staticmethod
+    def _normalize_id_list(value) -> list[int]:
+        """Normalize list-like form values into integer primary keys."""
+        if value in (None, "", []):
+            return []
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                return []
+            try:
+                parsed = json.loads(value)
+            except json.JSONDecodeError:
+                parsed = [part.strip() for part in value.split(",")]
+            value = parsed
+        if not isinstance(value, (list, tuple, set)):
+            value = [value]
+
+        ids = []
+        for item in value:
+            if item in (None, ""):
+                continue
+            try:
+                ids.append(int(item))
+            except (TypeError, ValueError):
+                logger.warning("Ignoring invalid tag id in processing context: %r", item)
+        return ids

@@ -240,7 +240,7 @@ class TestExpireSignatureRequests:
 
     @pytest.mark.django_db
     def test_does_not_expire_already_completed(self, document, user):
-        req = SignatureRequest.objects.create(
+        SignatureRequest.objects.create(
             document=document,
             title="Completed Request",
             status=REQUEST_COMPLETED,
@@ -252,7 +252,7 @@ class TestExpireSignatureRequests:
 
     @pytest.mark.django_db
     def test_does_not_expire_already_expired(self, document, user):
-        req = SignatureRequest.objects.create(
+        SignatureRequest.objects.create(
             document=document,
             title="Already Expired",
             status=REQUEST_EXPIRED,

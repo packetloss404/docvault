@@ -2,6 +2,7 @@
 
 import logging
 import os
+import shlex
 import subprocess
 
 from django.conf import settings
@@ -66,13 +67,14 @@ def _run_hook(
     })
 
     try:
+        command = shlex.split(script)
         result = subprocess.run(
-            script,
+            command,
             env=env,
             timeout=timeout,
             capture_output=True,
             text=True,
-            shell=True,
+            shell=False,
         )
         if result.returncode != 0:
             logger.warning(

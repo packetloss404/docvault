@@ -2,10 +2,12 @@
 
 import json
 import logging
-import urllib.request
 import urllib.error
+import urllib.request
 
 import jinja2
+
+from core.url_safety import UnsafeOutboundUrlError, validate_outbound_http_url
 
 from .base import WorkflowAction
 
@@ -33,6 +35,11 @@ class WebhookAction(WorkflowAction):
 
         if not url:
             logger.warning("WebhookAction: no URL specified.")
+            return
+        try:
+            url = validate_outbound_http_url(url)
+        except UnsafeOutboundUrlError as e:
+            logger.warning("WebhookAction: blocked unsafe URL %s: %s", url, e)
             return
 
         template_context = {
@@ -75,6 +82,11 @@ class WebhookAction(WorkflowAction):
         errors = []
         if not config.get("url"):
             errors.append("'url' is required.")
+        else:
+            try:
+                validate_outbound_http_url(config["url"])
+            except UnsafeOutboundUrlError as e:
+                errors.append(f"'url' is not allowed: {e}")
         method = config.get("method", "POST").upper()
         if method not in ("POST", "PUT"):
             errors.append("'method' must be POST or PUT.")

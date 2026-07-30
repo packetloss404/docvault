@@ -1,12 +1,25 @@
 """Tests for health check, readiness, and metrics endpoints."""
 
 import pytest
+from django.contrib.auth.models import User
 from rest_framework.test import APIClient
 
 
 @pytest.fixture
 def client():
     return APIClient()
+
+
+@pytest.fixture
+def admin_client(db):
+    admin = User.objects.create_superuser(
+        username="metricsadmin",
+        password="adminpass",
+        email="metrics@example.com",
+    )
+    client = APIClient()
+    client.force_authenticate(user=admin)
+    return client
 
 
 class TestHealthEndpoint:
@@ -84,43 +97,50 @@ class TestMetricsEndpoint:
     """GET /metrics/ - Prometheus format."""
 
     @pytest.mark.django_db
-    def test_metrics_returns_200(self, client):
-        response = client.get("/metrics/")
+    def test_metrics_returns_200(self, admin_client):
+        response = admin_client.get("/metrics/")
         assert response.status_code == 200
 
     @pytest.mark.django_db
-    def test_metrics_returns_prometheus_content_type(self, client):
-        response = client.get("/metrics/")
+    def test_metrics_returns_prometheus_content_type(self, admin_client):
+        response = admin_client.get("/metrics/")
         assert "text/plain" in response["Content-Type"]
 
     @pytest.mark.django_db
-    def test_metrics_contains_http_requests_total(self, client):
-        response = client.get("/metrics/")
+    def test_metrics_contains_http_requests_total(self, admin_client):
+        response = admin_client.get("/metrics/")
         content = response.content.decode()
         assert "docvault_http_requests_total" in content
 
     @pytest.mark.django_db
-    def test_metrics_contains_documents_count(self, client):
-        response = client.get("/metrics/")
+    def test_metrics_contains_documents_count(self, admin_client):
+        response = admin_client.get("/metrics/")
         content = response.content.decode()
         assert "docvault_documents_count" in content
 
     @pytest.mark.django_db
-    def test_metrics_contains_active_users_count(self, client):
-        response = client.get("/metrics/")
+    def test_metrics_contains_active_users_count(self, admin_client):
+        response = admin_client.get("/metrics/")
         content = response.content.decode()
         assert "docvault_active_users_count" in content
 
     @pytest.mark.django_db
-    def test_metrics_contains_type_annotations(self, client):
-        response = client.get("/metrics/")
+    def test_metrics_contains_type_annotations(self, admin_client):
+        response = admin_client.get("/metrics/")
         content = response.content.decode()
         assert "# TYPE docvault_http_requests_total counter" in content
 
     @pytest.mark.django_db
-    def test_metrics_no_auth_required(self, client):
+    def test_metrics_requires_auth(self, client):
         response = client.get("/metrics/")
-        assert response.status_code not in (401, 403)
+        assert response.status_code in (401, 403)
+
+    @pytest.mark.django_db
+    def test_metrics_requires_admin(self, client):
+        user = User.objects.create_user(username="metricsuser", password="pass")
+        client.force_authenticate(user=user)
+        response = client.get("/metrics/")
+        assert response.status_code == 403
 
 
 class TestIncrementMetric:
