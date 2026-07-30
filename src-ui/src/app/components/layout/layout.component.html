@@ -1,299 +1,131 @@
-<!-- Top Navbar -->
-<nav class="navbar navbar-dark bg-dark px-3">
-  <div class="d-flex align-items-center">
-    <button class="btn btn-dark me-2 d-md-none" (click)="toggleSidebar()">
-      <i class="bi bi-list"></i>
+<div class="dv-shell">
+  <!-- Icon rail -->
+  <nav class="dv-rail" aria-label="Primary">
+    <button
+      type="button"
+      class="dv-rail__logo"
+      routerLink="/"
+      title="DocVault"
+      aria-label="DocVault home"
+    >
+      V
     </button>
-    <a class="navbar-brand fw-bold" routerLink="/">DocVault</a>
-  </div>
 
-  <div class="d-flex align-items-center">
-    <div class="input-group me-3 d-none d-md-flex" style="width: 300px;">
-      <input
-        type="text"
-        class="form-control form-control-sm"
-        placeholder="Search documents..."
-        [ngModel]="searchQuery()"
-        (ngModelChange)="searchQuery.set($event)"
-        (keyup.enter)="onSearch()"
-      />
-      <button class="btn btn-outline-secondary btn-sm" type="button" (click)="onSearch()">
-        <i class="bi bi-search"></i>
-      </button>
-    </div>
-
-    <!-- Theme Toggle -->
-    <div class="dropdown me-2">
-      <button
-        class="btn btn-dark"
-        type="button"
-        data-bs-toggle="dropdown"
-        aria-expanded="false"
-        title="Toggle theme"
+    @for (item of railItems(); track item.key) {
+      <a
+        class="dv-rail__item"
+        [class.is-active]="isActive(item)"
+        [routerLink]="item.path"
+        [title]="item.label"
+        [attr.aria-current]="isActive(item) ? 'page' : null"
       >
-        <i class="bi" [ngClass]="getThemeIcon()"></i>
-      </button>
-      <ul class="dropdown-menu dropdown-menu-end">
-        <li>
-          <button
-            class="dropdown-item"
-            [class.active]="currentTheme() === 'light'"
-            (click)="setTheme('light')"
-          >
-            <i class="bi bi-sun-fill me-2"></i>Light
-          </button>
-        </li>
-        <li>
-          <button
-            class="dropdown-item"
-            [class.active]="currentTheme() === 'dark'"
-            (click)="setTheme('dark')"
-          >
-            <i class="bi bi-moon-fill me-2"></i>Dark
-          </button>
-        </li>
-        <li>
-          <button
-            class="dropdown-item"
-            [class.active]="currentTheme() === 'system'"
-            (click)="setTheme('system')"
-          >
-            <i class="bi bi-circle-half me-2"></i>System
-          </button>
-        </li>
-      </ul>
-    </div>
+        <dv-icon [name]="item.icon" />
+        <span class="visually-hidden">{{ item.label }}</span>
+      </a>
+    }
 
-    <a class="btn btn-dark position-relative me-2" routerLink="/notifications">
-      <i class="bi bi-bell"></i>
-      @if (unreadCount() > 0) {
-        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-          {{ unreadCount() }}
-        </span>
-      }
-    </a>
-
-    <div class="dropdown">
+    <div class="dv-rail__foot">
       <button
-        class="btn btn-dark dropdown-toggle"
         type="button"
-        data-bs-toggle="dropdown"
+        class="dv-rail__theme"
+        (click)="theme.cycleMode()"
+        [title]="themeTitle()"
+        aria-label="Toggle theme"
       >
-        <i class="bi bi-person-circle me-1"></i>
-        {{ auth.currentUser()?.username || 'User' }}
+        <dv-icon name="theme" [size]="15" />
       </button>
-      <ul class="dropdown-menu dropdown-menu-end">
-        <li><a class="dropdown-item" routerLink="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
-        <li><hr class="dropdown-divider" /></li>
-        <li><a class="dropdown-item" href="#" (click)="onLogout(); $event.preventDefault()"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
-      </ul>
+      <a
+        class="dv-rail__avatar"
+        routerLink="/profile"
+        [title]="auth.currentUser()?.username || 'Profile'"
+        >{{ initials() }}</a
+      >
     </div>
-  </div>
-</nav>
+  </nav>
 
-<!-- Global Search Overlay (Ctrl+K / Cmd+K) -->
-<app-global-search-overlay
-  [open]="globalSearchOpen()"
-  (closed)="globalSearchOpen.set(false)"
-/>
+  <div class="dv-main">
+    <!-- Command bar -->
+    <div class="dv-cmdbar">
+      <button
+        type="button"
+        class="dv-cmdbar__search"
+        (click)="paletteOpen.set(true)"
+        aria-label="Search, filter, or run a command"
+      >
+        <span class="dv-cmdbar__caret">&gt;</span>
+        <span class="dv-cmdbar__placeholder">Search, filter, or run a command…</span>
+        <span class="dv-kbd dv-push">⌘K</span>
+      </button>
 
-<!-- Main Content Area -->
-<div class="d-flex">
-  <!-- Sidebar -->
-  <div class="sidebar d-none d-md-block" [class.d-block]="!sidebarCollapsed" style="width: 240px;">
-    <nav class="nav flex-column pt-2">
-      <!-- Top-level (always visible) -->
-      <a class="nav-link" routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
-        <i class="bi bi-speedometer2"></i> Dashboard
-      </a>
-
-      <!-- Documents -->
-      <a class="nav-link sidebar-section-header" role="button" (click)="toggleSection('documents')">
-        <i class="bi bi-chevron-right me-1 small" [class.bi-chevron-down]="isSectionOpen('documents')" [class.bi-chevron-right]="!isSectionOpen('documents')"></i>
-        <i class="bi bi-file-earmark-text me-1"></i> Documents
-      </a>
-      @if (isSectionOpen('documents')) {
-        <a class="nav-link ps-4" routerLink="/documents" routerLinkActive="active">
-          <i class="bi bi-files"></i> All Documents
-        </a>
-        <a class="nav-link ps-4" routerLink="/search" routerLinkActive="active">
-          <i class="bi bi-search"></i> Search
-        </a>
-        <a class="nav-link ps-4" routerLink="/saved-views" routerLinkActive="active">
-          <i class="bi bi-bookmarks"></i> Saved Views
-        </a>
-        @if (sidebarViews().length > 0) {
-          @for (view of sidebarViews(); track view.id) {
-            <a class="nav-link py-1 ps-5 small" [routerLink]="['/saved-views', view.id, 'results']">
-              {{ view.name }}
-            </a>
-          }
+      <div class="dv-cmdbar__status">
+        <span
+          class="dv-dot"
+          [class.dv-dot--ok]="!stats.ocrBusy()"
+          [class.dv-dot--warn]="stats.ocrBusy()"
+        ></span>
+        <span>{{ stats.ocrLabel() }}</span>
+        @if (stats.documentsLabel()) {
+          <span class="dv-sep">|</span>
+          <span>{{ stats.documentsLabel() }}</span>
         }
-      }
-
-      <!-- Organize -->
-      <a class="nav-link sidebar-section-header" role="button" (click)="toggleSection('organize')">
-        <i class="bi me-1 small" [class.bi-chevron-down]="isSectionOpen('organize')" [class.bi-chevron-right]="!isSectionOpen('organize')"></i>
-        <i class="bi bi-collection me-1"></i> Organize
-      </a>
-      @if (isSectionOpen('organize')) {
-        <a class="nav-link ps-4" routerLink="/tags" routerLinkActive="active">
-          <i class="bi bi-tags"></i> Tags
-        </a>
-        <a class="nav-link ps-4" routerLink="/correspondents" routerLinkActive="active">
-          <i class="bi bi-people"></i> Correspondents
-        </a>
-        <a class="nav-link ps-4" routerLink="/cabinets" routerLinkActive="active">
-          <i class="bi bi-folder"></i> Cabinets
-        </a>
-        <a class="nav-link ps-4" routerLink="/custom-fields" routerLinkActive="active">
-          <i class="bi bi-input-cursor-text"></i> Custom Fields
-        </a>
-        <a class="nav-link ps-4" routerLink="/metadata-types" routerLinkActive="active">
-          <i class="bi bi-card-list"></i> Metadata Types
-        </a>
-      }
-
-      <!-- Workflows -->
-      <a class="nav-link sidebar-section-header" role="button" (click)="toggleSection('workflows')">
-        <i class="bi me-1 small" [class.bi-chevron-down]="isSectionOpen('workflows')" [class.bi-chevron-right]="!isSectionOpen('workflows')"></i>
-        <i class="bi bi-diagram-3 me-1"></i> Workflows
-      </a>
-      @if (isSectionOpen('workflows')) {
-        <a class="nav-link ps-4" routerLink="/workflows" routerLinkActive="active">
-          <i class="bi bi-diagram-3"></i> Templates
-        </a>
-        <a class="nav-link ps-4" routerLink="/sources" routerLinkActive="active">
-          <i class="bi bi-inbox"></i> Sources
-        </a>
-        <a class="nav-link ps-4" routerLink="/notification-preferences" routerLinkActive="active">
-          <i class="bi bi-bell-slash"></i> Notifications
-        </a>
-      }
-
-      <!-- Ingest & Processing -->
-      <a class="nav-link sidebar-section-header" role="button" (click)="toggleSection('ingest')">
-        <i class="bi me-1 small" [class.bi-chevron-down]="isSectionOpen('ingest')" [class.bi-chevron-right]="!isSectionOpen('ingest')"></i>
-        <i class="bi bi-cloud-upload me-1"></i> Ingest
-      </a>
-      @if (isSectionOpen('ingest')) {
-        <a class="nav-link ps-4" routerLink="/scanner" routerLinkActive="active">
-          <i class="bi bi-printer"></i> Scanners
-        </a>
-        <a class="nav-link ps-4" routerLink="/classifier" routerLinkActive="active">
-          <i class="bi bi-cpu"></i> ML Classifier
-        </a>
-        <a class="nav-link ps-4" routerLink="/barcode-config" routerLinkActive="active">
-          <i class="bi bi-upc-scan"></i> Barcode & ASN
-        </a>
-        <a class="nav-link ps-4" routerLink="/ai-config" routerLinkActive="active">
-          <i class="bi bi-robot"></i> AI Configuration
-        </a>
-      }
-
-      <!-- Signatures & Sharing -->
-      <a class="nav-link sidebar-section-header" role="button" (click)="toggleSection('sharing')">
-        <i class="bi me-1 small" [class.bi-chevron-down]="isSectionOpen('sharing')" [class.bi-chevron-right]="!isSectionOpen('sharing')"></i>
-        <i class="bi bi-pen me-1"></i> Signatures & Sharing
-      </a>
-      @if (isSectionOpen('sharing')) {
-        <a class="nav-link ps-4" routerLink="/signature-requests" routerLinkActive="active">
-          <i class="bi bi-pen"></i> E-Signatures
-        </a>
-        <a class="nav-link ps-4" routerLink="/share-links" routerLinkActive="active">
-          <i class="bi bi-link-45deg"></i> Share Links
-        </a>
-      }
-
-      <!-- Analytics & Search -->
-      <a class="nav-link sidebar-section-header" role="button" (click)="toggleSection('analytics')">
-        <i class="bi me-1 small" [class.bi-chevron-down]="isSectionOpen('analytics')" [class.bi-chevron-right]="!isSectionOpen('analytics')"></i>
-        <i class="bi bi-bar-chart me-1"></i> Analytics
-      </a>
-      @if (isSectionOpen('analytics')) {
-        <a class="nav-link ps-4" routerLink="/search-analytics" routerLinkActive="active">
-          <i class="bi bi-graph-up"></i> Search Analytics
-        </a>
-        <a class="nav-link ps-4" routerLink="/synonyms" routerLinkActive="active">
-          <i class="bi bi-arrow-left-right"></i> Synonyms
-        </a>
-        <a class="nav-link ps-4" routerLink="/curations" routerLinkActive="active">
-          <i class="bi bi-pin-angle"></i> Curations
-        </a>
-        <a class="nav-link ps-4" routerLink="/zone-ocr" routerLinkActive="active">
-          <i class="bi bi-crop"></i> Zone OCR
-        </a>
-        <a class="nav-link ps-4" routerLink="/zone-ocr-review" routerLinkActive="active">
-          <i class="bi bi-clipboard-check"></i> OCR Review
-        </a>
-        <a class="nav-link ps-4" routerLink="/entity-browser" routerLinkActive="active">
-          <i class="bi bi-diagram-3"></i> Entity Browser
-        </a>
-      }
-
-      <!-- Compliance (staff/superuser only) -->
-      @if (isAdmin()) {
-        <a class="nav-link sidebar-section-header" role="button" (click)="toggleSection('compliance')">
-          <i class="bi me-1 small" [class.bi-chevron-down]="isSectionOpen('compliance')" [class.bi-chevron-right]="!isSectionOpen('compliance')"></i>
-          <i class="bi bi-shield-lock me-1"></i> Compliance
-        </a>
-        @if (isSectionOpen('compliance')) {
-          <a class="nav-link ps-4" routerLink="/legal-holds" routerLinkActive="active">
-            <i class="bi bi-shield-lock"></i> Legal Holds
-          </a>
-          <a class="nav-link ps-4" routerLink="/physical-locations" routerLinkActive="active">
-            <i class="bi bi-building"></i> Physical Locations
-          </a>
-          <a class="nav-link ps-4" routerLink="/charge-outs" routerLinkActive="active">
-            <i class="bi bi-box-arrow-up-right"></i> Charge-Outs
-          </a>
+        @if (stats.storageLabel()) {
+          <span class="dv-sep">|</span>
+          <span>{{ stats.storageLabel() }}</span>
         }
-      }
+      </div>
 
-      <!-- Admin (staff/superuser only) -->
-      @if (isAdmin()) {
-        <a class="nav-link sidebar-section-header" role="button" (click)="toggleSection('admin')">
-          <i class="bi me-1 small" [class.bi-chevron-down]="isSectionOpen('admin')" [class.bi-chevron-right]="!isSectionOpen('admin')"></i>
-          <i class="bi bi-gear me-1"></i> Admin
-        </a>
-        @if (isSectionOpen('admin')) {
-          <a class="nav-link ps-4" routerLink="/portals" routerLinkActive="active">
-            <i class="bi bi-door-open"></i> Portals
-          </a>
-          <a class="nav-link ps-4" routerLink="/document-requests" routerLinkActive="active">
-            <i class="bi bi-send"></i> Doc Requests
-          </a>
-          <a class="nav-link ps-4" routerLink="/submission-review" routerLinkActive="active">
-            <i class="bi bi-check2-square"></i> Review Queue
-          </a>
-          <a class="nav-link ps-4" routerLink="/activity" routerLinkActive="active">
-            <i class="bi bi-activity"></i> Activity Feed
-          </a>
-          <a class="nav-link ps-4" routerLink="/audit-log" routerLinkActive="active">
-            <i class="bi bi-journal-check"></i> Audit Log
-          </a>
-          <a class="nav-link ps-4" routerLink="/admin/users" routerLinkActive="active">
-            <i class="bi bi-people"></i> Users
-          </a>
-          <a class="nav-link ps-4" routerLink="/admin/groups" routerLinkActive="active">
-            <i class="bi bi-collection"></i> Groups
-          </a>
-          <a class="nav-link ps-4" routerLink="/admin/roles" routerLinkActive="active">
-            <i class="bi bi-person-badge"></i> Roles
-          </a>
-          <a class="nav-link ps-4" routerLink="/admin/permissions" routerLinkActive="active">
-            <i class="bi bi-key"></i> Permissions
-          </a>
-          <a class="nav-link ps-4" routerLink="/admin/storage" routerLinkActive="active">
-            <i class="bi bi-hdd-stack"></i> Storage
-          </a>
+      <a
+        class="dv-cmdbar__bell"
+        routerLink="/notifications"
+        title="Notifications"
+        aria-label="Notifications"
+      >
+        <dv-icon name="bell" [size]="16" />
+        @if (unreadCount() > 0) {
+          <span class="dv-badge">{{ unreadCount() }}</span>
         }
-      }
-    </nav>
-  </div>
+      </a>
 
-  <!-- Content -->
-  <div class="content-area flex-grow-1 p-4">
+      <button
+        type="button"
+        class="dv-btn dv-btn--primary"
+        (click)="uploads.pick()"
+        [disabled]="uploads.uploading()"
+      >
+        @if (uploads.uploading()) {
+          Uploading…
+        } @else {
+          Upload <span class="dv-btn__kbd">⇧U</span>
+        }
+      </button>
+    </div>
+
     <router-outlet />
   </div>
+
+  <!-- Command palette (⌘K) -->
+  <app-global-search-overlay
+    [open]="paletteOpen()"
+    (closed)="paletteOpen.set(false)"
+  />
+
+  <!-- Drop-anywhere ingest hint -->
+  @if (uploads.dragActive()) {
+    <div class="dv-dropveil">
+      <div class="dv-dropveil__card">
+        <div class="dv-dropveil__title">Drop to ingest</div>
+        <div class="dv-meta">pdf · img · office · email</div>
+      </div>
+    </div>
+  }
+
+  @if (uploads.message()) {
+    <div
+      class="dv-toast"
+      [class.dv-toast--error]="uploads.error()"
+      (click)="uploads.clearMessage()"
+    >
+      {{ uploads.message() }}
+    </div>
+  }
 </div>

@@ -1,20 +1,53 @@
+// Shell-only styling. Everything reusable lives in src/_console.scss.
 :host {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
+  display: block;
 }
 
-.sidebar-section-header {
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  opacity: 0.8;
-  padding-top: 0.5rem;
-  padding-bottom: 0.25rem;
-  user-select: none;
+// Full-window veil shown while files are dragged over the app.
+.dv-dropveil {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: var(--overlay);
+  backdrop-filter: blur(2px);
+  pointer-events: none;
 
-  &:hover {
-    opacity: 1;
+  &__card {
+    background: var(--panel);
+    border: 1.5px dashed var(--accent-line);
+    border-radius: 12px;
+    padding: 28px 44px;
+    text-align: center;
+    box-shadow: var(--shadow);
+  }
+
+  &__title {
+    font: 600 15px "Space Grotesk", sans-serif;
+    color: var(--accent-text);
+    margin-bottom: 4px;
+  }
+}
+
+.dv-toast {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 61;
+  background: var(--panel);
+  border: 1px solid var(--accent-line);
+  border-radius: 9px;
+  padding: 10px 18px;
+  font-size: 13px;
+  color: var(--text);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  animation: dvFadeUp 0.2s ease;
+
+  &--error {
+    border-color: var(--danger);
+    color: var(--danger);
   }
 }

@@ -1,0 +1,1512 @@
+// Console primitives.
+//
+// Every measurement here is taken from the design prototype
+// (docs/design/console-ui.md). Screens compose these classes rather than
+// re-declaring colours, so a token change propagates everywhere.
+//
+// Grid rows take their columns from a `--dv-cols` custom property so a screen
+// can keep its exact column spec inline without each table growing its own rule:
+//   <div class="dv-thead dv-grid" style="--dv-cols: 28px 1fr 150px">
+
+$mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+$sans: "Space Grotesk", system-ui, -apple-system, sans-serif;
+
+@keyframes dvFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Shell
+// ---------------------------------------------------------------------------
+.dv-shell {
+  height: 100vh;
+  display: flex;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.dv-rail {
+  width: 60px;
+  flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 0;
+  gap: 4px;
+  z-index: 5;
+
+  &__logo {
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-radius: 6px;
+    display: grid;
+    place-items: center;
+    font: 700 15px #{$sans};
+    margin-bottom: 14px;
+    cursor: pointer;
+    border: none;
+  }
+
+  &__item {
+    width: 42px;
+    height: 42px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    color: var(--faint);
+    background: transparent;
+    border: none;
+    padding: 0;
+    box-shadow: inset 2px 0 0 transparent;
+
+    &:hover {
+      background: var(--panel2);
+      color: var(--text);
+    }
+
+    &.is-active {
+      background: var(--panel2);
+      color: var(--accent-text);
+      box-shadow: inset 2px 0 0 var(--accent);
+    }
+  }
+
+  &__foot {
+    margin-top: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+  }
+
+  &__theme {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    color: var(--faint);
+    background: transparent;
+    border: 1px solid var(--border);
+
+    &:hover {
+      color: var(--text);
+    }
+  }
+
+  &__avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: var(--panel2);
+    color: var(--accent-text);
+    display: grid;
+    place-items: center;
+    font: 600 12px #{$mono};
+    cursor: pointer;
+    border: none;
+  }
+}
+
+.dv-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dv-cmdbar {
+  height: 54px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 22px;
+  gap: 16px;
+
+  &__search {
+    flex: 1;
+    max-width: 540px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    cursor: text;
+    text-align: left;
+
+    &:hover {
+      border-color: var(--border2);
+    }
+  }
+
+  &__caret {
+    color: var(--accent-text);
+    font: 500 13px #{$mono};
+  }
+
+  &__placeholder {
+    color: var(--faint);
+    font-size: 13.5px;
+  }
+
+  &__status {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font: 400 12px #{$mono};
+    color: var(--faint);
+    white-space: nowrap;
+
+    .dv-sep {
+      color: var(--border2);
+    }
+  }
+
+  &__bell {
+    position: relative;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    background: none;
+    border: none;
+    color: var(--muted);
+    padding: 0;
+  }
+}
+
+.dv-badge {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: 600 9px #{$mono};
+  border-radius: 8px;
+  padding: 1px 4px;
+}
+
+// ---------------------------------------------------------------------------
+// Screens
+// ---------------------------------------------------------------------------
+.dv-screen {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 32px;
+  animation: dvFadeUp 0.25s ease;
+
+  // Full-bleed screens that manage their own scrolling (documents table).
+  &--flush {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0;
+  }
+
+  &--tight {
+    padding: 24px 32px;
+  }
+}
+
+.dv-inner {
+  max-width: 920px;
+
+  &--wide {
+    max-width: 1000px;
+  }
+  &--narrow {
+    max-width: 760px;
+  }
+  &--feed {
+    max-width: 720px;
+  }
+}
+
+.dv-pagehead {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+// ---------------------------------------------------------------------------
+// Typography
+// ---------------------------------------------------------------------------
+.dv-mono {
+  font-family: #{$mono};
+}
+
+.dv-h1 {
+  margin: 0;
+  font: 600 26px #{$sans};
+  letter-spacing: -0.01em;
+
+  &--sm {
+    font-size: 22px;
+    letter-spacing: 0;
+  }
+}
+
+.dv-h2 {
+  margin: 0;
+  font: 600 19px #{$sans};
+  line-height: 1.3;
+}
+
+// Mono uppercase micro-label: table headers, section labels, metadata keys.
+.dv-eyebrow {
+  font: 500 11px #{$mono};
+  color: var(--faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.dv-ts {
+  font: 400 12px #{$mono};
+  color: var(--faint);
+}
+
+.dv-meta {
+  font: 400 11px #{$mono};
+  color: var(--faint);
+}
+
+.dv-ok {
+  color: var(--ok);
+}
+.dv-warn {
+  color: var(--warn);
+}
+.dv-danger {
+  color: var(--danger);
+}
+.dv-accent {
+  color: var(--accent-text);
+}
+.dv-muted {
+  color: var(--muted);
+}
+.dv-faint {
+  color: var(--faint);
+}
+.dv-push {
+  margin-left: auto;
+}
+.dv-num {
+  text-align: right;
+}
+.dv-clip {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dv-link {
+  color: var(--accent-text);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+
+  &:hover {
+    color: var(--text);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Surfaces
+// ---------------------------------------------------------------------------
+.dv-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--dv-card-radius, 11px);
+
+  &--r9 {
+    --dv-card-radius: 9px;
+  }
+  &--r10 {
+    --dv-card-radius: 10px;
+  }
+  &--r12 {
+    --dv-card-radius: 12px;
+  }
+  &--r14 {
+    --dv-card-radius: 14px;
+  }
+  &--pad {
+    padding: 17px 19px;
+  }
+  &--pad-sm {
+    padding: 14px 18px;
+  }
+  &--flush {
+    overflow: hidden;
+  }
+  &--accent {
+    border-color: var(--accent-line);
+  }
+  &--hover:hover {
+    border-color: var(--border2);
+  }
+
+  &__head {
+    display: flex;
+    align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  &__title {
+    font: 600 14px #{$sans};
+  }
+}
+
+.dv-well {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+
+.dv-dropzone {
+  border: 1.5px dashed var(--border2);
+  border-radius: 12px;
+  padding: 20px 18px;
+  text-align: center;
+  color: var(--faint);
+  font-size: 13px;
+
+  &:hover {
+    border-color: var(--accent-line);
+    color: var(--muted);
+  }
+}
+
+.dv-callout {
+  background: var(--accent-dim);
+  border: 1px solid var(--accent-line);
+  border-radius: 9px;
+  padding: 11px 13px;
+
+  &__label {
+    font: 500 10.5px #{$mono};
+    color: var(--accent-text);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Rows, grids, tables
+// ---------------------------------------------------------------------------
+.dv-grid {
+  display: grid;
+  grid-template-columns: var(--dv-cols);
+  gap: var(--dv-gap, 14px);
+}
+
+.dv-thead {
+  padding: 8px 12px;
+  font: 500 11px #{$mono};
+  color: var(--faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+
+  &--sticky {
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 1;
+  }
+}
+
+// Hoverable list row. Sits directly on the screen background by default;
+// `--in-card` lifts the hover a step so it stays visible inside a panel.
+.dv-row {
+  align-items: center;
+  padding: 11px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--panel);
+  }
+
+  &.is-selected {
+    background: var(--panel2);
+  }
+
+  &--in-card:hover {
+    background: var(--panel2);
+  }
+
+  &--static {
+    cursor: default;
+  }
+
+  &--tight {
+    padding: 9px 12px;
+  }
+}
+
+// Divided row inside a card (dashboard recent documents).
+.dv-listrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--panel2);
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.dv-kv {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 10px;
+  font-size: 13px;
+
+  &__k {
+    font: 400 11px #{$mono};
+    color: var(--faint);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding-top: 2px;
+  }
+}
+
+// Label/value line inside a card: "accuracy .......... 92.4%"
+.dv-stat-line {
+  display: flex;
+  font-size: 12.5px;
+
+  &__k {
+    color: var(--faint);
+  }
+
+  &__v {
+    margin-left: auto;
+    font: 400 12px #{$mono};
+  }
+}
+
+.dv-pager {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 0 8px;
+  font: 400 12px #{$mono};
+  color: var(--faint);
+
+  span {
+    cursor: pointer;
+  }
+
+  .is-current {
+    color: var(--accent-text);
+    cursor: default;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Stat cards
+// ---------------------------------------------------------------------------
+.dv-stat {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+
+  &__label {
+    font: 500 11px #{$mono};
+    color: var(--faint);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  &__row {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  &__value {
+    font: 600 28px #{$sans};
+  }
+
+  &__delta {
+    font: 400 11px #{$mono};
+  }
+
+  &--sm {
+    border-radius: 10px;
+    padding: 14px 16px;
+
+    .dv-stat__label {
+      font-size: 10.5px;
+    }
+    .dv-stat__value {
+      font-size: 24px;
+    }
+    .dv-stat__row {
+      margin-top: 6px;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Chips
+// ---------------------------------------------------------------------------
+.dv-chip {
+  display: inline-block;
+  font: 400 11px #{$mono};
+  border-radius: 4px;
+  padding: 2px 7px;
+  background: var(--panel2);
+  color: var(--muted);
+  white-space: nowrap;
+
+  &--accent {
+    background: var(--accent-dim);
+    color: var(--accent-text);
+  }
+  &--ok {
+    background: var(--ok-dim);
+    color: var(--ok);
+  }
+  &--warn {
+    background: var(--warn-dim);
+    color: var(--warn);
+  }
+  &--danger {
+    background: var(--danger-dim);
+    color: var(--danger);
+  }
+  &--well {
+    background: var(--bg2);
+    color: var(--muted);
+  }
+
+  // Bordered, transparent — tag chips.
+  &--outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+  }
+  &--outline-strong {
+    background: transparent;
+    border: 1px solid var(--border2);
+  }
+  &--dashed {
+    background: transparent;
+    border: 1px dashed var(--accent-line);
+    color: var(--accent-text);
+    cursor: pointer;
+  }
+
+  // Status chips read as small caps.
+  &--upper {
+    font: 500 10.5px #{$mono};
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 8px;
+  }
+}
+
+.dv-kbd {
+  font: 400 11px #{$mono};
+  color: var(--faint);
+  background: var(--bg2);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+// Removable filter token above the documents table.
+.dv-token {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 400 12px #{$mono};
+  border-radius: 6px;
+  padding: 5px 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+
+  &.is-active {
+    background: var(--accent-dim);
+    border-color: var(--accent-line);
+    color: var(--accent-text);
+  }
+}
+
+// Peer-content switch chip (Search / Ingest / Sharing / Compliance / Admin).
+.dv-navchip {
+  font: 400 12px #{$mono};
+  border-radius: 6px;
+  padding: 4px 11px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &.is-active {
+    background: var(--accent-dim);
+    border-color: var(--accent-line);
+    color: var(--accent-text);
+  }
+}
+
+.dv-navchips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+// ---------------------------------------------------------------------------
+// Tabs (document-scoped, underline)
+// ---------------------------------------------------------------------------
+.dv-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dv-tab {
+  padding: 9px 14px;
+  font-size: 13.5px;
+  cursor: pointer;
+  white-space: nowrap;
+  color: var(--faint);
+  border: none;
+  background: none;
+  border-bottom: 2px solid transparent;
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &.is-active {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+    font-weight: 600;
+  }
+}
+
+.dv-tabs--compact .dv-tab {
+  padding: 8px;
+  font-size: 12.5px;
+}
+
+// ---------------------------------------------------------------------------
+// Buttons
+// ---------------------------------------------------------------------------
+.dv-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font: 600 13px #{$sans};
+  cursor: pointer;
+  background: var(--panel);
+  color: var(--text);
+  white-space: nowrap;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &--primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+
+    &:hover:not(:disabled) {
+      filter: brightness(1.08);
+    }
+  }
+
+  &--secondary {
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--border2);
+  }
+
+  &--ghost {
+    background: var(--panel2);
+    color: var(--muted);
+    border: 1px solid var(--border2);
+
+    &:hover:not(:disabled) {
+      color: var(--text);
+    }
+  }
+
+  &--warn {
+    background: var(--panel2);
+    color: var(--warn);
+    border: 1px solid var(--border2);
+  }
+
+  &--danger {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid var(--border);
+  }
+
+  // Accent-outlined "+ New" affordance.
+  &--accent {
+    background: var(--panel);
+    color: var(--accent-text);
+    border: 1px solid var(--accent-line);
+  }
+
+  &--md {
+    padding: 7px 13px;
+    font-size: 12.5px;
+    border-radius: 7px;
+  }
+
+  &--sm {
+    padding: 6px 13px;
+    font-size: 12px;
+    border-radius: 7px;
+  }
+
+  &--block {
+    width: 100%;
+  }
+
+  &__kbd {
+    font: 500 11px #{$mono};
+    opacity: 0.7;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Inputs
+// ---------------------------------------------------------------------------
+.dv-input {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 13px;
+  color: var(--text);
+  font: 400 13px #{$sans};
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+
+  &::placeholder {
+    color: var(--faint);
+  }
+
+  &:focus {
+    border-color: var(--accent-line);
+  }
+
+  &--r7 {
+    border-radius: 7px;
+    padding: 8px 12px;
+  }
+
+  // Login / credential fields: mono, sunken.
+  &--mono {
+    background: var(--bg2);
+    border-color: var(--border2);
+    font: 400 14px #{$mono};
+    padding: 10px 13px;
+  }
+
+  &--bare {
+    background: transparent;
+    border: none;
+    font-size: 15px;
+    padding: 0;
+
+    &:focus {
+      border-color: transparent;
+    }
+  }
+}
+
+.dv-field__label {
+  font: 500 11px #{$mono};
+  color: var(--faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 7px;
+  display: block;
+}
+
+.dv-select {
+  @extend .dv-input;
+  cursor: pointer;
+  appearance: none;
+}
+
+// Filter-builder pill (field ▾ / operator ▾ / value).
+.dv-pill {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 5px 10px;
+  color: var(--text);
+  font: 400 12px #{$mono};
+  cursor: pointer;
+
+  &--op {
+    color: var(--muted);
+  }
+
+  &--value {
+    border-color: var(--accent-line);
+    color: var(--accent-text);
+    cursor: default;
+  }
+}
+
+// TOTP digit box.
+.dv-otp {
+  width: 40px;
+  height: 44px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font: 500 17px #{$mono};
+  color: var(--text);
+  text-align: center;
+  outline: none;
+
+  &.is-filled,
+  &:focus {
+    border-color: var(--accent-line);
+  }
+}
+
+.dv-toggle {
+  width: 34px;
+  height: 19px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  position: relative;
+  cursor: pointer;
+  padding: 0;
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: var(--faint);
+    transition: left 0.15s;
+  }
+
+  &.is-on {
+    background: var(--accent);
+    border-color: var(--accent);
+
+    &::after {
+      left: 17px;
+      background: var(--accent-ink);
+    }
+  }
+}
+
+.dv-check {
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--border2);
+  border-radius: 4px;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  font: 600 10px #{$mono};
+  color: var(--accent-ink);
+  cursor: pointer;
+  padding: 0;
+
+  &.is-checked {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Indicators
+// ---------------------------------------------------------------------------
+.dv-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+  background: var(--faint);
+
+  &--sm {
+    width: 6px;
+    height: 6px;
+  }
+  &--lg {
+    width: 8px;
+    height: 8px;
+  }
+  &--xl {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+  }
+  &--ok {
+    background: var(--ok);
+  }
+  &--warn {
+    background: var(--warn);
+  }
+  &--danger {
+    background: var(--danger);
+  }
+  &--accent {
+    background: var(--accent-text);
+  }
+}
+
+.dv-bar {
+  height: 7px;
+  background: var(--bg2);
+  border-radius: 4px;
+  overflow: hidden;
+
+  &__fill {
+    height: 100%;
+    border-radius: 4px;
+    background: var(--accent);
+
+    &--ok {
+      background: var(--ok);
+    }
+    &--warn {
+      background: var(--warn);
+    }
+    &--danger {
+      background: var(--danger);
+    }
+  }
+
+  &--sm {
+    height: 6px;
+    border-radius: 3px;
+
+    .dv-bar__fill {
+      border-radius: 3px;
+    }
+  }
+
+  // Inline confidence meter beside an extracted field.
+  &--micro {
+    display: inline-block;
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    vertical-align: middle;
+
+    .dv-bar__fill {
+      border-radius: 2px;
+    }
+  }
+}
+
+.dv-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  &__item {
+    display: flex;
+    gap: 11px;
+  }
+
+  &__dot {
+    margin-top: 5px;
+  }
+
+  &__body {
+    flex: 1;
+    font-size: 12.5px;
+    line-height: 1.45;
+  }
+
+  &__when {
+    font: 400 10.5px #{$mono};
+    color: var(--faint);
+    margin-top: 2px;
+  }
+}
+
+// Signer / step chain joined by arrows.
+.dv-chain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  &__arrow {
+    color: var(--border2);
+    font-size: 11px;
+    padding: 0 5px;
+  }
+}
+
+.dv-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--panel2);
+  color: var(--accent-text);
+  display: grid;
+  place-items: center;
+  font: 600 10.5px #{$mono};
+  flex-shrink: 0;
+
+  &--sm {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    font-size: 9.5px;
+  }
+  &--md {
+    width: 28px;
+    height: 28px;
+    font-size: 11px;
+  }
+  &--lg {
+    width: 44px;
+    height: 44px;
+    border-radius: 11px;
+    font-size: 16px;
+  }
+  &--signed {
+    background: var(--accent-dim);
+    border: 1px solid var(--accent-line);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Document preview
+// ---------------------------------------------------------------------------
+.dv-split {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  animation: dvFadeUp 0.25s ease;
+
+  &__left {
+    flex: 1.3;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    min-width: 0;
+  }
+
+  &__right {
+    width: 400px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+}
+
+.dv-crumb {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--border);
+  font: 400 12px #{$mono};
+  color: var(--muted);
+
+  &__up {
+    color: var(--faint);
+    cursor: pointer;
+
+    &:hover {
+      color: var(--text);
+    }
+  }
+}
+
+.dv-zoom {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+  font: 400 11px #{$mono};
+  color: var(--faint);
+
+  span,
+  button {
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 3px 8px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--text);
+    }
+  }
+}
+
+.dv-viewer {
+  flex: 1;
+  overflow-y: auto;
+  background: var(--bg2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px;
+  gap: 16px;
+}
+
+// Striped stand-in shown until the real thumbnail/preview loads.
+.dv-page {
+  width: 520px;
+  max-width: 90%;
+  aspect-ratio: 8.5 / 11;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--panel2),
+    var(--panel2) 6px,
+    var(--panel) 6px,
+    var(--panel) 12px
+  );
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+
+.dv-thumb {
+  width: 26px;
+  height: 34px;
+  flex-shrink: 0;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--panel2),
+    var(--panel2) 4px,
+    var(--bg) 4px,
+    var(--bg) 8px
+  );
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+.dv-highlight {
+  position: absolute;
+  background: var(--warn);
+  opacity: 0.85;
+  border-radius: 2px;
+}
+
+.dv-note {
+  background: var(--panel);
+  border: 1px solid var(--accent-line);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.dv-snippet {
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.55;
+
+  mark {
+    background: var(--accent-dim);
+    color: var(--accent-text);
+    padding: 0 3px;
+    border-radius: 3px;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Bulk action bar
+// ---------------------------------------------------------------------------
+.dv-bulkbar {
+  margin: 0 24px 18px;
+  flex-shrink: 0;
+  background: var(--panel);
+  border: 1px solid var(--accent-line);
+  border-radius: 10px;
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+
+  &__count {
+    font: 500 13px #{$mono};
+    color: var(--accent-text);
+  }
+
+  &__action {
+    color: var(--muted);
+    font-size: 13px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    &:hover {
+      color: var(--text);
+    }
+
+    &--danger {
+      margin-left: auto;
+      color: var(--danger);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Command palette
+// ---------------------------------------------------------------------------
+.dv-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  backdrop-filter: blur(3px);
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  padding-top: 12vh;
+}
+
+.dv-palette {
+  width: 640px;
+  max-width: calc(100vw - 32px);
+  height: fit-content;
+  background: var(--panel);
+  border: 1px solid var(--border2);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  animation: dvFadeUp 0.18s ease;
+
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  &__caret {
+    color: var(--accent-text);
+    font: 500 15px #{$mono};
+  }
+
+  &__body {
+    padding: 10px 8px 12px;
+    max-height: 52vh;
+    overflow-y: auto;
+  }
+
+  &__group {
+    font: 500 10.5px #{$mono};
+    color: var(--faint);
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    padding: 10px 14px 6px;
+
+    &:first-child {
+      padding-top: 6px;
+    }
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 9px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13.5px;
+
+    &:hover,
+    &.is-active {
+      background: var(--panel2);
+    }
+
+    svg {
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+
+    &.is-active svg {
+      color: var(--accent-text);
+    }
+  }
+
+  &__hint {
+    margin-left: auto;
+    font: 400 11px #{$mono};
+    color: var(--faint);
+  }
+
+  &__foot {
+    display: flex;
+    gap: 16px;
+    padding: 10px 20px;
+    border-top: 1px solid var(--border);
+    font: 400 11px #{$mono};
+    color: var(--faint);
+  }
+
+  &__esc {
+    font: 400 11px #{$mono};
+    color: var(--faint);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Login
+// ---------------------------------------------------------------------------
+.dv-auth {
+  position: fixed;
+  inset: 0;
+  background: var(--bg2);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  overflow-y: auto;
+
+  &__col {
+    width: 380px;
+    max-width: 100%;
+    animation: dvFadeUp 0.3s ease;
+  }
+
+  &__brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  &__logo {
+    width: 38px;
+    height: 38px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    font: 700 18px #{$sans};
+  }
+
+  &__name {
+    font: 700 19px #{$sans};
+  }
+
+  &__card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Misc
+// ---------------------------------------------------------------------------
+.dv-divider {
+  height: 1px;
+  background: var(--border);
+  border: none;
+  margin: 0;
+}
+
+.dv-section {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+
+  & + .dv-section {
+    margin-top: 22px;
+  }
+}
+
+.dv-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--faint);
+  font-size: 13px;
+}
+
+.dv-spinner {
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--border2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: dvSpin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes dvSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}

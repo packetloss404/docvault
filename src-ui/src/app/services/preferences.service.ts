@@ -6,6 +6,8 @@ import { environment } from '../../environments/environment';
 export interface UserPreferences {
   dashboard_layout?: string[];
   theme?: 'light' | 'dark' | 'system';
+  /** Console accent colour: teal | chartreuse | amber | periwinkle. */
+  accent?: string;
   [key: string]: unknown;
 }
 

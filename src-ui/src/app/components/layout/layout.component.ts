@@ -1,211 +1,162 @@
-import { Component, HostListener, OnDestroy, OnInit, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
-import { Subscription, interval } from 'rxjs';
-import { AuthService } from '../../services/auth.service';
-import { SearchService } from '../../services/search.service';
-import { NotificationService } from '../../services/notification.service';
 import {
-  PreferencesService,
-  UserPreferences,
-} from '../../services/preferences.service';
-import { SavedViewListItem } from '../../models/search.model';
+  Component,
+  HostListener,
+  OnDestroy,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import {
+  NavigationEnd,
+  Event as RouterEvent,
+  Router,
+  RouterModule,
+} from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { Subscription, filter, interval, map, startWith } from 'rxjs';
+import { AuthService } from '../../services/auth.service';
+import { NotificationService } from '../../services/notification.service';
+import { ShellStatsService } from '../../services/shell-stats.service';
+import { ThemeService } from '../../services/theme.service';
+import { UploadService } from '../../services/upload.service';
 import { GlobalSearchOverlayComponent } from '../global-search-overlay/global-search-overlay.component';
+import { IconComponent } from '../icon/icon.component';
+import { RAIL, RailItem, isUnder } from '../../nav';
 
-export type ThemeMode = 'light' | 'dark' | 'system';
+const STATS_POLL_MS = 30000;
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule, GlobalSearchOverlayComponent],
+  imports: [RouterModule, GlobalSearchOverlayComponent, IconComponent],
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.scss',
 })
 export class LayoutComponent implements OnInit, OnDestroy {
-  sidebarCollapsed = false;
-  searchQuery = signal('');
-  sidebarViews = signal<SavedViewListItem[]>([]);
-  unreadCount = signal(0);
-  currentTheme = signal<ThemeMode>('system');
-  globalSearchOpen = signal(false);
+  readonly auth = inject(AuthService);
+  readonly theme = inject(ThemeService);
+  readonly stats = inject(ShellStatsService);
+  readonly uploads = inject(UploadService);
+  private readonly router = inject(Router);
+  private readonly notifications = inject(NotificationService);
 
-  // Sidebar section collapse state
-  sectionState: Record<string, boolean> = {};
-
-  private readonly SECTION_STATE_KEY = 'dv_sidebar_sections';
+  readonly unreadCount = signal(0);
+  readonly paletteOpen = signal(false);
 
   private pollSubscription: Subscription | null = null;
-  private mediaQuery: MediaQueryList | null = null;
-  private mediaListener: ((e: MediaQueryListEvent) => void) | null = null;
 
-  constructor(
-    public auth: AuthService,
-    private router: Router,
-    private searchService: SearchService,
-    private notificationService: NotificationService,
-    private preferencesService: PreferencesService,
-  ) {}
+  private readonly url = toSignal(
+    this.router.events.pipe(
+      filter((e: RouterEvent): e is NavigationEnd => e instanceof NavigationEnd),
+      map((e) => e.urlAfterRedirects),
+      startWith(this.router.url),
+    ),
+    { initialValue: this.router.url },
+  );
 
-  @HostListener('document:keydown', ['$event'])
-  onGlobalKeydown(event: KeyboardEvent): void {
-    // Ctrl+K (Windows/Linux) or Cmd+K (Mac)
-    if (event.key === 'k' && (event.ctrlKey || event.metaKey)) {
-      event.preventDefault();
-      this.globalSearchOpen.set(!this.globalSearchOpen());
-    }
-  }
+  readonly isStaff = computed(() => {
+    const user = this.auth.currentUser();
+    return !!(user?.is_staff || user?.is_superuser);
+  });
+
+  readonly railItems = computed(() =>
+    RAIL.filter((item) => !item.staffOnly || this.isStaff()),
+  );
+
+  readonly initials = computed(() => {
+    const source = this.auth.currentUser()?.username ?? '';
+    if (!source) return '··';
+    const parts = source.split(/[\s._-]+/).filter(Boolean);
+    const letters = parts.length > 1 ? parts[0][0] + parts[1][0] : source.slice(0, 2);
+    return letters.toLowerCase();
+  });
+
+  readonly themeTitle = computed(
+    () => `Theme: ${this.theme.mode()} — click to change`,
+  );
 
   ngOnInit(): void {
-    this.loadSectionState();
-    this.auth.getProfile().subscribe();
-    this.loadSidebarViews();
+    this.auth.getProfile().subscribe({
+      next: () => this.stats.refresh(this.isStaff()),
+      error: () => this.stats.refresh(false),
+    });
+    this.theme.load();
     this.loadUnreadCount();
-    this.loadTheme();
-    this.pollSubscription = interval(30000).subscribe(() => {
+    this.pollSubscription = interval(STATS_POLL_MS).subscribe(() => {
       this.loadUnreadCount();
+      this.stats.refresh(this.isStaff());
     });
   }
 
   ngOnDestroy(): void {
-    if (this.pollSubscription) {
-      this.pollSubscription.unsubscribe();
+    this.pollSubscription?.unsubscribe();
+  }
+
+  isActive(item: RailItem): boolean {
+    return item.match.some((prefix) => isUnder(this.url(), prefix));
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onGlobalKeydown(event: KeyboardEvent): void {
+    if (event.key.toLowerCase() === 'k' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      this.paletteOpen.update((open) => !open);
+      return;
     }
-    if (this.mediaQuery && this.mediaListener) {
-      this.mediaQuery.removeEventListener('change', this.mediaListener);
+    if (event.key === 'Escape' && this.paletteOpen()) {
+      this.paletteOpen.set(false);
+      return;
     }
-  }
-
-  // --- Theme ---
-
-  loadTheme(): void {
-    this.preferencesService.getPreferences().subscribe({
-      next: (prefs: UserPreferences) => {
-        const theme = prefs.theme as ThemeMode;
-        if (theme && ['light', 'dark', 'system'].includes(theme)) {
-          this.currentTheme.set(theme);
-        }
-        this.applyTheme();
-      },
-      error: () => {
-        this.applyTheme();
-      },
-    });
-  }
-
-  setTheme(theme: ThemeMode): void {
-    this.currentTheme.set(theme);
-    this.applyTheme();
-    this.preferencesService.updatePreferences({ theme }).subscribe();
-  }
-
-  private applyTheme(): void {
-    const mode = this.currentTheme();
-    if (mode === 'system') {
-      this.setupSystemThemeListener();
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      document.documentElement.setAttribute(
-        'data-bs-theme',
-        prefersDark ? 'dark' : 'light',
-      );
-    } else {
-      this.removeSystemThemeListener();
-      document.documentElement.setAttribute('data-bs-theme', mode);
+    // Shift+U uploads — but not while the user is typing into a field.
+    if (
+      event.key === 'U' &&
+      event.shiftKey &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !isTypingTarget(event.target)
+    ) {
+      event.preventDefault();
+      this.uploads.pick();
     }
   }
 
-  private setupSystemThemeListener(): void {
-    if (this.mediaQuery && this.mediaListener) return;
-    this.mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    this.mediaListener = (e: MediaQueryListEvent) => {
-      if (this.currentTheme() === 'system') {
-        document.documentElement.setAttribute(
-          'data-bs-theme',
-          e.matches ? 'dark' : 'light',
-        );
-      }
-    };
-    this.mediaQuery.addEventListener('change', this.mediaListener);
+  // Shell-wide "drop files anywhere to ingest".
+  @HostListener('document:dragover', ['$event'])
+  onDragOver(event: DragEvent): void {
+    if (!event.dataTransfer?.types?.includes('Files')) return;
+    event.preventDefault();
+    this.uploads.setDragActive(true);
   }
 
-  private removeSystemThemeListener(): void {
-    if (this.mediaQuery && this.mediaListener) {
-      this.mediaQuery.removeEventListener('change', this.mediaListener);
-      this.mediaQuery = null;
-      this.mediaListener = null;
-    }
+  @HostListener('document:dragleave', ['$event'])
+  onDragLeave(event: DragEvent): void {
+    // relatedTarget is null only when the pointer leaves the window entirely.
+    if (event.relatedTarget === null) this.uploads.setDragActive(false);
   }
 
-  getThemeIcon(): string {
-    switch (this.currentTheme()) {
-      case 'light':
-        return 'bi-sun-fill';
-      case 'dark':
-        return 'bi-moon-fill';
-      default:
-        return 'bi-circle-half';
-    }
+  @HostListener('document:drop', ['$event'])
+  onDrop(event: DragEvent): void {
+    const files = event.dataTransfer?.files;
+    if (!files?.length) return;
+    event.preventDefault();
+    this.uploads.setDragActive(false);
+    this.uploads.upload(files);
   }
 
-  // --- Existing functionality ---
-
-  loadUnreadCount(): void {
-    this.notificationService.getUnreadCount().subscribe({
+  private loadUnreadCount(): void {
+    this.notifications.getUnreadCount().subscribe({
       next: (resp) => this.unreadCount.set(resp.count),
+      error: () => {},
     });
   }
+}
 
-  loadSidebarViews(): void {
-    this.searchService.getSidebarViews().subscribe({
-      next: (views) => this.sidebarViews.set(views),
-    });
-  }
-
-  toggleSidebar(): void {
-    this.sidebarCollapsed = !this.sidebarCollapsed;
-  }
-
-  onSearch(): void {
-    const q = this.searchQuery().trim();
-    if (q) {
-      this.router.navigate(['/search'], { queryParams: { q, page: 1 } });
-    }
-  }
-
-  onLogout(): void {
-    this.auth.logout().subscribe();
-  }
-
-  // --- Role checks ---
-
-  isAdmin(): boolean {
-    const user = this.auth.currentUser();
-    return !!(user?.is_staff || user?.is_superuser);
-  }
-
-  // --- Sidebar Sections ---
-
-  isSectionOpen(section: string): boolean {
-    return this.sectionState[section] !== false;
-  }
-
-  toggleSection(section: string): void {
-    this.sectionState[section] = !this.isSectionOpen(section);
-    this.saveSectionState();
-  }
-
-  private loadSectionState(): void {
-    try {
-      const stored = localStorage.getItem(this.SECTION_STATE_KEY);
-      if (stored) {
-        this.sectionState = JSON.parse(stored);
-      }
-    } catch {
-      this.sectionState = {};
-    }
-  }
-
-  private saveSectionState(): void {
-    localStorage.setItem(this.SECTION_STATE_KEY, JSON.stringify(this.sectionState));
-  }
+function isTypingTarget(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el) return false;
+  const tag = el.tagName;
+  return (
+    tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable
+  );
 }

@@ -1,3 +1,14 @@
-.login-wrapper {
-  background-color: #f0f2f5;
+.dv-otp-row {
+  display: flex;
+  gap: 7px;
+}
+
+.dv-auth__error {
+  background: var(--danger-dim);
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: var(--danger);
+  font-size: 12.5px;
+  line-height: 1.45;
 }

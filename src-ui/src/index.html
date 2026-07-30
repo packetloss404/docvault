@@ -2,12 +2,19 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>SrcUi</title>
+  <title>DocVault</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <!-- Dark is the default theme; painting the root here avoids a white flash
+       before ThemeService applies the persisted preference. -->
+  <style>
+    html { background: #101310; }
+    html[data-bs-theme="light"] { background: #f1f3ec; }
+  </style>
 </head>
-<body>
+<body data-theme="dark" data-accent="teal">
   <app-root></app-root>
 </body>
 </html>
