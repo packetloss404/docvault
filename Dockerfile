@@ -56,7 +56,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr-eng \
     libreoffice-nogui \
     curl \
-    mime-support \
+    media-types \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root application user
