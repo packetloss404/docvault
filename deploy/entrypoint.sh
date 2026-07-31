@@ -14,7 +14,14 @@
 # =============================================================================
 set -eu
 
-ROLE="${1:-${DOCVAULT_ROLE:-web}}"
+# DOCVAULT_ROLE wins over the argument. The Dockerfile's CMD is ["web"], so an
+# argument is ALWAYS present; if the argument took precedence, setting
+# DOCVAULT_ROLE=worker would be silently ignored and every service would start
+# the web server. Platforms that set env vars but not the command (Railway among
+# them) need the env var to be authoritative.
+# With DOCVAULT_ROLE unset, the argument still works, so
+# `docker run <image> python manage.py shell` behaves as expected.
+ROLE="${DOCVAULT_ROLE:-${1:-web}}"
 [ "$#" -gt 0 ] && shift || true
 
 run_migrations() {
