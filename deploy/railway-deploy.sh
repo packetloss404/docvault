@@ -129,11 +129,34 @@ NOTE
 
 # --- deploy ----------------------------------------------------------------
 
+# `railway up` tars the working directory and uploads it. Doing that from a
+# Windows drive mounted into WSL (/mnt/...) produced corrupted file contents —
+# NUL bytes inside source files — which surfaced only as a baffling Angular
+# build error on the remote builder:
+#     TS1127: Invalid character  /  Unexpected "\x00" in JSON
+# The local build was fine, so the corruption was introduced in transit.
+# Exporting a clean `git archive` onto the Linux filesystem first avoids it, and
+# has the side benefit of deploying exactly HEAD rather than the dirty tree.
+STAGE_DIR=""
+
+stage_tree() {
+  [ -n "$STAGE_DIR" ] && return 0
+  STAGE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/docvault-deploy.XXXXXX")"
+  log "Staging HEAD at $STAGE_DIR (avoids upload corruption from drive mounts)"
+  git archive HEAD | tar -x -C "$STAGE_DIR" || die "could not export HEAD"
+  [ -f .railwayignore ] && cp .railwayignore "$STAGE_DIR/"
+  trap 'rm -rf "$STAGE_DIR"' EXIT
+}
+
 deploy_service() {
   local service="$1"
+  stage_tree
   log "Deploying $service"
-  railway up --service "$service" --ci 2>&1 | tail -25
-  local rc=${PIPESTATUS[0]}
+  ( cd "$STAGE_DIR" \
+      && railway link --project "$PROJECT_NAME" --service "$service" \
+           --environment "${RAILWAY_ENVIRONMENT_NAME:-production}" >/dev/null 2>&1
+    cd "$STAGE_DIR" && railway up --service "$service" --ci 2>&1 | tail -25 )
+  local rc=$?
   [ "$rc" -eq 0 ] || warn "deploy of $service exited $rc"
   return "$rc"
 }
