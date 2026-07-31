@@ -27,6 +27,14 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 # CSRF_TRUSTED_ORIGINS=https://docvault.up.railway.app,https://docs.example.com
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])  # noqa: F405
 
+# Platform health probes hit the container directly over plain HTTP, on the
+# internal network, without the X-Forwarded-Proto header the proxy adds for real
+# traffic. SECURE_SSL_REDIRECT would answer them with a 301, the probe does not
+# follow it, and the deployment is marked unhealthy and never goes live.
+# Exempt only the unauthenticated liveness endpoints; everything else still
+# redirects. (/metrics/ stays admin-only regardless of scheme.)
+SECURE_REDIRECT_EXEMPT = [r"^health/$", r"^ready/$"]
+
 # ALLOWED_HOSTS comes from DJANGO_ALLOWED_HOSTS (see settings/base.py) and must
 # list the deployed domain — on Railway that is the service's generated
 # *.up.railway.app host plus any custom domain, e.g.

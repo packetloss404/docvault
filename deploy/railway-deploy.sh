@@ -96,8 +96,10 @@ configure_service() {
 
   if [ "$role" = "web" ]; then
     # RAILWAY_PUBLIC_DOMAIN is injected once a domain exists; Django needs it in
-    # ALLOWED_HOSTS, and CSRF needs it with a scheme.
-    set_var "$service" DJANGO_ALLOWED_HOSTS '${{RAILWAY_PUBLIC_DOMAIN}}'
+    # ALLOWED_HOSTS, and CSRF needs it with a scheme. healthcheck.railway.app is
+    # the Host header Railway's own probe sends — without it every health check
+    # gets a 400 DisallowedHost and the deploy never goes live.
+    set_var "$service" DJANGO_ALLOWED_HOSTS '${{RAILWAY_PUBLIC_DOMAIN}},healthcheck.railway.app'
     set_var "$service" CSRF_TRUSTED_ORIGINS 'https://${{RAILWAY_PUBLIC_DOMAIN}}'
   fi
 }
