@@ -118,8 +118,21 @@ RUN DJANGO_SECRET_KEY=build-time-secret-for-static-collection-only \
 # Fix final ownership after collectstatic
 RUN chown -R docvault:docvault /app/staticfiles
 
-# Declare persistent volumes
-VOLUME ["/data/media", "/data/consume", "/data/export"]
+# NOTE: no VOLUME instruction here on purpose.
+#
+# Railway rejects the whole Dockerfile at validation time if it sees one
+# ("dockerfile invalid: docker VOLUME ... is not supported, use Railway
+# Volumes") — the build fails before a single step runs. VOLUME is only a hint
+# anyway: it declares mount points and creates anonymous volumes, but every
+# platform that matters mounts these paths explicitly.
+#
+# The directories are still created and owned by the app user above. Mount
+# persistent storage at them as needed:
+#   docker run  -v docvault-media:/data/media ...
+#   compose     volumes: in docker-compose.yml
+#   Railway     a Railway Volume, or better, object storage via STORAGE_BACKEND
+#               (a Railway volume attaches to one service, but web and worker
+#               both need the documents — see docs/storage-backends.md)
 
 # Health check against the /health/ endpoint. Shell form so ${PORT} is expanded
 # at runtime by the container's shell — the app binds $PORT, not always 8000.
