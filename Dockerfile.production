@@ -49,6 +49,7 @@ LABEL org.opencontainers.image.version="1.0.0"
 # Runtime system dependencies only — no compilers
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
+    libmagic1 \
     gnupg \
     poppler-utils \
     tesseract-ocr \
@@ -69,6 +70,8 @@ WORKDIR /app
 
 # Copy application code
 COPY manage.py pyproject.toml ./
+COPY deploy/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 COPY docvault/ docvault/
 COPY core/ core/
 COPY documents/ documents/
@@ -118,14 +121,18 @@ RUN chown -R docvault:docvault /app/staticfiles
 # Declare persistent volumes
 VOLUME ["/data/media", "/data/consume", "/data/export"]
 
-# Health check against the /health/ endpoint
+# Health check against the /health/ endpoint. Shell form so ${PORT} is expanded
+# at runtime by the container's shell — the app binds $PORT, not always 8000.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:8000/health/ || exit 1
+    CMD curl -f "http://localhost:${PORT:-8000}/health/" || exit 1
 
 EXPOSE 8000
 
 # Drop to non-root user
 USER docvault
 
-# Run ASGI so HTTP and WebSocket routes are both served.
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "docvault.asgi:application"]
+# The entrypoint migrates and then runs ASGI (HTTP + WebSockets) on $PORT.
+# Override the command to run the other services off this same image:
+#   worker  -> celery worker      beat -> celery beat scheduler
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["web"]

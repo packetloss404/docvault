@@ -235,6 +235,29 @@ docker build -f Dockerfile.production -t docvault:latest .
 
 The production image uses a multi-stage build (Node.js frontend + Python backend), runs as non-root (UID 1000), and includes health checks.
 
+One image serves all three services. `deploy/entrypoint.sh` picks the role from the first argument (or `DOCVAULT_ROLE`):
+
+```bash
+docker run docvault:latest            # web: runs migrations, then daphne on $PORT (default 8000)
+docker run docvault:latest worker     # Celery worker
+docker run docvault:latest beat       # Celery beat scheduler
+```
+
+Only the `web` role applies migrations, so workers cannot race it on deploy (set `DOCVAULT_SKIP_MIGRATIONS=1` to opt out). The built Angular app is served from `FRONTEND_DIR` (default `$STATIC_ROOT/frontend`) at the URL root, which is what Angular's `<base href="/">` expects.
+
+### Railway
+
+`railway.json` at the repo root builds `Dockerfile.production` and health-checks `/health/`. Railway terminates TLS at its edge and forwards plain HTTP, which production settings account for via `SECURE_PROXY_SSL_HEADER`. Required variables:
+
+| Variable | Value |
+| --- | --- |
+| `DJANGO_SECRET_KEY` | a strong random value (validated at startup) |
+| `DJANGO_ALLOWED_HOSTS` | the deployed domain(s), e.g. `docvault.up.railway.app,docs.example.com` — Django rejects any host not listed |
+| `CSRF_TRUSTED_ORIGINS` | the same domains **with scheme**, e.g. `https://docvault.up.railway.app` — required for admin login |
+| `DATABASE_URL`, `REDIS_URL` | from the Postgres/Redis services |
+
+`PORT` is injected by Railway and honoured by the entrypoint. Deploy the worker and beat as separate services on the same repo with custom start commands `worker` / `beat`.
+
 ### Kubernetes / Helm
 
 ```bash

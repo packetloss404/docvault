@@ -1,0 +1,39 @@
+# Keep the build context small: without this, `docker build` uploads the local
+# virtualenv, node_modules, the dev database and all media — gigabytes that the
+# image never uses, and slow/failing builds on remote builders (Railway).
+.git
+.github
+.venv
+venv
+env
+**/__pycache__
+*.py[cod]
+.pytest_cache
+.ruff_cache
+.claude
+
+# Frontend deps are installed inside the build stage by `npm ci`
+src-ui/node_modules
+src-ui/dist
+src-ui/.angular
+
+# Local state — never belongs in an image
+.env
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+*.log
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Docs / editor noise
+docs/
+dev/
+*.md
+!README.md
+.vscode
+.idea
+.DS_Store

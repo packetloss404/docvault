@@ -2,11 +2,32 @@
 
 from django.conf import settings
 from django.contrib import admin
+from django.http import HttpResponse
+from django.template import TemplateDoesNotExist, loader
 from django.urls import include, path, re_path
-from django.views.generic import TemplateView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 from core.health import health_view, metrics_view, readiness_view
+
+_FRONTEND_MISSING_MESSAGE = (
+    "DocVault API is running, but the Angular frontend has not been built.\n"
+    "Run `npm ci && npx ng build` in src-ui/ and point FRONTEND_DIR at the\n"
+    "build output (defaults to STATIC_ROOT/frontend), or use the dev server on\n"
+    "http://localhost:4200. API endpoints under /api/v1/ are unaffected.\n"
+)
+
+
+def spa_fallback(request, *args, **kwargs):
+    """Serve the Angular SPA's index.html for deep links.
+
+    The template is resolved eagerly so a missing frontend build degrades to a
+    plain 503 with instructions instead of a TemplateDoesNotExist traceback.
+    """
+    try:
+        template = loader.get_template("index.html")
+    except TemplateDoesNotExist:
+        return HttpResponse(_FRONTEND_MISSING_MESSAGE, status=503, content_type="text/plain")
+    return HttpResponse(template.render({}, request))
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -41,10 +62,12 @@ urlpatterns = [
     # OpenAPI
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
-    # SPA deep-link fallback: serve index.html for all unmatched routes
+    # SPA deep-link fallback: serve index.html for all unmatched routes.
+    # Hashed bundles and public assets (/fonts/*.woff2, /favicon.ico) are served
+    # ahead of this by WhiteNoise from settings.FRONTEND_DIR at the URL root.
     re_path(
         r"^(?!api/|admin/|health/|ready/|metrics/|static/|media/|accounts/|__debug__/).*$",
-        TemplateView.as_view(template_name="index.html"),
+        spa_fallback,
         name="spa-fallback",
     ),
 ]
@@ -54,8 +77,11 @@ if settings.DEBUG:
     try:
         import debug_toolbar
 
+        # debug_toolbar.urls is a (urlpatterns, app_name) pair, so it has to be
+        # wrapped in include(); passing it to path() directly raises
+        # "not enough values to unpack" and breaks every management command.
         urlpatterns = [
-            path("__debug__/", debug_toolbar.urls),
+            path("__debug__/", include(debug_toolbar.urls)),
         ] + urlpatterns
     except ImportError:
         pass

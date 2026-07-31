@@ -1,8 +1,8 @@
 """Parser base class, result dataclass, and registry."""
 
+import datetime
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import date
 from pathlib import Path
 
 
@@ -14,7 +14,10 @@ class ParseResult:
     archive_path: Path | None = None
     page_count: int = 0
     metadata: dict = field(default_factory=dict)
-    date: date | None = None
+    # Qualified as datetime.date: the field name shadows a bare `date` import,
+    # and on Python < 3.14 the annotation is evaluated after `date = None` is
+    # bound in the class body, which raises TypeError at import time.
+    date: datetime.date | None = None
 
 
 class DocumentParser(ABC):

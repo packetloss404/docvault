@@ -16,7 +16,11 @@ channels-redis>=4.2
 daphne>=4.1
 django-storages>=1.14
 boto3>=1.40
-python-magic-bin>=0.4
+# libmagic bindings: the -bin variant ships prebuilt libmagic for Windows only
+# (PyPI has no Linux wheel or sdist for it), so Linux/macOS use plain
+# python-magic against the system libmagic1. Both expose the same `import magic` API.
+python-magic-bin>=0.4; sys_platform == "win32"
+python-magic>=0.4.27; sys_platform != "win32"
 ocrmypdf>=16.0
 pikepdf>=9.0
 Pillow>=12.0

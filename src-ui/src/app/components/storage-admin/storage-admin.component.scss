@@ -1,7 +1,15 @@
 // Storage admin geometry. Colours and surfaces come from the Console
 // primitives in src/_console.scss.
-.sa-grid {
+// Full-width cards (backends, configuration) stacked above the two-column grid.
+.sa-stack {
   margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sa-grid {
+  margin-top: 12px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
@@ -54,4 +62,56 @@
 .sa-errors {
   margin-top: 10px;
   border-top: 1px solid var(--border);
+}
+
+// --- Backends / configuration ---------------------------------------------
+
+.sa-backends {
+  margin-top: 6px;
+}
+
+// Mono metadata strip: which configuration source is in force.
+.sa-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.sa-switch {
+  margin-top: 16px;
+  align-items: flex-start;
+}
+
+// Helper text under a field. `.dv-meta` is mono; drop the label's casing rules
+// so a sentence reads as a sentence.
+.sa-hint {
+  margin-top: 5px;
+  text-transform: none;
+  letter-spacing: 0;
+  line-height: 1.45;
+}
+
+.sa-fields {
+  margin-top: 16px;
+}
+
+.sa-note {
+  margin-top: 16px;
+}
+
+.sa-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.sa-banner {
+  margin-top: 12px;
+}
+
+.sa-dismiss {
+  margin-top: 8px;
 }

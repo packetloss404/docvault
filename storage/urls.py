@@ -15,4 +15,19 @@ urlpatterns = [
         views.VerifyIntegrityView.as_view(),
         name="storage-verify-integrity",
     ),
+    path(
+        "storage/config/",
+        views.StorageConfigView.as_view(),
+        name="storage-config",
+    ),
+    path(
+        "storage/config/test/",
+        views.StorageConnectionTestView.as_view(),
+        name="storage-config-test",
+    ),
+    path(
+        "storage/backends/",
+        views.StorageBackendsView.as_view(),
+        name="storage-backends",
+    ),
 ]

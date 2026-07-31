@@ -114,10 +114,19 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "docvault.urls"
 
+# Built Angular SPA (index.html, hashed JS/CSS bundles, favicon.ico and the
+# self-hosted fonts under fonts/). Dockerfile.production copies the output of
+# `ng build` here; in local development it may not exist until someone runs a
+# build, so nothing below may assume the directory is present.
+FRONTEND_DIR = Path(env.str("FRONTEND_DIR", default=str(Path(env("STATIC_ROOT")) / "frontend")))
+FRONTEND_AVAILABLE = (FRONTEND_DIR / "index.html").is_file()
+
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        # The SPA's index.html is loaded as a Django template so the
+        # deep-link fallback in docvault/urls.py can render it.
+        "DIRS": [FRONTEND_DIR] if FRONTEND_AVAILABLE else [],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -259,6 +268,17 @@ CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
 CORS_ALLOW_CREDENTIALS = True
 
 # Whitenoise
+# Serve the Angular build at the URL root. Angular emits `<base href="/">` and
+# references its bundles/assets root-relatively (/main-<hash>.js, /favicon.ico,
+# /fonts/*.woff2), so those files must be reachable at "/" and not only under
+# STATIC_URL. Only wired up when the build output actually exists — WhiteNoise
+# scans the directory at startup and would raise on a missing path.
+if FRONTEND_AVAILABLE:
+    WHITENOISE_ROOT = str(FRONTEND_DIR)
+    # index.html is rendered by the SPA fallback view, so WhiteNoise must not
+    # also claim "/" (it would bypass Django and break deep links).
+    WHITENOISE_INDEX_FILE = False
+
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
@@ -304,6 +324,17 @@ S3_ACCESS_KEY = env("S3_ACCESS_KEY")
 S3_SECRET_KEY = env("S3_SECRET_KEY")
 S3_BUCKET_NAME = env("S3_BUCKET_NAME")
 S3_REGION = env("S3_REGION")
+
+# Which S3-compatible service we are talking to. Selects the compatibility
+# preset in storage.backends.s3 — Backblaze B2, MinIO and R2 each reject
+# something AWS S3 accepts. Defaults to STORAGE_BACKEND so setting
+# STORAGE_BACKEND=b2 is enough on its own.
+S3_PROVIDER = env.str("S3_PROVIDER", default=STORAGE_BACKEND)
+S3_PREFIX = env.str("S3_PREFIX", default="documents")
+# Blank/None means "use the provider preset".
+S3_ADDRESSING_STYLE = env.str("S3_ADDRESSING_STYLE", default="") or None
+S3_DISABLE_CHECKSUMS = env.bool("S3_DISABLE_CHECKSUMS", default=None)
+S3_AUTO_CREATE_BUCKET = env.bool("S3_AUTO_CREATE_BUCKET", default=False)
 
 # OCR settings
 OCR_LANGUAGE = env.str("OCR_LANGUAGE", default="eng")

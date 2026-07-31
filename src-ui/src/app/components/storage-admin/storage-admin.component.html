@@ -5,6 +5,386 @@
       <dv-subnav />
     </div>
 
+    <div class="sa-stack">
+      <!-- Available backends -->
+      <div class="dv-card dv-card--pad">
+        <div class="sa-cardhead">
+          <span class="dv-card__title">Backends</span>
+          <button
+            type="button"
+            class="dv-btn dv-btn--ghost dv-btn--sm dv-push"
+            (click)="loadBackends()"
+            [disabled]="backendsLoading()"
+          >
+            @if (backendsLoading()) {
+              <span class="dv-spinner"></span>
+            } @else {
+              refresh
+            }
+          </button>
+        </div>
+
+        @if (backendsLoading() && backends().length === 0) {
+          <div class="dv-empty"><span class="dv-spinner"></span> Reading backends…</div>
+        } @else if (backends().length === 0) {
+          <div class="dv-empty">Backend list unavailable.</div>
+        } @else {
+          <div class="sa-backends">
+            <div class="dv-thead dv-grid" style="--dv-cols: 1fr 130px 110px 80px">
+              <span>backend</span><span>kind</span><span>endpoint</span><span>state</span>
+            </div>
+            @for (backend of backends(); track backend.id) {
+              <div
+                class="dv-row dv-row--static dv-row--tight dv-grid"
+                style="--dv-cols: 1fr 130px 110px 80px"
+              >
+                <span class="dv-clip">
+                  {{ backend.label }}
+                  <span class="dv-meta">{{ backend.id }}</span>
+                </span>
+                <span>
+                  <span class="dv-chip" [class.dv-chip--well]="!backend.object_storage">
+                    {{ backend.object_storage ? 'object storage' : 'local' }}
+                  </span>
+                </span>
+                <span class="dv-meta">
+                  {{ backend.requires_endpoint ? 'required' : '—' }}
+                </span>
+                <span>
+                  @if (backend.active) {
+                    <span class="dv-chip dv-chip--accent">active</span>
+                  }
+                </span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Storage configuration -->
+      <div class="dv-card dv-card--pad">
+        <div class="sa-cardhead">
+          <span class="dv-card__title">Storage configuration</span>
+          <button
+            type="button"
+            class="dv-btn dv-btn--ghost dv-btn--sm dv-push"
+            (click)="loadConfig()"
+            [disabled]="configLoading()"
+          >
+            @if (configLoading()) {
+              <span class="dv-spinner"></span>
+            } @else {
+              reload
+            }
+          </button>
+        </div>
+
+        <div class="sa-meta">
+          <span class="dv-eyebrow">source</span>
+          <span class="dv-chip" [class.dv-chip--accent]="configSource() === 'database'">
+            {{ configSource() }}
+          </span>
+          <span class="dv-eyebrow">effective backend</span>
+          <span class="dv-chip dv-chip--well">{{ effectiveBackend() || '—' }}</span>
+          @if (updatedAt()) {
+            <span class="dv-ts dv-push">updated {{ updatedAt() | date: 'short' }}</span>
+          }
+        </div>
+
+        <!-- enabled -->
+        <div class="dv-switch-row sa-switch">
+          <button
+            type="button"
+            class="dv-toggle"
+            role="switch"
+            [class.is-on]="formEnabled"
+            [attr.aria-checked]="formEnabled"
+            aria-labelledby="sa-enabled-label"
+            (click)="toggleEnabled()"
+          ></button>
+          <div>
+            <span class="dv-field__label" id="sa-enabled-label">
+              use this configuration
+            </span>
+            <div class="dv-meta sa-hint">
+              When off, storage is configured from environment variables and everything
+              below is ignored.
+            </div>
+          </div>
+        </div>
+
+        <!-- backend -->
+        <div class="dv-form-grid sa-fields">
+          <div>
+            <label class="dv-field__label" for="sa-backend">backend</label>
+            <select id="sa-backend" class="dv-select dv-input--r7" [(ngModel)]="formBackend">
+              @for (option of backendOptions; track option.id) {
+                <option [value]="option.id">{{ option.label }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="dv-callout dv-callout--warn sa-note">
+          <div class="dv-callout__label">backend change</div>
+          <p class="sa-prose">
+            Switching backends does not move existing documents. Anything already stored in
+            the previous backend stays there and will stop resolving until it is moved.
+          </p>
+        </div>
+
+        <!-- object storage fields -->
+        @if (isObjectStorage) {
+          <div class="dv-form-grid sa-fields">
+            <div>
+              <label class="dv-field__label" for="sa-bucket">bucket name</label>
+              <input
+                id="sa-bucket"
+                type="text"
+                class="dv-input dv-input--r7"
+                [(ngModel)]="formBucketName"
+                placeholder="docvault"
+              />
+            </div>
+
+            <div>
+              <label class="dv-field__label" for="sa-endpoint">
+                endpoint url{{ endpointRequired ? ' *' : '' }}
+              </label>
+              <input
+                id="sa-endpoint"
+                type="text"
+                class="dv-input dv-input--r7"
+                [(ngModel)]="formEndpointUrl"
+                [attr.aria-required]="endpointRequired"
+                [placeholder]="
+                  endpointRequired
+                    ? 'https://…  (required — no default endpoint)'
+                    : 'Leave blank to use the provider default'
+                "
+              />
+              @if (endpointMissing) {
+                <div class="dv-meta sa-hint dv-warn">
+                  {{ formBackend }} has no default endpoint — one is required.
+                </div>
+              }
+            </div>
+
+            <div>
+              <label class="dv-field__label" for="sa-region">region</label>
+              <input
+                id="sa-region"
+                type="text"
+                class="dv-input dv-input--r7"
+                [(ngModel)]="formRegion"
+                placeholder="us-east-1"
+              />
+            </div>
+
+            <div>
+              <label class="dv-field__label" for="sa-access-key">access key</label>
+              <input
+                id="sa-access-key"
+                type="text"
+                class="dv-input dv-input--r7 dv-mono"
+                [(ngModel)]="formAccessKey"
+                autocomplete="off"
+              />
+            </div>
+
+            <div>
+              <label class="dv-field__label" for="sa-secret-key">
+                secret key{{ hasSecretKey() ? ' (set)' : '' }}
+              </label>
+              <input
+                id="sa-secret-key"
+                type="password"
+                class="dv-input dv-input--r7 dv-mono"
+                [(ngModel)]="formSecretKey"
+                autocomplete="new-password"
+                [placeholder]="hasSecretKey() ? '••••••••' : 'Secret access key'"
+              />
+              <div class="dv-meta sa-hint">
+                @if (hasSecretKey()) {
+                  A secret is stored. Leave blank to keep it; type a new one to replace it.
+                } @else {
+                  No secret stored yet.
+                }
+              </div>
+            </div>
+
+            <div>
+              <label class="dv-field__label" for="sa-prefix">prefix</label>
+              <input
+                id="sa-prefix"
+                type="text"
+                class="dv-input dv-input--r7 dv-mono"
+                [(ngModel)]="formPrefix"
+                placeholder="documents"
+              />
+            </div>
+
+            <div>
+              <label class="dv-field__label" for="sa-addressing">addressing style</label>
+              <select
+                id="sa-addressing"
+                class="dv-select dv-input--r7"
+                [(ngModel)]="formAddressingStyle"
+              >
+                <option value="">Provider default</option>
+                <option value="auto">Auto</option>
+                <option value="path">Path-style</option>
+                <option value="virtual">Virtual-hosted</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="dv-field__label" for="sa-checksums">disable checksums</label>
+              <select
+                id="sa-checksums"
+                class="dv-select dv-input--r7"
+                [(ngModel)]="formDisableChecksums"
+              >
+                <option value="">Provider default</option>
+                <option value="true">On — do not send checksum headers</option>
+                <option value="false">Off — send checksum headers</option>
+              </select>
+              <div class="dv-meta sa-hint">
+                B2, MinIO and R2 reject the checksum headers boto3 sends by default.
+              </div>
+            </div>
+
+            <div class="dv-form-grid__wide dv-switch-row sa-switch">
+              <button
+                type="button"
+                class="dv-toggle"
+                role="switch"
+                [class.is-on]="formAutoCreateBucket"
+                [attr.aria-checked]="formAutoCreateBucket"
+                aria-labelledby="sa-autocreate-label"
+                (click)="toggleAutoCreateBucket()"
+              ></button>
+              <div>
+                <span class="dv-field__label" id="sa-autocreate-label">
+                  auto-create bucket
+                </span>
+                <div class="dv-meta sa-hint">
+                  Creates the bucket if it is missing. Needs broader credentials.
+                </div>
+              </div>
+            </div>
+          </div>
+        } @else {
+          <p class="sa-prose">
+            Documents are stored on the local filesystem. No credentials are needed.
+          </p>
+        }
+
+        <!-- actions -->
+        <div class="sa-actions">
+          <button
+            type="button"
+            class="dv-btn dv-btn--primary dv-btn--md"
+            (click)="saveConfig()"
+            [disabled]="saving() || endpointMissing"
+          >
+            @if (saving()) {
+              <span class="dv-spinner"></span>
+            }
+            Save configuration
+          </button>
+          <button
+            type="button"
+            class="dv-btn dv-btn--secondary dv-btn--md"
+            (click)="testConnection()"
+            [disabled]="testing()"
+          >
+            @if (testing()) {
+              <span class="dv-spinner"></span>
+              Testing…
+            } @else {
+              Test connection
+            }
+          </button>
+        </div>
+
+        @if (testResult(); as result) {
+          <div
+            class="dv-banner sa-banner"
+            [class.dv-banner--ok]="result.ok"
+            [class.dv-banner--error]="!result.ok"
+            [attr.role]="result.ok ? 'status' : 'alert'"
+          >
+            @if (result.ok) {
+              <span>
+                Connection ok
+                @if (result.provider) {
+                  · <span class="dv-mono">{{ result.provider }}</span>
+                }
+                @if (result.bucket) {
+                  · bucket <span class="dv-mono">{{ result.bucket }}</span>
+                }
+                @if (result.prefix) {
+                  · prefix <span class="dv-mono">{{ result.prefix }}</span>
+                }
+                @if (result.detail) {
+                  · {{ result.detail }}
+                }
+              </span>
+            } @else {
+              <span>{{ result.error }}</span>
+            }
+            <button
+              type="button"
+              class="dv-banner__close"
+              aria-label="Dismiss"
+              (click)="dismissTestResult()"
+            >
+              ✕
+            </button>
+          </div>
+        }
+
+        @if (saveError()) {
+          <div class="dv-banner dv-banner--error sa-banner" role="alert">
+            <span>{{ saveError() }}</span>
+            <button
+              type="button"
+              class="dv-banner__close"
+              aria-label="Dismiss"
+              (click)="dismissSaveError()"
+            >
+              ✕
+            </button>
+          </div>
+        }
+
+        @if (saveMessage()) {
+          <div class="dv-banner dv-banner--ok sa-banner" role="status">
+            <span>{{ saveMessage() }}</span>
+            <button
+              type="button"
+              class="dv-banner__close"
+              aria-label="Dismiss"
+              (click)="dismissSaveMessage()"
+            >
+              ✕
+            </button>
+          </div>
+        }
+
+        @if (saveWarning()) {
+          <div class="dv-callout dv-callout--warn sa-note" role="alert">
+            <div class="dv-callout__label">documents not migrated</div>
+            <p class="sa-prose">{{ saveWarning() }}</p>
+            <button type="button" class="dv-link dv-meta sa-dismiss" (click)="dismissSaveWarning()">
+              dismiss
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+
     <div class="sa-grid">
       <!-- Deduplication -->
       <div class="dv-card dv-card--pad">

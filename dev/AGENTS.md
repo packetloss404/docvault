@@ -18,6 +18,37 @@ Use this file as the **onboarding brief** before changing the repo.
 | Django project | `docvault/` — `settings/`, `urls.py` |
 | API contract | `GET /api/schema/` (OpenAPI) when unsure of paths or bodies |
 
+## 2b. Local environment (WSL / Linux)
+
+A shared virtualenv with all backend dependencies lives at **`~/.venvs/docvault`**
+(Python 3.12). Use it directly rather than creating your own:
+
+```bash
+export PATH="$HOME/.venvs/docvault/bin:$PATH"   # or: source ~/.venvs/docvault/bin/activate
+python -m pytest -q
+python manage.py makemigrations --check --dry-run
+python -m ruff check .
+```
+
+**Put the venv's `bin` on `PATH`** rather than calling the interpreter by
+absolute path. Some tests shell out to `python` (unversioned), which does not
+exist on Ubuntu's default `PATH`; without this, three hook tests in
+`processing/tests/test_hooks.py` fail with "hook script not found" even though
+nothing is wrong.
+
+It is **outside the repo on purpose**. The project sits on `/mnt/d`, a Windows
+drive mount, where a virtualenv's thousands of small files are very slow; `~` is
+ext4. The in-repo `.venv/` is a *Windows* environment (`.venv/Scripts/`) and
+cannot be used from WSL.
+
+Installed from `requirements/dev.txt` + `requirements/test.txt`. System packages
+it depends on: `libmagic1 libpq5 poppler-utils tesseract-ocr tesseract-ocr-eng
+ghostscript`.
+
+Frontend: `cd src-ui && npx ng test --no-watch` (see
+[`docs/design/console-ui.md`](../docs/design/console-ui.md) for the worker-crash
+caveat under load).
+
 ## 3. Workflow
 
 1. Choose a **checkbox** in [`work/CHECKLIST.md`](work/CHECKLIST.md) (or a whole subsection if doing a batch).
