@@ -230,7 +230,7 @@ npm test
 ### Production Docker
 
 ```bash
-docker build -f Dockerfile.production -t docvault:latest .
+docker build -t docvault:latest .
 ```
 
 The production image uses a multi-stage build (Node.js frontend + Python backend), runs as non-root (UID 1000), and includes health checks.
@@ -247,7 +247,7 @@ Only the `web` role applies migrations, so workers cannot race it on deploy (set
 
 ### Railway
 
-`railway.json` at the repo root builds `Dockerfile.production` and health-checks `/health/`. Railway terminates TLS at its edge and forwards plain HTTP, which production settings account for via `SECURE_PROXY_SSL_HEADER`. Required variables:
+Railway builds the root `Dockerfile` (the production, multi-stage one) and health-checks `/health/`. Railway terminates TLS at its edge and forwards plain HTTP, which production settings account for via `SECURE_PROXY_SSL_HEADER`. Required variables:
 
 | Variable | Value |
 | --- | --- |

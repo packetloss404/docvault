@@ -115,7 +115,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = "docvault.urls"
 
 # Built Angular SPA (index.html, hashed JS/CSS bundles, favicon.ico and the
-# self-hosted fonts under fonts/). Dockerfile.production copies the output of
+# self-hosted fonts under fonts/). The root Dockerfile copies the output of
 # `ng build` here; in local development it may not exist until someone runs a
 # build, so nothing below may assume the directory is present.
 FRONTEND_DIR = Path(env.str("FRONTEND_DIR", default=str(Path(env("STATIC_ROOT")) / "frontend")))
