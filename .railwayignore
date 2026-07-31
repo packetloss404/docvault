@@ -1,0 +1,29 @@
+# What `railway up` must not upload. Mirrors .dockerignore.
+#
+# The CLI tars this directory and sends it to the remote builder. Without this,
+# that upload includes the local virtualenv, src-ui/node_modules, the dev
+# database and all media — gigabytes the image never uses. The root .gitignore
+# does not list node_modules (only src-ui/.gitignore does), so relying on
+# gitignore inference is not enough.
+.git
+.github
+.venv
+venv
+env
+**/__pycache__
+*.py[cod]
+.pytest_cache
+.ruff_cache
+.claude
+
+# Installed inside the build stage by `npm ci`
+src-ui/node_modules
+src-ui/dist
+src-ui/.angular
+
+# Local state — never belongs in an image
+.env
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
