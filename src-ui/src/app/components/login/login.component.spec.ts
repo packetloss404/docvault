@@ -144,6 +144,45 @@ describe('LoginComponent', () => {
     expect(component.errorMessage).toBe('Invalid OTP code.');
   });
 
+  it('should start with the password hidden', () => {
+    expect(component.showPassword).toBe(false);
+  });
+
+  describe('backToCredentials', () => {
+    beforeEach(() => {
+      component.username = 'testuser';
+      component.password = 'secret123';
+      component.otpRequired = true;
+      component.otpCode = '123456';
+      component.errorMessage = 'Invalid OTP code.';
+    });
+
+    it('returns to the credentials step', () => {
+      component.backToCredentials();
+      expect(component.otpRequired).toBe(false);
+    });
+
+    it('clears the stale error', () => {
+      component.backToCredentials();
+      expect(component.errorMessage).toBe('');
+    });
+
+    it('clears the entered OTP so it cannot be resubmitted', () => {
+      component.backToCredentials();
+      expect(component.otpCode).toBe('');
+    });
+
+    it('clears the password rather than leaving it in memory', () => {
+      component.backToCredentials();
+      expect(component.password).toBe('');
+    });
+
+    it('keeps the username so it need not be retyped', () => {
+      component.backToCredentials();
+      expect(component.username).toBe('testuser');
+    });
+  });
+
   it('should show fallback error message when error has no known fields', () => {
     mockAuthService.login.mockReturnValue(throwError(() => ({ error: {} })));
 

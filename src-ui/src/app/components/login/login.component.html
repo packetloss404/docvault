@@ -1,81 +1,146 @@
-<div class="dv-auth">
-  <div class="dv-auth__col">
-    <div class="dv-auth__brand">
-      <div class="dv-auth__logo">V</div>
-      <div>
-        <div class="dv-auth__name">DocVault</div>
-        <div class="dv-meta">v{{ version }} · self-hosted</div>
-      </div>
-    </div>
-
-    <form class="dv-auth__card" (ngSubmit)="onSubmit()">
-      @if (errorMessage) {
-        <div class="dv-auth__error" role="alert">{{ errorMessage }}</div>
-      }
-
-      <div>
-        <label class="dv-field__label" for="username">username</label>
-        <input
-          type="text"
-          class="dv-input dv-input--mono"
-          id="username"
-          name="username"
-          autocomplete="username"
-          [(ngModel)]="username"
-          [disabled]="otpRequired"
-          required
-        />
+<div class="dv-auth lg-page">
+  <div class="lg-split">
+    <!-- Brand panel. Static product copy only — no fabricated statistics. -->
+    <aside class="lg-brand" aria-hidden="true">
+      <div class="lg-brand__mark">
+        <span class="dv-auth__logo">V</span>
+        <span class="dv-auth__name">DocVault</span>
       </div>
 
-      <div>
-        <label class="dv-field__label" for="password">password</label>
-        <input
-          type="password"
-          class="dv-input dv-input--mono"
-          id="password"
-          name="password"
-          autocomplete="current-password"
-          [(ngModel)]="password"
-          [disabled]="otpRequired"
-          required
-        />
+      <div class="lg-brand__body">
+        <p class="lg-brand__tagline">
+          Self-hosted document management.<br />
+          Your archive stays on your own server.
+        </p>
+
+        <ul class="lg-brand__list">
+          <li><span class="lg-brand__bullet">›</span> Full-text and semantic search</li>
+          <li><span class="lg-brand__bullet">›</span> OCR and automatic classification</li>
+          <li><span class="lg-brand__bullet">›</span> E-signatures and approval workflows</li>
+          <li><span class="lg-brand__bullet">›</span> Retention, legal hold and audit trail</li>
+        </ul>
       </div>
 
-      @if (otpRequired) {
-        <div>
-          <span class="dv-field__label">authenticator code</span>
-          <div class="dv-otp-row" (paste)="onOtpPaste($event)">
-            @for (digit of otpDigits; track $index) {
-              <input
-                #otpBox
-                class="dv-otp"
-                [class.is-filled]="digit !== ''"
-                type="text"
-                inputmode="numeric"
-                autocomplete="one-time-code"
-                maxlength="1"
-                [attr.aria-label]="'Digit ' + ($index + 1)"
-                [value]="digit"
-                (input)="onOtpInput($index, $event)"
-                (keydown)="onOtpKeydown($index, $event)"
-              />
-            }
-          </div>
+      <div class="lg-brand__foot dv-meta">
+        v{{ version }} · self-hosted · GPL-3.0
+      </div>
+    </aside>
+
+    <!-- Sign-in panel -->
+    <main class="lg-form">
+      <div class="lg-form__inner">
+        <!-- Shown on narrow screens, where the brand panel is hidden. -->
+        <div class="lg-form__mark">
+          <span class="dv-auth__logo">V</span>
+          <span class="dv-auth__name">DocVault</span>
         </div>
-      }
 
-      <button
-        type="submit"
-        class="dv-btn dv-btn--primary dv-btn--block"
-        [disabled]="loading || !username || !password || (otpRequired && otpCode.length < 6)"
-      >
-        @if (loading) {
-          <span class="dv-spinner"></span>
-          Signing in…
-        } @else {
-          {{ otpRequired ? 'Verify code →' : 'Sign in →' }}
+        <h1 class="dv-h1 dv-h1--sm lg-form__title">
+          {{ otpRequired ? 'Two-factor authentication' : 'Sign in' }}
+        </h1>
+        <p class="lg-form__sub">
+          {{
+            otpRequired
+              ? 'Enter the 6-digit code from your authenticator app.'
+              : 'Use your DocVault account to continue.'
+          }}
+        </p>
+
+        @if (errorMessage) {
+          <div class="dv-banner dv-banner--error lg-form__error" role="alert">
+            {{ errorMessage }}
+          </div>
         }
-      </button>
-    </form>
+
+        <form (ngSubmit)="onSubmit()" novalidate>
+          @if (!otpRequired) {
+            <div class="lg-field">
+              <label class="dv-field__label" for="username">username</label>
+              <input
+                class="dv-input dv-input--mono"
+                id="username"
+                name="username"
+                type="text"
+                autocomplete="username"
+                autocapitalize="none"
+                spellcheck="false"
+                [(ngModel)]="username"
+                required
+              />
+            </div>
+
+            <div class="lg-field">
+              <label class="dv-field__label" for="password">password</label>
+              <div class="lg-password">
+                <input
+                  class="dv-input dv-input--mono"
+                  id="password"
+                  name="password"
+                  [type]="showPassword ? 'text' : 'password'"
+                  autocomplete="current-password"
+                  [(ngModel)]="password"
+                  required
+                />
+                <button
+                  type="button"
+                  class="lg-password__toggle"
+                  (click)="showPassword = !showPassword"
+                  [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+                  [attr.aria-pressed]="showPassword"
+                >
+                  {{ showPassword ? 'hide' : 'show' }}
+                </button>
+              </div>
+            </div>
+          } @else {
+            <div class="lg-field">
+              <span class="dv-field__label">authenticator code</span>
+              <div class="lg-otp" (paste)="onOtpPaste($event)">
+                @for (digit of otpDigits; track $index) {
+                  <input
+                    #otpBox
+                    class="dv-otp"
+                    [class.is-filled]="digit !== ''"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="one-time-code"
+                    maxlength="1"
+                    [attr.aria-label]="'Digit ' + ($index + 1)"
+                    [value]="digit"
+                    (input)="onOtpInput($index, $event)"
+                    (keydown)="onOtpKeydown($index, $event)"
+                  />
+                }
+              </div>
+            </div>
+          }
+
+          <button
+            type="submit"
+            class="dv-btn dv-btn--primary dv-btn--block lg-submit"
+            [disabled]="loading || !username || !password || (otpRequired && otpCode.length < 6)"
+          >
+            @if (loading) {
+              <span class="dv-spinner"></span>
+              Signing in…
+            } @else {
+              {{ otpRequired ? 'Verify code' : 'Sign in' }}
+              <span class="lg-submit__key" aria-hidden="true">↵</span>
+            }
+          </button>
+
+          @if (otpRequired) {
+            <button type="button" class="dv-link lg-back" (click)="backToCredentials()">
+              ← Use a different account
+            </button>
+          }
+        </form>
+
+        <div class="lg-form__foot dv-meta">
+          <span class="dv-dot dv-dot--sm dv-dot--ok"></span>
+          self-hosted instance · v{{ version }}
+        </div>
+      </div>
+    </main>
   </div>
 </div>

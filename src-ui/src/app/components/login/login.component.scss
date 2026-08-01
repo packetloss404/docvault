@@ -1,14 +1,247 @@
-.dv-otp-row {
+// Login screen geometry. Shared primitives (.dv-auth, .dv-input, .dv-btn,
+// .dv-otp, .dv-banner) come from src/_console.scss.
+//
+// A lone centred card read as generic and unrelated to the console shell behind
+// it, so the page is a two-panel split: the product on the left, the form on
+// the right. Below 900px the brand panel is dropped rather than stacked — on a
+// phone it is noise between the user and the password field.
+
+.lg-page {
+  padding: 0;
+}
+
+.lg-split {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  width: 100%;
+  height: 100%;
+  max-width: 1180px;
+  max-height: 720px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+// ---------------------------------------------------------------------------
+// Brand panel
+// ---------------------------------------------------------------------------
+.lg-brand {
+  position: relative;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  padding: 44px 44px 36px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  // Faint dot grid: gives the panel the plotted, technical feel of the app
+  // without competing with the form. Built from the accent so it follows the
+  // selected colour.
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(var(--accent-line) 1px, transparent 1px);
+    background-size: 22px 22px;
+    opacity: 0.28;
+    pointer-events: none;
+  }
+
+  // A soft accent wash anchored bottom-left, so the panel is not a flat slab.
+  &::after {
+    content: "";
+    position: absolute;
+    left: -18%;
+    bottom: -28%;
+    width: 74%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--accent-dim) 0%, transparent 68%);
+    pointer-events: none;
+  }
+
+  > * {
+    position: relative;
+  }
+
+  &__mark {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 34px;
+  }
+
+  // Centred in the space between the logo and the footer, so the panel does not
+  // read as top-weighted with a dead zone beneath it.
+  &__body {
+    margin: auto 0;
+  }
+
+  &__tagline {
+    margin: 0 0 28px;
+    font-size: 19px;
+    line-height: 1.5;
+    color: var(--text);
+    font-weight: 500;
+    max-width: 24em;
+  }
+
+  &__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+
+  &__bullet {
+    color: var(--accent-text);
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    margin-right: 8px;
+  }
+
+  &__foot {
+    margin-top: auto;
+    padding-top: 28px;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Form panel
+// ---------------------------------------------------------------------------
+.lg-form {
+  display: grid;
+  place-items: center;
+  padding: 44px 40px;
+  overflow-y: auto;
+
+  &__inner {
+    width: 100%;
+    max-width: 340px;
+    animation: dvFadeUp 0.3s ease;
+  }
+
+  // Only shown when the brand panel is hidden on narrow screens.
+  &__mark {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  &__title {
+    margin-bottom: 6px;
+  }
+
+  &__sub {
+    margin: 0 0 24px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  &__error {
+    margin-bottom: 18px;
+  }
+
+  &__foot {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 28px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+  }
+}
+
+.lg-field {
+  margin-bottom: 16px;
+}
+
+// Password field with an inline reveal control.
+.lg-password {
+  position: relative;
+
+  .dv-input {
+    padding-right: 58px;
+  }
+
+  &__toggle {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 4px 6px;
+    cursor: pointer;
+    font: 400 11px "JetBrains Mono", ui-monospace, monospace;
+    color: var(--faint);
+    border-radius: 4px;
+
+    &:hover {
+      color: var(--text);
+      background: var(--panel2);
+    }
+  }
+}
+
+.lg-otp {
   display: flex;
   gap: 7px;
 }
 
-.dv-auth__error {
-  background: var(--danger-dim);
-  border: 1px solid var(--danger);
-  border-radius: 8px;
-  padding: 9px 12px;
-  color: var(--danger);
+.lg-submit {
+  margin-top: 22px;
+
+  &__key {
+    font: 500 11px "JetBrains Mono", ui-monospace, monospace;
+    opacity: 0.7;
+  }
+}
+
+.lg-back {
+  display: block;
+  margin: 16px auto 0;
   font-size: 12.5px;
-  line-height: 1.45;
+}
+
+// ---------------------------------------------------------------------------
+// Responsive
+// ---------------------------------------------------------------------------
+@media (max-width: 900px) {
+  .lg-split {
+    grid-template-columns: 1fr;
+    max-height: none;
+    height: auto;
+    min-height: 100%;
+    border: none;
+    border-radius: 0;
+    background: var(--bg2);
+    box-shadow: none;
+  }
+
+  .lg-brand {
+    display: none;
+  }
+
+  .lg-form__mark {
+    display: flex;
+  }
+
+  .lg-form {
+    padding: 32px 24px;
+    align-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lg-form__inner {
+    animation: none;
+  }
 }

@@ -27,6 +27,7 @@ export class LoginComponent {
   otpRequired = false;
   errorMessage = '';
   loading = false;
+  showPassword = false;
 
   /** One entry per box; `otpCode` is kept as the joined value. */
   otpDigits: string[] = Array(OTP_LENGTH).fill('');
@@ -61,6 +62,14 @@ export class LoginComponent {
           'Login failed. Please check your credentials.';
       },
     });
+  }
+
+  /** Leave the two-factor step and sign in as someone else. */
+  backToCredentials(): void {
+    this.otpRequired = false;
+    this.errorMessage = '';
+    this.password = '';
+    this.resetOtp();
   }
 
   onOtpInput(index: number, event: Event): void {
