@@ -1,5 +1,9 @@
 # Console UI — unbuilt design elements
 
+> Prioritised alongside the rest of the open work in the root
+> [`BACKLOG.md`](../../BACKLOG.md). This file is the per-field detail behind the
+> "Backend gaps blocking designed UI" section there.
+
 The Console redesign is implemented against the API DocVault actually exposes.
 Where the prototype showed a value the backend does not return, the element was
 **left out** rather than filled with a plausible-looking placeholder — a

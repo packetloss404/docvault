@@ -179,9 +179,23 @@ Admin) or as underline tabs (Organize), derived from `nav.ts` and the URL.
 
 ## Migration status
 
-Bootstrap remains imported. `styles.scss` re-points Bootstrap's own CSS
-variables at the Console tokens, so a screen that still uses `.btn` / `.card` /
-`.table` reads as Console rather than as stock Bootstrap while it is converted.
+Every screen is converted: no `src/app/components/**` template references a
+Bootstrap class any more. Bootstrap is still *imported*, and `styles.scss`
+re-points its CSS variables at the Console tokens, but nothing depends on that
+bridge except the reset.
 
-Remove Bootstrap from `styles.scss` and `package.json` once no
-`src/app/components/**` template references its classes.
+**Removing it is tracked as P1 in the root [`BACKLOG.md`](../../BACKLOG.md).**
+`styles.scss` already restates the load-bearing parts of Bootstrap's reboot, so
+the removal is small — but do it behind a visual pass, because a missing reset
+shows up as subtle layout shift rather than a build error.
+
+### Production build note
+
+Critical-CSS inlining is **disabled** in `angular.json`
+(`optimization.styles.inlineCritical: false`). Angular's inliner emits the
+stylesheet as `media="print"` with an inline `onload="this.media='all'"` and puts
+the working link inside `<noscript>`. The app's CSP sets `script-src 'self'`
+without `'unsafe-inline'`, so that handler is blocked, the media never flips, and
+**no CSS applies at all** — with the fonts and body background still rendering
+from the inlined critical block, which makes it look like a styling bug rather
+than total failure. Do not re-enable it without also changing the CSP.
