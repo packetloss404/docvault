@@ -34,7 +34,8 @@ def main():
         if args.build:
             run(["docker", "build", "-t", "docvault:e2e-base", "."])
             run(compose + ["build"])
-        run(compose + ["up", "-d", "--wait", "--wait-timeout", "300"])
+        # Worker/Beat disable the image's HTTP healthcheck; /ready/ checks the worker.
+        run(compose + ["up", "-d"])
         run(compose + ["exec", "-T", "web", "python", "manage.py", "seed_e2e"])
         if args.integrations:
             for model in ("qwen2.5:0.5b", "all-minilm"):
