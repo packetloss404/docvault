@@ -9,6 +9,7 @@ from physical_records.constants import (
     BUILDING,
     CHECKED_OUT,
     GOOD,
+    OVERDUE,
     RETURNED,
     ROOM,
     SHELF,
@@ -646,6 +647,51 @@ class TestChargeOutListView:
 
 
 class TestOverdueChargeOutView:
+    @pytest.mark.django_db
+    def test_overdue_task_preserves_checkout_and_return_lifecycle(
+        self, client, user, document, physical_record, shelf
+    ):
+        from physical_records.tasks import check_overdue_charge_outs
+
+        charge_out = ChargeOut.objects.create(
+            physical_record=physical_record,
+            user=user,
+            expected_return=timezone.now() - timezone.timedelta(days=1),
+            status=CHECKED_OUT,
+        )
+        check_overdue_charge_outs()
+        charge_out.refresh_from_db()
+        assert charge_out.status == OVERDUE
+        client.force_authenticate(user=user)
+
+        response = client.get(OVERDUE_URL)
+        assert response.status_code == 200
+        assert [item["id"] for item in response.data] == [charge_out.pk]
+
+        data = {"expected_return": (timezone.now() + timezone.timedelta(days=5)).isoformat()}
+        response = client.post(
+            f"/api/v1/documents/{document.pk}/charge-out/", data, format="json"
+        )
+        assert response.status_code == 400
+        response = client.post(
+            f"/api/v1/physical-records/{physical_record.pk}/barcode-checkout/",
+            {**data, "barcode": physical_record.barcode},
+            format="json",
+        )
+        assert response.status_code == 400
+        assert physical_record.charge_outs.count() == 1
+
+        response = client.post(
+            f"/api/v1/documents/{document.pk}/charge-in/", {}, format="json"
+        )
+        assert response.status_code == 200
+        charge_out.refresh_from_db()
+        shelf.refresh_from_db()
+        assert charge_out.status == RETURNED
+        assert charge_out.returned_at is not None
+        assert shelf.current_count == 1
+        assert client.get(OVERDUE_URL).data == []
+
     @pytest.mark.django_db
     def test_overdue_list(self, client, user, physical_record):
         ChargeOut.objects.create(

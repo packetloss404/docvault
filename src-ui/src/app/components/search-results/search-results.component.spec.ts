@@ -89,6 +89,18 @@ describe('SearchResultsComponent', () => {
       queryParamsSubject.next({ q: 'hello' });
       expect(component.currentPage()).toBe(1);
     });
+
+    it('loads subsequent pages for an active filter without a text query', () => {
+      const filters: FilterRow[] = [{ field: 'title', operator: 'contains', value: 'invoice' }];
+      component.onFiltersChange(filters);
+      searchService.search.mockClear();
+
+      queryParamsSubject.next({ q: '', page: '2' });
+
+      expect(searchService.search).toHaveBeenCalledWith(
+        expect.objectContaining({ query: '', page: 2, filter_rules: filters }),
+      );
+    });
   });
 
   describe('doSearch', () => {
@@ -187,13 +199,16 @@ describe('SearchResultsComponent', () => {
       expect((searchService.search as ReturnType<typeof vi.fn>).mock.calls.length).toBeGreaterThan(callsBefore);
     });
 
-    it('does not call doSearch when query is empty', () => {
+    it('applies filters even when the text query is empty', () => {
       component.query.set('');
       searchService.search.mockClear();
 
       component.onFiltersChange([{ field: 'title', operator: 'contains', value: 'x' }]);
 
-      expect(searchService.search).not.toHaveBeenCalled();
+      expect(searchService.search).toHaveBeenCalledWith(expect.objectContaining({
+        query: '',
+        filter_rules: [{ field: 'title', operator: 'contains', value: 'x' }],
+      }));
     });
   });
 

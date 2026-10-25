@@ -153,8 +153,6 @@ class DocumentFile(AuditableModel):
     size = models.PositiveBigIntegerField(default=0, help_text="File size in bytes.")
     comment = models.TextField(blank=True, default="")
 
-    # Link to content-addressed storage blob (Section M).
-    # Migration needed: add nullable FK column `blob_id` referencing storage_contentblob.
     blob = models.ForeignKey(
         "storage.ContentBlob",
         null=True,

@@ -14,6 +14,7 @@ from documents.models import Document
 from documents.serializers import DocumentListSerializer
 from security.permissions import get_document_for_user, get_objects_for_user_with_ownership
 
+from .filter_rules import apply_filter_rules
 from .models import SavedView, SearchCuration, SearchQuery, SearchSynonym
 from .query import execute_autocomplete, execute_more_like_this, execute_search
 from .saved_view_executor import execute_saved_view
@@ -82,6 +83,13 @@ class SearchView(APIView):
             filters["mime_type"] = request.query_params["mime_type"]
 
         document_ids = _permitted_document_ids(request.user)
+
+        if "filter_rules" in request.query_params:
+            scoped_documents = Document.objects.all()
+            if document_ids is not None:
+                scoped_documents = scoped_documents.filter(id__in=document_ids)
+            scoped_documents = apply_filter_rules(scoped_documents, request.query_params["filter_rules"])
+            document_ids = list(scoped_documents.values_list("id", flat=True))
 
         results = execute_search(
             query_text=query,

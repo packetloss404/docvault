@@ -154,7 +154,7 @@ class DocumentAnnotationViewSet(ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def export(self, request, document_id):
-        """Export annotations as JSON for PDF overlay (stub)."""
+        """Export visible annotations as JSON for a PDF overlay."""
         self._get_document(document_id)
 
         qs = Annotation.objects.filter(

@@ -101,20 +101,3 @@ AUDIT_EVENT_TYPE_CHOICES = [
     (EVENT_EXPIRED, "Expired"),
     (EVENT_REMINDER_SENT, "Reminder Sent"),
 ]
-
-# ---------------------------------------------------------------------------
-# Stamp types (reserved for future rubber-stamp feature)
-# ---------------------------------------------------------------------------
-STAMP_APPROVED = "approved"
-STAMP_REJECTED = "rejected"
-STAMP_RECEIVED = "received"
-STAMP_REVIEWED = "reviewed"
-STAMP_CONFIDENTIAL = "confidential"
-
-STAMP_TYPE_CHOICES = [
-    (STAMP_APPROVED, "Approved"),
-    (STAMP_REJECTED, "Rejected"),
-    (STAMP_RECEIVED, "Received"),
-    (STAMP_REVIEWED, "Reviewed"),
-    (STAMP_CONFIDENTIAL, "Confidential"),
-]

@@ -112,6 +112,13 @@ describe('SearchService', () => {
   // --- search() ---
 
   describe('search()', () => {
+    it('serializes filter-builder rules for the search API', () => {
+      const rules = [{ field: 'title' as const, operator: 'starts_with' as const, value: 'Invoice' }];
+      service.search({ filter_rules: rules }).subscribe();
+      const request = httpMock.expectOne((r) => r.url === `${API}/search/`);
+      expect(JSON.parse(request.request.params.get('filter_rules')!)).toEqual(rules);
+      request.flush(makeSearchResponse());
+    });
     it('should GET /search/ with no params when called with empty object', () => {
       const mockResp = makeSearchResponse();
       service.search({}).subscribe((res) => expect(res).toEqual(mockResp));

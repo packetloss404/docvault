@@ -245,7 +245,7 @@ def _send_webhook_action(config, document):
     """Send webhook with rendered payload."""
     import urllib.request
 
-    from core.url_safety import UnsafeOutboundUrlError, validate_outbound_http_url
+    from core.url_safety import UnsafeOutboundUrlError, open_outbound_http_request, validate_outbound_http_url
 
     url = config.get("url", "")
     method = config.get("method", "POST").upper()
@@ -270,7 +270,7 @@ def _send_webhook_action(config, document):
         method=method,
     )
     try:
-        with urllib.request.urlopen(req, timeout=10) as response:
+        with open_outbound_http_request(req, timeout=10) as response:
             logger.info("Webhook %s returned %s", url, response.status)
     except Exception:
         logger.exception("Webhook failed: %s", url)

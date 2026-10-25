@@ -82,6 +82,13 @@
   }
 }
 
+.dv-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  &:not([src]) { display: none; }
+}
+
 .db-attention,
 .db-views {
   display: flex;

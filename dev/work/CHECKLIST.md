@@ -180,4 +180,17 @@ Source: `work/features/FEAT-NG-*.md`
 
 ---
 
+## P — Code review and hardening (2026-10-24)
+
+- [x] Validate resolved webhook destinations at connection time and block redirects/proxy bypasses.
+- [x] Keep authenticated thumbnails out of public caches; enforce legal holds on version mutations.
+- [x] Enforce signing request state, expiration, sequential order and SMS verification; reject stale state updates.
+- [x] Store original files at their rendered storage paths without overwriting other documents.
+- [x] Treat overdue physical-record loans as active until returned.
+- [x] Authenticate document previews/downloads and accept account recovery codes at login.
+- [x] Apply rich search filters through validated, permission-scoped API rules.
+- [x] Remove unused stamp scaffolding, misleading version-download actions and stale comments; repair a test that swallowed failures.
+
+---
+
 **All items complete.** 4 items formally deferred (Mail OAuth, i18n locales, visual workflow designer, user docs).

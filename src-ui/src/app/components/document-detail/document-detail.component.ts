@@ -1,9 +1,9 @@
 import { Component, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { DocumentService } from '../../services/document.service';
+import { AuthenticatedDownloadDirective, AuthenticatedSrcDirective } from '../../directives/authenticated-file.directive';
 import { OrganizationService } from '../../services/organization.service';
 import { CollaborationService } from '../../services/collaboration.service';
 import { LegalHoldService } from '../../services/legal-hold.service';
@@ -72,6 +72,8 @@ export type DocumentDetailTab =
     AnnotationToolbarComponent,
     AnnotationPanelComponent,
     IconComponent,
+    AuthenticatedSrcDirective,
+    AuthenticatedDownloadDirective,
   ],
   templateUrl: './document-detail.component.html',
   styleUrl: './document-detail.component.scss',
@@ -210,7 +212,6 @@ export class DocumentDetailComponent implements OnInit {
     private zoneOcrService: ZoneOCRService,
     private physicalRecordService: PhysicalRecordService,
     private annotationService: AnnotationService,
-    private sanitizer: DomSanitizer,
   ) {}
 
   ngOnInit(): void {
@@ -366,16 +367,14 @@ export class DocumentDetailComponent implements OnInit {
    * PDF viewer URL. The page and zoom fragment is a standard PDF open
    * parameter, so the toolbar controls drive the embedded viewer for real.
    */
-  previewFrameUrl = computed<SafeResourceUrl>(() => {
+  previewFrameUrl = computed(() => {
     const doc = this.document();
-    if (!doc) return this.sanitizer.bypassSecurityTrustResourceUrl('about:blank');
+    if (!doc) return '';
     const base = this.documentService.getDownloadUrl(
       doc.id,
       doc.archive_filename ? 'archive' : 'original',
     );
-    return this.sanitizer.bypassSecurityTrustResourceUrl(
-      `${base}#page=${this.currentPage()}&zoom=${this.zoom()}`,
-    );
+    return `${base}#page=${this.currentPage()}&zoom=${this.zoom()}`;
   });
 
   zoomIn(): void {

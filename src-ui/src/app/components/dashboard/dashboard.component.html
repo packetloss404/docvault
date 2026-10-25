@@ -91,10 +91,9 @@
             } @else {
               @for (doc of recentDocuments(); track doc.id) {
                 <a class="dv-listrow" [routerLink]="['/documents', doc.id]">
-                  <div
-                    class="dv-thumb"
-                    [style.--dv-thumb-src]="thumbSrc(doc)"
-                  ></div>
+                  <div class="dv-thumb">
+                    <img [authenticatedSrc]="getPreviewUrl(doc)" alt="" />
+                  </div>
                   <div class="db-recent__main">
                     <div class="db-recent__title dv-clip">{{ doc.title }}</div>
                     <div class="db-recent__from">{{ doc.correspondent_name }}</div>

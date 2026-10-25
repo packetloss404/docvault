@@ -35,6 +35,7 @@ class TestSecurityHeadersMiddleware:
         response = middleware(request)
         assert "Content-Security-Policy" in response
         assert "default-src 'self'" in response["Content-Security-Policy"]
+        assert "frame-src 'self' blob:;" in response["Content-Security-Policy"]
 
     def test_adds_x_content_type_options(self, rf):
         request = rf.get("/")

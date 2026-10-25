@@ -144,12 +144,12 @@ class DocumentViewSet(viewsets.ModelViewSet):
         # ETag-based caching
         etag = hashlib.md5(doc.thumbnail_path.encode()).hexdigest()
         if request.META.get("HTTP_IF_NONE_MATCH") == etag:
-            return HttpResponse(status=304)
-
-        file_handle = backend.open(doc.thumbnail_path)
-        response = FileResponse(file_handle, content_type="image/webp")
+            response = HttpResponse(status=304)
+        else:
+            file_handle = backend.open(doc.thumbnail_path)
+            response = FileResponse(file_handle, content_type="image/webp")
         response["ETag"] = etag
-        response["Cache-Control"] = "public, max-age=86400"
+        response["Cache-Control"] = "private, no-store"
         return response
 
     @action(detail=True, methods=["get"], url_path="download")
@@ -175,6 +175,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
     def activate_version(self, request, pk=None, version_id=None):
         """Activate a specific version of the document."""
         doc = self.get_object()
+        self._check_legal_hold(doc)
         try:
             version = doc.version_history.get(pk=version_id)
         except DocumentVersion.DoesNotExist:
@@ -259,6 +260,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
     def upload_new_version(self, request, pk=None):
         """Upload a new file to create a new version of the document."""
         doc = self.get_object()
+        self._check_legal_hold(doc)
         file = request.FILES.get("document")
         if not file:
             return Response(

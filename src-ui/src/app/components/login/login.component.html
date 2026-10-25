@@ -1,6 +1,5 @@
 <div class="dv-auth lg-page">
   <div class="lg-split">
-    <!-- Brand panel. Static product copy only — no fabricated statistics. -->
     <aside class="lg-brand" aria-hidden="true">
       <div class="lg-brand__mark">
         <span class="dv-auth__logo">V</span>
@@ -41,7 +40,7 @@
         <p class="lg-form__sub">
           {{
             otpRequired
-              ? 'Enter the 6-digit code from your authenticator app.'
+              ? (useBackupCode ? 'Enter one of your saved backup codes.' : 'Enter the 6-digit code from your authenticator app.')
               : 'Use your DocVault account to continue.'
           }}
         </p>
@@ -94,6 +93,19 @@
             </div>
           } @else {
             <div class="lg-field">
+              @if (useBackupCode) {
+                <label class="dv-field__label" for="backup-code">backup code</label>
+                <input
+                  id="backup-code"
+                  name="backup-code"
+                  class="dv-input dv-input--mono"
+                  type="text"
+                  autocomplete="one-time-code"
+                  autocapitalize="none"
+                  spellcheck="false"
+                  [(ngModel)]="otpCode"
+                />
+              } @else {
               <span class="dv-field__label">authenticator code</span>
               <div class="lg-otp" (paste)="onOtpPaste($event)">
                 @for (digit of otpDigits; track $index) {
@@ -112,13 +124,14 @@
                   />
                 }
               </div>
+              }
             </div>
           }
 
           <button
             type="submit"
             class="dv-btn dv-btn--primary dv-btn--block lg-submit"
-            [disabled]="loading || !username || !password || (otpRequired && otpCode.length < 6)"
+            [disabled]="loading || !username || !password || (otpRequired && (useBackupCode ? !otpCode.trim() : otpCode.length !== 6))"
           >
             @if (loading) {
               <span class="dv-spinner"></span>
@@ -130,6 +143,9 @@
           </button>
 
           @if (otpRequired) {
+            <button type="button" class="dv-link lg-back" (click)="toggleBackupCode()" [disabled]="loading">
+              {{ useBackupCode ? 'Use an authenticator code' : 'Use a backup code' }}
+            </button>
             <button type="button" class="dv-link lg-back" (click)="backToCredentials()">
               ← Use a different account
             </button>

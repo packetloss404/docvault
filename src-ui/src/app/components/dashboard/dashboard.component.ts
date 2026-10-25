@@ -11,6 +11,7 @@ import {
 } from '@angular/cdk/drag-drop';
 import { AuthService } from '../../services/auth.service';
 import { DocumentService } from '../../services/document.service';
+import { AuthenticatedSrcDirective } from '../../directives/authenticated-file.directive';
 import { SearchService } from '../../services/search.service';
 import { OrganizationService } from '../../services/organization.service';
 import { EsignatureService } from '../../services/esignature.service';
@@ -59,6 +60,7 @@ export interface AttentionItem {
     CdkDrag,
     CdkDragHandle,
     CdkDragPlaceholder,
+    AuthenticatedSrcDirective,
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
@@ -343,10 +345,6 @@ export class DashboardComponent implements OnInit {
     return this.documentService.getPreviewUrl(doc.id);
   }
 
-  /** `--dv-thumb-src` value; the stripe placeholder shows through on a 404. */
-  thumbSrc(doc: Document): string {
-    return `url("${this.getPreviewUrl(doc)}")`;
-  }
 
   // --- Upload handling ---
 

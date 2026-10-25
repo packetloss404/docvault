@@ -134,18 +134,46 @@ From `dev/work/SPRINT-PLAN.md`:
 | User-facing docs tree | Deferred | Content work, not code |
 | `@angular/localize` + locales | Deferred | i18n groundwork in `src/locale/README.md` |
 
-### Portfolio audit backlog — 2026-07-17
-_Findings from a 2026-07-17 code audit, preserved for later._
+### SMS verification delivery
 
-- **[low/M]** Single benign TODO at `esignatures/views.py:398` — optional SMS
-  provider hook for external signer verification-code delivery (currently
-  out-of-band).
-  Fix: optionally integrate Twilio/AWS SNS to send the 6-digit
-  `verification_code` via SMS when `Signer.phone_number` is set, before
-  `ExternalSignerVerifyView` is hit. The endpoint already works with out-of-band
-  code delivery and is throttled (`SigningRateThrottle`). Not a defect —
-  deliberate documented design. Verified as the only TODO/FIXME/stub in the tree
-  (excluding migrations).
+Verification codes are provisioned and delivered out-of-band. Automatic SMS
+delivery still needs a configured provider. SMS signers must complete code
+verification before signing; email-link and no-additional-verification methods
+retain their existing token-based behavior.
+
+---
+
+## Completed review fixes — 2026-10-24
+
+Three review agents examined backend correctness, security, and frontend quality.
+Confirmed findings were fixed with regression coverage:
+
+- Webhooks now resolve and validate every destination address at connect time,
+  connect to those exact addresses, and reject redirects and environment proxies.
+- Confidential thumbnails use `private, no-store`, including conditional 304
+  responses. Version activation and uploads enforce existing legal-hold checks.
+- Signing checks persisted request/signer state, expiration, sequential order,
+  and SMS verification. Stale views and expiration workers cannot overwrite
+  terminal states; declining advances the next sequential invitation.
+- Storage templates copy files before publishing the new filename and retain
+  unique names. Overdue physical-record loans remain active and returnable.
+- The SPA loads protected previews and downloads through authenticated HTTP
+  requests and releases blob URLs. Iframe previews accept PDF content only.
+  The frame CSP explicitly permits blob previews. Login accepts eight-character
+  recovery codes.
+- Search filter-builder rules reach the API, are validated against explicit
+  fields/operators, and narrow the existing document permission scope.
+- Removed unused stamp constants, misleading historical-version download links,
+  obsolete migration/stub comments and repetitive comments in touched code.
+  Replaced a certificate test that swallowed exceptions with an exact assertion.
+
+Research references: [OWASP SSRF prevention](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html),
+[OWASP transaction authorization](https://cheatsheetseries.owasp.org/cheatsheets/Transaction_Authorization_Cheat_Sheet.html),
+[Django storage contracts](https://docs.djangoproject.com/en/5.2/ref/files/storage/),
+and [Angular HTTP requests](https://angular.dev/guide/http/making-requests).
+
+Existing deployment, tenancy, source-secret storage and dependency-locking work
+above remains open. Automatic SMS delivery still needs provider configuration.
 
 ---
 

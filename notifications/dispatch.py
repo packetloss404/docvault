@@ -8,7 +8,7 @@ import urllib.request
 from django.conf import settings
 from django.core.mail import send_mail
 
-from core.url_safety import UnsafeOutboundUrlError, validate_outbound_http_url
+from core.url_safety import UnsafeOutboundUrlError, open_outbound_http_request, validate_outbound_http_url
 
 from .constants import (
     ALL_CHANNELS,
@@ -155,6 +155,7 @@ def _send_webhook(url, event_type, title, body, document=None):
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        urllib.request.urlopen(req, timeout=10)
+        with open_outbound_http_request(req, timeout=10):
+            pass
     except Exception:
         logger.exception("Failed to send webhook notification to %s", url)

@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 from documents.models import Document
 from security.permissions import get_document_for_user, get_objects_for_user_with_ownership
 
-from .constants import CHECKED_OUT, RETURNED
+from .constants import CHECKED_OUT, OVERDUE, RETURNED
 from .models import ChargeOut, DestructionCertificate, PhysicalLocation, PhysicalRecord
 from .serializers import (
     BarcodeCheckoutSerializer,
@@ -130,7 +130,7 @@ class ChargeOutView(APIView):
 
         # Check if already checked out
         active_checkout = physical_record.charge_outs.filter(
-            status=CHECKED_OUT
+            status__in=(CHECKED_OUT, OVERDUE)
         ).first()
         if active_checkout:
             return Response(
@@ -171,7 +171,7 @@ class ChargeInView(APIView):
         physical_record = get_object_or_404(PhysicalRecord, document=document)
 
         active_checkout = physical_record.charge_outs.filter(
-            status=CHECKED_OUT
+            status__in=(CHECKED_OUT, OVERDUE)
         ).first()
         if not active_checkout:
             return Response(
@@ -224,7 +224,7 @@ class BarcodeCheckoutView(APIView):
 
         # Check if already checked out
         active_checkout = physical_record.charge_outs.filter(
-            status=CHECKED_OUT
+            status__in=(CHECKED_OUT, OVERDUE)
         ).first()
         if active_checkout:
             return Response(
@@ -287,7 +287,7 @@ class OverdueChargeOutView(APIView):
             "physical_record", "physical_record__document", "user"
         ).filter(
             physical_record__document__in=_permitted_documents(request.user),
-            status=CHECKED_OUT,
+            status__in=(CHECKED_OUT, OVERDUE),
             expected_return__lt=now,
         )
 

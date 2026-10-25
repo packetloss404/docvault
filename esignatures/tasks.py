@@ -154,8 +154,13 @@ def expire_signature_requests():
 
     count = 0
     for sig_request in expired_qs:
-        sig_request.status = REQUEST_EXPIRED
-        sig_request.save(update_fields=["status", "updated_at"])
+        changed = SignatureRequest.objects.filter(
+            pk=sig_request.pk,
+            expiration__lt=now,
+            status__in=[REQUEST_DRAFT, REQUEST_SENT, REQUEST_IN_PROGRESS],
+        ).update(status=REQUEST_EXPIRED, updated_at=now)
+        if not changed:
+            continue
 
         SignatureAuditEvent.objects.create(
             request=sig_request,

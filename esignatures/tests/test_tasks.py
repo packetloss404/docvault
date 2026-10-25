@@ -288,24 +288,13 @@ class TestGenerateCompletionCertificate:
     """Tests for the generate_completion_certificate task."""
 
     @pytest.mark.django_db
-    @patch("esignatures.tasks.reportlab", create=True)
     def test_certificate_without_reportlab_returns_error(
-        self, mock_reportlab, signature_request
+        self, signature_request
     ):
-        """When reportlab is not installed, task returns an error dict."""
-        # The task catches ImportError internally
-        with patch.dict("sys.modules", {"reportlab": None}):
-            # Force ImportError by temporarily removing reportlab
-            try:
-                result = generate_completion_certificate(signature_request.pk)
-                # If reportlab IS installed, it will succeed
-                if "error" in result:
-                    assert "reportlab" in result["error"]
-                else:
-                    assert "certificate_size" in result
-            except Exception:
-                # If reportlab is not installed, the task handles it gracefully
-                pass
+        with patch.dict("sys.modules", {"reportlab.lib": None}):
+            result = generate_completion_certificate(signature_request.pk)
+
+        assert result == {"request_id": signature_request.pk, "error": "reportlab not installed"}
 
     @pytest.mark.django_db
     def test_certificate_generation_succeeds_if_reportlab_available(

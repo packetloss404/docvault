@@ -37,7 +37,7 @@ class StorePlugin(ProcessingPlugin):
         storage_name = f"originals/{file_uuid}{ext}"
 
         with open(context.source_path, "rb") as f:
-            backend.save(storage_name, f)
+            storage_name = backend.save(storage_name, f)
 
         self.update_progress(context, 0.80, "Original file stored")
 
@@ -110,20 +110,18 @@ class StorePlugin(ProcessingPlugin):
             doc.created = context.date_created
             doc.save(update_fields=["created"])
 
-        # Apply StoragePath Jinja2 template to set the document's filename.
-        # The StoragePath is resolved from the document's FK after the record
-        # exists so that all related objects (correspondent, document_type, etc.)
-        # are accessible through the ORM.
         if doc.storage_path_id:
-            # Reload to pick up the storage_path relation written above.
-            doc.refresh_from_db(fields=["storage_path"])
             try:
                 rendered_path = doc.storage_path.render(doc)
                 if rendered_path:
-                    # Preserve the original file extension.
-                    ext = Path(context.original_filename).suffix or ""
-                    doc.filename = f"{rendered_path}{ext}"
+                    # Keep the UUID so matching templates cannot overwrite each other's files.
+                    target_name = f"{rendered_path}_{file_uuid}{ext}"
+                    with backend.open(storage_name) as original:
+                        new_storage_name = backend.save(target_name, original)
+                    doc.filename = new_storage_name
                     doc.save(update_fields=["filename"])
+                    if new_storage_name != storage_name:
+                        backend.delete(storage_name)
                     logger.debug(
                         "StoragePath template applied for document #%s: %s",
                         doc.pk,
@@ -131,8 +129,7 @@ class StorePlugin(ProcessingPlugin):
                     )
             except Exception:
                 logger.exception(
-                    "Failed to render StoragePath template for document #%s — "
-                    "keeping auto-generated filename.",
+                    "Failed to apply StoragePath template for document #%s.",
                     doc.pk,
                 )
 

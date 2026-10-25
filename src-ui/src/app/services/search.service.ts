@@ -9,6 +9,7 @@ import {
   SavedView,
   SavedViewListItem,
   SearchResponse,
+  FilterRow,
 } from '../models/search.model';
 import { SemanticSearchResponse } from '../models/ai.model';
 import { AnalyticsService } from './analytics.service';
@@ -33,6 +34,7 @@ export class SearchService {
     tag_ids?: number[];
     created_after?: string;
     created_before?: string;
+    filter_rules?: FilterRow[];
   }): Observable<SearchResponse> {
     let httpParams = new HttpParams();
     if (params.query) httpParams = httpParams.set('query', params.query);
@@ -55,6 +57,8 @@ export class SearchService {
       httpParams = httpParams.set('created_after', params.created_after);
     if (params.created_before)
       httpParams = httpParams.set('created_before', params.created_before);
+    if (params.filter_rules?.length)
+      httpParams = httpParams.set('filter_rules', JSON.stringify(params.filter_rules));
 
     const startTime = Date.now();
     return this.http.get<SearchResponse>(`${this.baseUrl}/search/`, {

@@ -25,6 +25,7 @@ export class LoginComponent {
   password = '';
   otpCode = '';
   otpRequired = false;
+  useBackupCode = false;
   errorMessage = '';
   loading = false;
   showPassword = false;
@@ -33,6 +34,7 @@ export class LoginComponent {
   otpDigits: string[] = Array(OTP_LENGTH).fill('');
 
   onSubmit(): void {
+    if (this.loading) return;
     this.errorMessage = '';
     this.loading = true;
 
@@ -46,6 +48,7 @@ export class LoginComponent {
       next: (res) => {
         if (res.otp_required) {
           this.otpRequired = true;
+          this.useBackupCode = false;
           this.resetOtp();
           this.loading = false;
           setTimeout(() => this.focusOtp(0), 0);
@@ -67,9 +70,17 @@ export class LoginComponent {
   /** Leave the two-factor step and sign in as someone else. */
   backToCredentials(): void {
     this.otpRequired = false;
+    this.useBackupCode = false;
     this.errorMessage = '';
     this.password = '';
     this.resetOtp();
+  }
+
+  toggleBackupCode(): void {
+    this.useBackupCode = !this.useBackupCode;
+    this.errorMessage = '';
+    this.resetOtp();
+    if (!this.useBackupCode) setTimeout(() => this.focusOtp(0), 0);
   }
 
   onOtpInput(index: number, event: Event): void {

@@ -1,28 +1,9 @@
-import { Component, EventEmitter, OnInit, Output, signal } from '@angular/core';
+import { Component, EventEmitter, Output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
-export type FilterField =
-  | 'title'
-  | 'content'
-  | 'document_type'
-  | 'correspondent'
-  | 'tags'
-  | 'created'
-  | 'language';
-
-export type FilterOperator =
-  | 'contains'
-  | 'equals'
-  | 'starts_with'
-  | 'date_before'
-  | 'date_after';
-
-export interface FilterRow {
-  field: FilterField;
-  operator: FilterOperator;
-  value: string;
-}
+import { FilterField, FilterOperator, FilterRow } from '../../models/search.model';
+export type { FilterField, FilterOperator, FilterRow } from '../../models/search.model';
 
 export const FILTER_FIELDS: { value: FilterField; label: string }[] = [
   { value: 'title', label: 'Title' },
@@ -253,15 +234,13 @@ function defaultOperatorForField(field: FilterField): FilterOperator {
     `,
   ],
 })
-export class SearchFilterBuilderComponent implements OnInit {
+export class SearchFilterBuilderComponent {
   @Output() filtersChange = new EventEmitter<FilterRow[]>();
 
   rows = signal<FilterRow[]>([]);
 
   readonly fields = FILTER_FIELDS;
   readonly allOperators = FILTER_OPERATORS;
-
-  ngOnInit(): void {}
 
   operatorsFor(field: FilterField): typeof FILTER_OPERATORS {
     if (DATE_FIELDS.includes(field)) {

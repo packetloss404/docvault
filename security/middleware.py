@@ -33,6 +33,7 @@ class SecurityHeadersMiddleware:
             "img-src 'self' data: blob:; "
             "font-src 'self'; "
             "connect-src 'self' ws: wss:; "
+            "frame-src 'self' blob:; "
             "frame-ancestors 'none'"
         )
 

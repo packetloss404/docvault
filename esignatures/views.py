@@ -13,7 +13,7 @@ from rest_framework.views import APIView
 
 from security.permissions import get_document_for_user
 
-from .constants import REQUEST_CANCELLED, REQUEST_COMPLETED, REQUEST_EXPIRED
+from .constants import REQUEST_CANCELLED, REQUEST_COMPLETED, REQUEST_EXPIRED, REQUEST_IN_PROGRESS, REQUEST_SENT
 from .engine import (
     InvalidStateError,
     cancel_request,
@@ -268,6 +268,12 @@ def _check_request_active(signer):
             status=status.HTTP_410_GONE,
         )
 
+    if sig_request.status not in (REQUEST_SENT, REQUEST_IN_PROGRESS):
+        return Response(
+            {"error": "This signature request has not been sent."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
     return None
 
 
@@ -412,10 +418,8 @@ class ExternalSignerVerifyView(APIView):
     Accepts { "token": "<signer-uuid>", "code": "<6-digit-code>" } and marks
     the signer as verified=True when the code matches.
 
-    TODO: SMS provider integration needed — once a phone_number is present on
-    the Signer record, send the verification_code via SMS before this endpoint
-    is called (e.g. via Twilio or AWS SNS). For now, the code must be delivered
-    out-of-band (e.g. by email or manually shared).
+    Verification codes must be provisioned and delivered out-of-band; automatic
+    SMS delivery is not configured.
     """
 
     permission_classes = []

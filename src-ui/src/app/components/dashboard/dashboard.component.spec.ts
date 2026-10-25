@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { of } from 'rxjs';
 
 import { DashboardComponent, WidgetType } from './dashboard.component';
@@ -79,6 +81,8 @@ describe('DashboardComponent', () => {
     await TestBed.configureTestingModule({
       imports: [DashboardComponent],
       providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
         { provide: DocumentService, useValue: mockDocumentService },
         { provide: SearchService, useValue: mockSearchService },
         { provide: OrganizationService, useValue: mockOrganizationService },

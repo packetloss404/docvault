@@ -70,7 +70,7 @@
           @case ('pdf') {
             <iframe
               class="dd-frame"
-              [src]="previewFrameUrl()"
+              [authenticatedSrc]="previewFrameUrl()"
               title="Document preview"
             ></iframe>
           }
@@ -78,7 +78,7 @@
             <div class="dd-page-wrap" [style.width.%]="zoom()">
               <img
                 class="dd-image"
-                [src]="getDownloadUrl('original')"
+                [authenticatedSrc]="getDownloadUrl('original')"
                 [alt]="doc.title"
               />
               <ng-container [ngTemplateOutlet]="overlays" />
@@ -88,7 +88,7 @@
             <div class="dd-page-wrap" [style.width.%]="zoom()">
               <img
                 class="dd-image"
-                [src]="getPreviewUrl()"
+                [authenticatedSrc]="getPreviewUrl()"
                 [alt]="'Preview of ' + doc.title"
                 (error)="thumbFailed.set(true)"
               />
@@ -108,7 +108,7 @@
               </span>
               <ng-container [ngTemplateOutlet]="overlays" />
             </div>
-            <a class="dv-link dd-page-link" [href]="getDownloadUrl('original')">
+            <a class="dv-link dd-page-link" href="#" [authenticatedDownload]="getDownloadUrl('original')" [downloadFilename]="doc.original_filename" (error)="actionMessage.set('Download failed. Please try again.'); actionError.set(true)">
               download the file to view it
             </a>
           }
@@ -154,11 +154,11 @@
         <h2 class="dv-h2 dv-clip" [title]="doc.title">{{ doc.title }}</h2>
 
         <div class="dd-actions">
-          <a class="dv-btn dv-btn--primary dv-btn--md" [href]="getDownloadUrl('original')">
+          <a class="dv-btn dv-btn--primary dv-btn--md" href="#" [authenticatedDownload]="getDownloadUrl('original')" [downloadFilename]="doc.original_filename" (error)="actionMessage.set('Download failed. Please try again.'); actionError.set(true)">
             Download
           </a>
           @if (doc.archive_filename) {
-            <a class="dv-btn dv-btn--secondary dv-btn--md" [href]="getDownloadUrl('archive')">
+            <a class="dv-btn dv-btn--secondary dv-btn--md" href="#" [authenticatedDownload]="getDownloadUrl('archive')" (error)="actionMessage.set('Download failed. Please try again.'); actionError.set(true)">
               Archive
             </a>
           }
@@ -687,9 +687,7 @@
                     [routerLink]="['/documents', doc.id, 'compare']"
                     >compare</a
                   >
-                  @if (ver.is_active) {
-                    <a class="dd-version__get" [href]="getDownloadUrl('original')">↓ get</a>
-                  } @else {
+                  @if (!ver.is_active) {
                     <button class="dv-link dd-version__act" (click)="activateVersion(ver.id)">
                       activate
                     </button>

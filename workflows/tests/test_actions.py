@@ -195,7 +195,7 @@ class SendEmailActionTest(ActionTestBase):
 class WebhookActionTest(ActionTestBase):
     """Tests for WebhookAction."""
 
-    @patch("workflows.actions.webhook.urllib.request.urlopen")
+    @patch("workflows.actions.webhook.open_outbound_http_request")
     def test_send_webhook(self, mock_urlopen):
         mock_response = MagicMock()
         mock_response.status = 200

@@ -112,3 +112,18 @@ export const FILTER_RULE_TYPES: { value: string; label: string }[] = [
   { value: 'has_no_asn', label: 'Has no ASN' },
   { value: 'filename_contains', label: 'Filename contains' },
 ];
+
+export type FilterField =
+  | 'title'
+  | 'content'
+  | 'document_type'
+  | 'correspondent'
+  | 'tags'
+  | 'created'
+  | 'language';
+export type FilterOperator = 'contains' | 'equals' | 'starts_with' | 'date_before' | 'date_after';
+export interface FilterRow {
+  field: FilterField;
+  operator: FilterOperator;
+  value: string;
+}

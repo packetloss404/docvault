@@ -82,6 +82,32 @@ describe('LoginComponent', () => {
     });
   });
 
+  it('submits a backup code unchanged through the recovery input', async () => {
+    component.username = 'testuser';
+    component.password = 'secret123';
+    component.otpRequired = true;
+    component.toggleBackupCode();
+    fixture.detectChanges();
+    await fixture.whenStable();
+    const input = fixture.nativeElement.querySelector('#backup-code') as HTMLInputElement;
+    input.value = 'a1b2c3d4';
+    input.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    const form = fixture.nativeElement.querySelector('form');
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    expect(mockAuthService.login).toHaveBeenCalledWith({
+      username: 'testuser', password: 'secret123', otp_code: 'a1b2c3d4',
+    });
+  });
+
+  it('clears recovery codes when returning to the authenticator inputs', () => {
+    component.toggleBackupCode();
+    component.otpCode = 'a1b2c3d4';
+    component.toggleBackupCode();
+    expect(component.useBackupCode).toBe(false);
+    expect(component.otpCode).toBe('');
+  });
+
   it('should set loading to true when submitting', () => {
     // Return an observable that never completes so we can observe mid-flight state
     mockAuthService.login.mockReturnValue(new Observable(() => {}));

@@ -60,7 +60,8 @@ class DocumentPreviewTests(TestCase):
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertEqual(resp["Content-Type"], "image/webp")
         self.assertIn("ETag", resp)
-        self.assertIn("Cache-Control", resp)
+        self.assertEqual(resp["Cache-Control"], "private, no-store")
+        resp.close()
 
     @override_settings(STORAGE_BACKEND="local")
     def test_preview_etag_returns_304(self):
@@ -89,6 +90,7 @@ class DocumentPreviewTests(TestCase):
                 HTTP_IF_NONE_MATCH=etag,
             )
         self.assertEqual(resp.status_code, 304)
+        self.assertEqual(resp["Cache-Control"], "private, no-store")
 
 
 class DocumentDownloadTests(TestCase):
@@ -284,6 +286,68 @@ class DocumentVersionTests(TestCase):
             f"/api/v1/documents/{self.doc.pk}/versions/99999/activate/"
         )
         self.assertEqual(resp.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_held_document_cannot_activate_a_version(self):
+        self.doc.is_held = True
+        self.doc.save(update_fields=["is_held"])
+        active = DocumentVersion.objects.create(document=self.doc, version_number=1, is_active=True)
+        inactive = DocumentVersion.objects.create(document=self.doc, version_number=2, is_active=False)
+
+        resp = self.client.post(f"/api/v1/documents/{self.doc.pk}/versions/{inactive.pk}/activate/")
+
+        self.assertEqual(resp.status_code, status.HTTP_409_CONFLICT)
+        active.refresh_from_db()
+        inactive.refresh_from_db()
+        self.assertTrue(active.is_active)
+        self.assertFalse(inactive.is_active)
+
+    def test_hold_override_allows_version_activation(self):
+        self.doc.is_held = True
+        self.doc.save(update_fields=["is_held"])
+        self.user.is_superuser = True
+        self.user.save(update_fields=["is_superuser"])
+        inactive = DocumentVersion.objects.create(document=self.doc, version_number=1, is_active=False)
+
+        resp = self.client.post(f"/api/v1/documents/{self.doc.pk}/versions/{inactive.pk}/activate/")
+
+        self.assertEqual(resp.status_code, status.HTTP_200_OK)
+        inactive.refresh_from_db()
+        self.assertTrue(inactive.is_active)
+
+    def test_held_document_cannot_receive_a_new_version(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        self.doc.is_held = True
+        self.doc.save(update_fields=["is_held"])
+        active = DocumentVersion.objects.create(document=self.doc, version_number=1, is_active=True)
+        upload = SimpleUploadedFile("new.txt", b"replacement content", content_type="text/plain")
+
+        resp = self.client.post(
+            f"/api/v1/documents/{self.doc.pk}/files/", {"document": upload}, format="multipart",
+        )
+
+        self.assertEqual(resp.status_code, status.HTTP_409_CONFLICT)
+        self.assertFalse(DocumentFile.objects.filter(document=self.doc).exists())
+        self.assertEqual(self.doc.version_history.count(), 1)
+        active.refresh_from_db()
+        self.assertTrue(active.is_active)
+
+    def test_hold_override_allows_new_version_upload(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        self.doc.is_held = True
+        self.doc.save(update_fields=["is_held"])
+        self.user.is_superuser = True
+        self.user.save(update_fields=["is_superuser"])
+        upload = SimpleUploadedFile("new.txt", b"replacement content", content_type="text/plain")
+
+        with tempfile.TemporaryDirectory() as media_root, override_settings(MEDIA_ROOT=media_root):
+            resp = self.client.post(
+                f"/api/v1/documents/{self.doc.pk}/files/", {"document": upload}, format="multipart",
+            )
+
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(self.doc.version_history.get().is_active)
 
     def test_upload_new_version(self):
         """Upload a new file to create a new version."""

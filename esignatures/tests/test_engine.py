@@ -287,6 +287,11 @@ class TestRecordPageView:
 class TestCompleteSigning:
     """Tests for the complete_signing engine function."""
 
+    @pytest.fixture(autouse=True)
+    def sent_request(self, seq_request):
+        seq_request.status = REQUEST_SENT
+        seq_request.save(update_fields=["status"])
+
     @pytest.mark.django_db
     @patch("esignatures.tasks.generate_completion_certificate.delay")
     def test_complete_signing_basic(self, mock_cert, seq_request):
@@ -413,6 +418,11 @@ class TestCompleteSigning:
 
 class TestDeclineSigning:
     """Tests for the decline_signing engine function."""
+
+    @pytest.fixture(autouse=True)
+    def sent_request(self, seq_request):
+        seq_request.status = REQUEST_SENT
+        seq_request.save(update_fields=["status"])
 
     @pytest.mark.django_db
     def test_decline_signing_basic(self, seq_request):

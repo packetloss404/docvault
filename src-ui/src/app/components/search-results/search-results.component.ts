@@ -49,7 +49,7 @@ export class SearchResultsComponent implements OnInit {
       const page = parseInt(params['page'] || '1', 10);
       this.query.set(q);
       this.currentPage.set(page);
-      if (q) {
+      if (q || this.activeFilters().length) {
         this.doSearch();
       }
     });
@@ -63,6 +63,7 @@ export class SearchResultsComponent implements OnInit {
         query: this.query(),
         page: this.currentPage(),
         page_size: this.pageSize(),
+        ...(this.activeFilters().length ? { filter_rules: this.activeFilters() } : {}),
       })
       .subscribe({
         next: (res) => {
@@ -105,9 +106,7 @@ export class SearchResultsComponent implements OnInit {
   onFiltersChange(filters: FilterRow[]): void {
     this.activeFilters.set(filters);
     this.currentPage.set(1);
-    if (this.query()) {
-      this.doSearch();
-    }
+    this.doSearch();
   }
 
   trackResultClick(result: SearchResult, position: number): void {

@@ -1,10 +1,4 @@
-"""
-Stateless service module for e-signature workflow orchestration.
-
-All business logic for signature requests lives here, keeping views
-and models thin. Functions accept model instances and perform
-state transitions, audit logging, and task dispatching.
-"""
+"""Validation, state transitions and audit events for signature requests."""
 
 import logging
 
@@ -29,8 +23,9 @@ from .constants import (
     SIGNER_PENDING,
     SIGNER_SIGNED,
     SIGNER_VIEWED,
+    VERIFY_SMS,
 )
-from .models import SignatureAuditEvent
+from .models import SignatureAuditEvent, SignatureRequest, Signer
 
 logger = logging.getLogger(__name__)
 
@@ -45,11 +40,6 @@ class InvalidStateError(SignatureEngineError):
 
 class ValidationError(SignatureEngineError):
     """Raised when validation fails for an engine operation."""
-
-
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
 
 
 @transaction.atomic
@@ -85,7 +75,6 @@ def send_request(signature_request):
         detail={"signing_order": signature_request.signing_order},
     )
 
-    # Dispatch email tasks
     from .tasks import send_signature_email
 
     if signature_request.signing_order == ORDER_SEQUENTIAL:
@@ -112,16 +101,16 @@ def record_view(signer, ip_address=None):
     Only transitions from PENDING to VIEWED. If the signer has already
     viewed or signed, this is a no-op for status but still logs the event.
     """
-    request = signer.request
+    request = SignatureRequest.objects.select_for_update().get(pk=signer.request_id)
+    signer.request = request
 
-    if signer.status == SIGNER_PENDING:
-        signer.status = SIGNER_VIEWED
-        signer.save(update_fields=["status"])
-
-        # Transition request from SENT to IN_PROGRESS on first view
-        if request.status == REQUEST_SENT:
-            request.status = REQUEST_IN_PROGRESS
-            request.save(update_fields=["status", "updated_at"])
+    if Signer.objects.filter(pk=signer.pk, status=SIGNER_PENDING).update(status=SIGNER_VIEWED):
+        # A stale page view must not reopen a completed or cancelled request.
+        SignatureRequest.objects.filter(pk=request.pk, status=REQUEST_SENT).update(
+            status=REQUEST_IN_PROGRESS, updated_at=timezone.now(),
+        )
+    signer.refresh_from_db(fields=["status"])
+    request.refresh_from_db(fields=["status", "updated_at"])
 
     SignatureAuditEvent.objects.create(
         request=request,
@@ -183,18 +172,20 @@ def complete_signing(signer, field_values, ip_address=None, user_agent=""):
         InvalidStateError: If signer is not in PENDING or VIEWED status.
         ValidationError: If required fields are missing values.
     """
+    request = _lock_signing_request(signer)
+
     if signer.status not in (SIGNER_PENDING, SIGNER_VIEWED):
         raise InvalidStateError(
             f"Signer '{signer.email}' is in '{signer.status}' status "
             f"and cannot complete signing."
         )
 
-    request = signer.request
+    _validate_signing_state(signer)
+    if signer.verification_method == VERIFY_SMS and not signer.verified:
+        raise ValidationError("Verify your identity before completing signing.")
 
-    # Build a map of field_id -> value from the submitted data
     value_map = {fv["field_id"]: fv["value"] for fv in field_values}
 
-    # Validate required fields
     signer_fields = signer.fields.all()
     now = timezone.now()
     missing = []
@@ -213,7 +204,6 @@ def complete_signing(signer, field_values, ip_address=None, user_agent=""):
             f"Required fields are missing values: {missing}"
         )
 
-    # Update signer
     signer.status = SIGNER_SIGNED
     signer.signed_at = now
     signer.ip_address = ip_address
@@ -240,7 +230,6 @@ def complete_signing(signer, field_values, ip_address=None, user_agent=""):
         request.pk,
     )
 
-    # Check for completion or advance to next signer
     if check_completion(request):
         _mark_completed(request)
     elif request.signing_order == ORDER_SEQUENTIAL:
@@ -266,11 +255,14 @@ def decline_signing(signer, reason="", ip_address=None):
     Raises:
         InvalidStateError: If signer has already signed or declined.
     """
+    _lock_signing_request(signer)
     if signer.status in (SIGNER_SIGNED, SIGNER_DECLINED):
         raise InvalidStateError(
             f"Signer '{signer.email}' is in '{signer.status}' status "
             f"and cannot decline."
         )
+
+    _validate_signing_state(signer)
 
     signer.status = SIGNER_DECLINED
     signer.ip_address = ip_address
@@ -295,9 +287,14 @@ def decline_signing(signer, reason="", ip_address=None):
         reason,
     )
 
-    # Check if all signers are now done (signed or declined)
     if check_completion(signer.request):
         _mark_completed(signer.request)
+    elif signer.request.signing_order == ORDER_SEQUENTIAL:
+        next_signer = get_next_signer(signer.request)
+        if next_signer:
+            from .tasks import send_signature_email
+
+            send_signature_email.delay(next_signer.pk)
 
     return signer
 
@@ -314,6 +311,8 @@ def cancel_request(signature_request, user=None):
     Raises:
         InvalidStateError: If the request is already completed or cancelled.
     """
+    SignatureRequest.objects.select_for_update().get(pk=signature_request.pk)
+    signature_request.refresh_from_db()
     if signature_request.status in (REQUEST_COMPLETED, REQUEST_CANCELLED):
         raise InvalidStateError(
             f"Cannot cancel request in '{signature_request.status}' status."
@@ -367,9 +366,24 @@ def check_completion(signature_request):
     return pending_count == 0
 
 
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
+def _lock_signing_request(signer):
+    # Serialize decisions for all signers on this request and discard stale state.
+    request = SignatureRequest.objects.select_for_update().get(pk=signer.request_id)
+    signer.refresh_from_db()
+    signer.request = request
+    return request
+
+
+def _validate_signing_state(signer):
+    request = signer.request
+    if request.status not in (REQUEST_SENT, REQUEST_IN_PROGRESS):
+        raise InvalidStateError(f"Cannot sign request in '{request.status}' status.")
+    if request.expiration and request.expiration <= timezone.now():
+        raise InvalidStateError("This signature request has expired.")
+    if request.signing_order == ORDER_SEQUENTIAL:
+        next_signer = get_next_signer(request)
+        if next_signer is None or next_signer.pk != signer.pk:
+            raise InvalidStateError("It is not your turn to sign this request.")
 
 
 def _mark_completed(signature_request):

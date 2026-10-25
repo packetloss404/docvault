@@ -7,7 +7,7 @@ import urllib.request
 
 import jinja2
 
-from core.url_safety import UnsafeOutboundUrlError, validate_outbound_http_url
+from core.url_safety import UnsafeOutboundUrlError, open_outbound_http_request, validate_outbound_http_url
 
 from .base import WorkflowAction
 
@@ -70,12 +70,12 @@ class WebhookAction(WorkflowAction):
         req = urllib.request.Request(url, data=data, headers=req_headers, method=method)
 
         try:
-            with urllib.request.urlopen(req, timeout=timeout) as response:
+            with open_outbound_http_request(req, timeout=timeout) as response:
                 logger.info(
                     "WebhookAction: %s %s returned %s",
                     method, url, response.status,
                 )
-        except urllib.error.URLError as e:
+        except (urllib.error.URLError, UnsafeOutboundUrlError) as e:
             logger.warning("WebhookAction: request to %s failed: %s", url, e)
 
     def validate_config(self, config):

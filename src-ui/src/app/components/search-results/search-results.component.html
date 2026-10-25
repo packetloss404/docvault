@@ -22,7 +22,7 @@
     </div>
 
     <!-- Result readout -->
-    @if (!loading() && query()) {
+    @if (!loading() && (query() || activeFilters().length)) {
       <div class="sr-readout dv-mono">
         <span>{{ totalCount() }} result{{ totalCount() !== 1 ? 's' : '' }}</span>
         @if (elapsedMs() !== null) {
@@ -97,6 +97,8 @@
           } @empty {
             @if (query()) {
               <div class="dv-empty">No results for “{{ query() }}”.</div>
+            } @else if (activeFilters().length) {
+              <div class="dv-empty">No documents match these filters.</div>
             } @else {
               <div class="dv-empty">
                 Type a query and press
