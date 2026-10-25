@@ -1,5 +1,4 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { Document } from '../models/document.model';
 import { DocumentService } from './document.service';
 
 /**
@@ -67,10 +66,8 @@ export class UploadService {
       const form = new FormData();
       form.append('document', file);
       form.append('title', file.name);
-      // createDocument posts the body as-is; FormData is what the DRF endpoint
-      // expects for a file upload.
       this.documents
-        .createDocument(form as unknown as Partial<Document>)
+        .uploadDocument(form)
         .subscribe({
           next: () => {
             completed++;

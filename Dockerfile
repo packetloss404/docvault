@@ -54,6 +54,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     poppler-utils \
     tesseract-ocr \
     tesseract-ocr-eng \
+    ghostscript \
+    unpaper \
     libreoffice-nogui \
     curl \
     media-types \

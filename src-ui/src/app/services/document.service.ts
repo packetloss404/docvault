@@ -22,6 +22,11 @@ export interface DocumentQueryParams {
   has_asn?: boolean;
 }
 
+export interface DocumentUploadResponse {
+  task_id: string;
+  status: 'queued';
+}
+
 @Injectable({ providedIn: 'root' })
 export class DocumentService {
   private readonly apiUrl = `${environment.apiUrl}/documents`;
@@ -51,6 +56,10 @@ export class DocumentService {
 
   createDocument(data: Partial<Document>): Observable<Document> {
     return this.http.post<Document>(`${this.apiUrl}/`, data);
+  }
+
+  uploadDocument(data: FormData): Observable<DocumentUploadResponse> {
+    return this.http.post<DocumentUploadResponse>(`${this.apiUrl}/upload/`, data);
   }
 
   updateDocument(id: number, data: Partial<Document>): Observable<Document> {

@@ -48,8 +48,6 @@ class PDFParser(DocumentParser):
 
         try:
             kwargs = {
-                "input_file": source_path,
-                "output_file": archive_path,
                 "language": language,
                 "output_type": ocr_config.output_type,
                 "deskew": ocr_config.deskew,
@@ -70,7 +68,7 @@ class PDFParser(DocumentParser):
             if ocr_config.clean == "finalize":
                 kwargs["clean_final"] = True
 
-            ocrmypdf.ocr(**kwargs)
+            ocrmypdf.ocr(source_path, archive_path, **kwargs)
             return archive_path
 
         except ocrmypdf.exceptions.PriorOcrFoundError:

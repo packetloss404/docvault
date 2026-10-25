@@ -4,6 +4,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { HttpTestingController } from '@angular/common/http/testing';
 
 import { DocumentService } from './document.service';
+import { UploadService } from './upload.service';
 import {
   Document,
   DocumentType,
@@ -183,6 +184,22 @@ describe('DocumentService', () => {
       expect(req.request.body).toEqual(payload);
       req.flush(created);
     });
+  });
+
+  it('queues files from the shared upload service at the ingestion endpoint', () => {
+    const uploads = TestBed.inject(UploadService);
+    const file = new File(['%PDF-1.7'], 'invoice.pdf', { type: 'application/pdf' });
+
+    uploads.upload([file]);
+
+    const request = httpMock.expectOne(`${DOCS_URL}/upload/`);
+    expect(request.request.method).toBe('POST');
+    const form = request.request.body as FormData;
+    expect(form.get('document')).toBe(file);
+    expect(form.get('title')).toBe(file.name);
+    request.flush({ task_id: 'task-123', status: 'queued' }, { status: 202, statusText: 'Accepted' });
+    expect(uploads.error()).toBe(false);
+    expect(uploads.completedTick()).toBe(1);
   });
 
   // --- updateDocument() ---

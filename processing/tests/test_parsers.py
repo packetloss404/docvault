@@ -2,6 +2,7 @@
 
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 from django.test import TestCase
 
@@ -251,6 +252,22 @@ class PDFParserTest(TestCase):
     def setUp(self):
         self.parser = PDFParser()
         self.temp_dir = Path(tempfile.mkdtemp())
+
+    @patch('ocrmypdf.ocr')
+    def test_ocr_accepts_the_positional_api_supported_by_versions_16_and_17(self, ocr):
+        source = self.temp_dir / 'source.pdf'
+        source.write_bytes(b'%PDF-1.7\n')
+
+        def compatible_ocr(input_file_or_options, output_file, **options):
+            self.assertEqual(input_file_or_options, source)
+            self.assertEqual(options['language'], 'eng')
+            Path(output_file).write_bytes(b'searchable PDF')
+
+        ocr.side_effect = compatible_ocr
+        archive = self.parser._run_ocrmypdf(source, 'eng')
+
+        self.assertIsNotNone(archive)
+        self.assertEqual(archive.read_bytes(), b'searchable PDF')
 
     def test_create_and_extract_text_from_pdf(self):
         """Create a simple text PDF and extract text."""
