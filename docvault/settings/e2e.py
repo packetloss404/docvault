@@ -39,3 +39,5 @@ CELERY_BEAT_SCHEDULE = {
     "staging-sources": {"task": "sources.tasks.poll_staging_sources", "schedule": 2.0},
     "s3-sources": {"task": "sources.tasks.poll_s3_sources", "schedule": 2.0},
 }
+for _beat_entry in CELERY_BEAT_SCHEDULE.values():
+    _beat_entry.setdefault("options", {})["ignore_result"] = True

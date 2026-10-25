@@ -463,7 +463,8 @@ test('AI disabled state is explicit, or real Ollama chat and FAISS indexing work
   if (process.env['E2E_INTEGRATIONS'] === '1') {
     expect(status.llm_enabled, 'Integration acceptance requires the enabled real provider').toBe(true);
   }
-  const document = await createDocument(request, user, { content: 'Barack Obama approved the mission in London. The mission code is ORBIT73491. Solar batteries cost 1234 dollars.' });
+  const fixtureContent = 'Barack Obama approved the mission in London. The mission code is ORBIT73491. Solar batteries cost 1234 dollars.';
+  const document = await createDocument(request, user, { content: fixtureContent });
   if (!status.llm_enabled) {
     const summary = await call(request, user, 'GET', `/ai/documents/${document.id}/summarize/`, undefined, 400);
     expect(summary.error).toContain('not enabled');
@@ -485,7 +486,9 @@ test('AI disabled state is explicit, or real Ollama chat and FAISS indexing work
   expect(summary.summary, 'Summary must preserve the actual battery cost').toMatch(/\b(?:1234|1,234)\b/);
   const title = await call(request, user, 'GET', `/ai/documents/${document.id}/suggest-title/`, undefined, 200, modelRequestTimeout);
   expect(title.suggested_title, 'Title must describe the fixture document').toMatch(/mission|solar|batter|ORBIT|Barack Obama/i);
-  expect(title.suggested_title.length).toBeLessThanOrEqual(128);
+  expect(title.suggested_title.length).toBeLessThanOrEqual(100);
+  expect(fixtureContent.toLowerCase().replace(/\s+/g, ' '), 'Title must copy a source phrase without inferred facts')
+    .toContain(title.suggested_title.toLowerCase().replace(/\s+/g, ' '));
   const extracted = await call(request, user, 'GET', `/ai/documents/${document.id}/entities/`, undefined, 200, modelRequestTimeout);
   expect(extracted.entities.names, 'Entity endpoint must return structured, source-grounded names').toEqual(expect.arrayContaining(['Barack Obama']));
   expect(extracted.entities.dates, 'No dates are present in the fixture; inferred dates must be rejected').toEqual([]);

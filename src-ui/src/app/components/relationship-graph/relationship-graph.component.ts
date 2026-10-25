@@ -300,63 +300,71 @@ export class RelationshipGraphComponent
     const cy = this.svgHeight / 2;
     const damping = 0.85;
     const repulsionStrength = 3000;
-    const attractionStrength = 0.005;
+    const attractionStrength = 0.02;
+    const linkDistance = NODE_RADIUS * 5;
+    const minDistance = NODE_RADIUS * 2;
+    const maxVelocity = NODE_RADIUS / 2;
     const centerGravity = 0.01;
+    const nodeById = new Map(nodes.map((node) => [node.id, node]));
 
-    // Reset forces
-    for (const node of nodes) {
+    // Compute every force before moving nodes so each step uses the same positions.
+    const forces = nodes.map((node) => {
+      let fx = 0;
+      let fy = 0;
+
+      for (const other of nodes) {
+        if (other.id === node.id) continue;
+        let dx = node.x - other.x;
+        const dy = node.y - other.y;
+        if (dx === 0 && dy === 0) dx = node.id < other.id ? -1 : 1;
+        const dist = Math.hypot(dx, dy);
+        const force = repulsionStrength / Math.max(dist, minDistance) ** 2;
+        fx += (dx / dist) * force;
+        fy += (dy / dist) * force;
+      }
+
+      for (const edge of edges) {
+        let other: SimNode | undefined;
+        if (edge.source === node.id) {
+          other = nodeById.get(edge.target);
+        } else if (edge.target === node.id) {
+          other = nodeById.get(edge.source);
+        }
+        if (other) {
+          const dx = other.x - node.x;
+          const dy = other.y - node.y;
+          const dist = Math.hypot(dx, dy) || 1;
+          const force = (dist - linkDistance) * attractionStrength;
+          fx += (dx / dist) * force;
+          fy += (dy / dist) * force;
+        }
+      }
+
+      fx += (cx - node.x) * centerGravity;
+      fy += (cy - node.y) * centerGravity;
+      return { fx, fy };
+    });
+
+    nodes.forEach((node, index) => {
       if (node.fx !== null) {
         node.x = node.fx;
         node.y = node.fy!;
         node.vx = 0;
         node.vy = 0;
-        continue;
+        return;
       }
-
-      let fx = 0;
-      let fy = 0;
-
-      // Repulsion between all nodes
-      for (const other of nodes) {
-        if (other.id === node.id) continue;
-        const dx = node.x - other.x;
-        const dy = node.y - other.y;
-        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-        const force = repulsionStrength / (dist * dist);
-        fx += (dx / dist) * force;
-        fy += (dy / dist) * force;
-      }
-
-      // Attraction along edges
-      for (const edge of edges) {
-        let other: SimNode | undefined;
-        if (edge.source === node.id) {
-          other = nodes.find((n) => n.id === edge.target);
-        } else if (edge.target === node.id) {
-          other = nodes.find((n) => n.id === edge.source);
-        }
-        if (other) {
-          const dx = other.x - node.x;
-          const dy = other.y - node.y;
-          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          fx += dx * attractionStrength * dist;
-          fy += dy * attractionStrength * dist;
-        }
-      }
-
-      // Center gravity
-      fx += (cx - node.x) * centerGravity;
-      fy += (cy - node.y) * centerGravity;
-
-      node.vx = (node.vx + fx) * damping;
-      node.vy = (node.vy + fy) * damping;
+      node.vx = Math.max(-maxVelocity, Math.min(maxVelocity, (node.vx + forces[index].fx) * damping));
+      node.vy = Math.max(-maxVelocity, Math.min(maxVelocity, (node.vy + forces[index].fy) * damping));
       node.x += node.vx;
       node.y += node.vy;
 
-      // Clamp to bounds
-      node.x = Math.max(NODE_RADIUS, Math.min(this.svgWidth - NODE_RADIUS, node.x));
-      node.y = Math.max(NODE_RADIUS, Math.min(this.svgHeight - NODE_RADIUS, node.y));
-    }
+      const x = Math.max(NODE_RADIUS, Math.min(this.svgWidth - NODE_RADIUS, node.x));
+      const y = Math.max(NODE_RADIUS, Math.min(this.svgHeight - NODE_RADIUS, node.y));
+      if (x !== node.x) node.vx = 0;
+      if (y !== node.y) node.vy = 0;
+      node.x = x;
+      node.y = y;
+    });
 
     // Trigger change detection by replacing the array reference
     this.simNodes.set([...nodes]);

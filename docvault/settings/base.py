@@ -339,6 +339,9 @@ CELERY_BEAT_SCHEDULE = {
     "portal-expiry": {"task": "portal.tasks.expire_overdue_requests", "schedule": 300.0},
     "portal-reminders": {"task": "portal.tasks.check_deadline_reminders", "schedule": 3600.0},
 }
+# Beat never consumes these results; Redis result cleanup can block dispatch.
+for _beat_entry in CELERY_BEAT_SCHEDULE.values():
+    _beat_entry.setdefault("options", {})["ignore_result"] = True
 
 # Django Channels
 ASGI_APPLICATION = "docvault.asgi.application"

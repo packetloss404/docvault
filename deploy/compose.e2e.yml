@@ -106,6 +106,9 @@ services:
   beat:
     <<: *app
     command: [beat]
+    environment:
+      <<: *environment
+      CELERY_LOG_LEVEL: DEBUG
     healthcheck: {disable: true}
     depends_on:
       web:

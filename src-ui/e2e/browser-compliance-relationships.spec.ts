@@ -67,8 +67,22 @@ test('a real relationship renders two graph nodes and its connecting edge in the
     await expect(node.locator('.rg__label')).toContainText(document.title.slice(0, 20));
   }
   const line = page.locator('.rg__svg > line');
-  await expect.poll(async () => {
-    const [x1, y1, x2, y2] = await Promise.all(['x1', 'y1', 'x2', 'y2'].map((attribute) => line.getAttribute(attribute)));
-    return Math.hypot(Number(x2) - Number(x1), Number(y2) - Number(y1));
-  }).toBeGreaterThan(20);
+  await expect.poll(() => line.evaluate((element) => Math.hypot(
+    Number(element.getAttribute('x2')) - Number(element.getAttribute('x1')),
+    Number(element.getAttribute('y2')) - Number(element.getAttribute('y1')),
+  ))).toBeGreaterThan(20);
+  const minimumAnimatedLength = await line.evaluate((element) => new Promise<number>((resolve) => {
+    let frames = 0;
+    let minimum = Infinity;
+    const sample = () => {
+      minimum = Math.min(minimum, Math.hypot(
+        Number(element.getAttribute('x2')) - Number(element.getAttribute('x1')),
+        Number(element.getAttribute('y2')) - Number(element.getAttribute('y1')),
+      ));
+      if (++frames === 120) resolve(minimum);
+      else requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  }));
+  expect(minimumAnimatedLength).toBeGreaterThan(20);
 });

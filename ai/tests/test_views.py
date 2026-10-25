@@ -284,6 +284,22 @@ class TestSmartTitleView:
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data["suggested_title"] == "Acme Corp Invoice - $500"
 
+    @patch('ai.features.get_llm_client')
+    def test_unfounded_title_returns_bad_gateway(self, mock_client, api_client, user, sample_doc):
+        mock_client.return_value.generate.return_value = (
+            '{"title": "US President approves military operation in London"}'
+        )
+        sample_doc.content = (
+            'Barack Obama approved the mission in London. The mission code is ORBIT73491. '
+            'Solar batteries cost 1234 dollars.'
+        )
+        sample_doc.save(update_fields=['content'])
+        api_client.force_authenticate(user)
+        response = api_client.get(f'/api/v1/ai/documents/{sample_doc.pk}/suggest-title/')
+        assert response.status_code == status.HTTP_502_BAD_GATEWAY
+        assert response.data['suggested_title'] is None
+        assert response.data['error_code'] == 'invalid_model_output'
+
 
 # --- AIConfigView ---
 
