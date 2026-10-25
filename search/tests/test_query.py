@@ -3,10 +3,23 @@
 from django.test import TestCase
 
 from search.query import (
+    _format_results,
     _parse_date_range,
     _parse_field_queries,
     build_search_query,
 )
+
+
+def test_entity_facets_count_documents_instead_of_duplicate_mentions():
+    query = build_search_query('John', document_ids=[1])
+    assert query['aggs']['entity_facets']['nested']['path'] == 'entities'
+    result = _format_results({
+        'hits': {'total': {'value': 1}, 'hits': []},
+        'aggregations': {'entity_facets': {'values': {'buckets': [
+            {'key': 'John Doe', 'doc_count': 3, 'documents': {'doc_count': 1}},
+        ]}}},
+    }, 1, 25)
+    assert result['facets']['entities'] == [{'key': 'John Doe', 'count': 1}]
 
 
 class ParseFieldQueriesTest(TestCase):

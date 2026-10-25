@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, Subject, of, throwError } from 'rxjs';
 
 import { LoginComponent } from './login.component';
 import { AuthService } from '../../services/auth.service';
@@ -65,6 +65,18 @@ describe('LoginComponent', () => {
     expect(component.otpRequired).toBe(true);
     expect(component.otpCode).toBe('');
     expect(component.loading).toBe(false);
+  });
+
+  it('renders a delayed OTP challenge without an extra user event in zoneless mode', async () => {
+    const response = new Subject<{ otp_required: boolean; username: string }>();
+    mockAuthService.login.mockReturnValue(response);
+    component.username = 'testuser';
+    component.password = 'secret123';
+    fixture.nativeElement.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await fixture.whenStable();
+    response.next({ otp_required: true, username: 'testuser' });
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('h1').textContent).toContain('Two-factor authentication');
   });
 
   it('should include OTP code after OTP is required', () => {

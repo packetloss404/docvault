@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { EsignatureService } from '../../services/esignature.service';
+import { AuthenticatedSrcDirective } from '../../directives/authenticated-file.directive';
 import {
   PublicSigningInfo,
   SignatureField,
@@ -11,7 +12,7 @@ import {
 @Component({
   selector: 'app-public-signing',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AuthenticatedSrcDirective],
   template: `
     <div class="dv-auth">
       <div class="dv-auth__col psg__col" [class.psg__col--narrow]="!info()">
@@ -78,10 +79,10 @@ import {
                       [attr.aria-pressed]="isPageViewed(pageNum)"
                       [title]="
                         isPageViewed(pageNum)
-                          ? 'Page ' + pageNum + ' reviewed'
-                          : 'Mark page ' + pageNum + ' reviewed'
+                          ? 'View reviewed page ' + pageNum
+                          : 'View page ' + pageNum
                       "
-                      (click)="viewPage(pageNum)"
+                      (click)="currentPage.set(pageNum)"
                     >
                       @if (isPageViewed(pageNum)) {
                         <span aria-hidden="true">✓</span>
@@ -90,6 +91,17 @@ import {
                     </button>
                   }
                 </div>
+                <img
+                  class="psg__document"
+                  style="width:100%;height:auto"
+                  [authenticatedSrc]="previewUrl()"
+                  [alt]="'Signing document, page ' + currentPage()"
+                  (load)="viewPage(currentPage())"
+                  (error)="previewError.set('Could not display the document. Please contact the sender before signing.')"
+                />
+                @if (previewError()) {
+                  <div class="psg__error" role="alert">{{ previewError() }}</div>
+                }
                 <span class="dv-meta"
                   >{{ viewedPages().length }} of {{ pageNumbers().length }}
                   marked</span
@@ -246,6 +258,8 @@ import {
   styleUrl: './public-signing.component.scss',
 })
 export class PublicSigningComponent implements OnInit {
+  currentPage = signal(1);
+  previewError = signal('');
   info = signal<PublicSigningInfo | null>(null);
   loading = signal(true);
   errorMsg = signal('');
@@ -296,6 +310,10 @@ export class PublicSigningComponent implements OnInit {
     return Array.from({ length: count }, (_, i) => i + 1);
   }
 
+  previewUrl(): string {
+    return this.esignatureService.getSigningPreviewUrl(this.token, this.currentPage());
+  }
+
   isPageViewed(page: number): boolean {
     return this.viewedPages().includes(page);
   }
@@ -330,6 +348,10 @@ export class PublicSigningComponent implements OnInit {
   completeSign(): void {
     const infoVal = this.info();
     if (!infoVal) return;
+    if (this.previewError() || this.viewedPages().length < this.pageNumbers().length) {
+      this.submitError.set('Review every document page before signing.');
+      return;
+    }
 
     // Validate required fields
     const vals = this.fieldValues();

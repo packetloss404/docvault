@@ -54,7 +54,9 @@
       </div>
     }
 
-    <!-- Flat, drag-to-reorder list -->
+    @if (actionError()) {
+      <div class="dv-callout dv-callout--danger" role="alert">{{ actionError() }}</div>
+    }
     @if (cabinets().length > 0) {
       <div class="dv-section cab-section">
         <span class="dv-eyebrow">cabinets · drag to reorder</span>
@@ -63,6 +65,7 @@
       <div
         class="cab-list"
         cdkDropList
+        [cdkDropListDisabled]="reordering()"
         [cdkDropListData]="cabinets()"
         (cdkDropListDropped)="onDrop($event)"
       >

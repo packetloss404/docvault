@@ -1,5 +1,7 @@
 """Validation helpers for settings modules."""
 
+from urllib.parse import urlsplit, urlunsplit
+
 from django.core.exceptions import ImproperlyConfigured
 
 PLACEHOLDER_SECRET_KEYS = frozenset(
@@ -10,6 +12,12 @@ PLACEHOLDER_SECRET_KEYS = frozenset(
         "insecure-dev-key-change-in-production",
     }
 )
+
+
+def redis_database_url(url: str, database: int) -> str:
+    """Select a Redis database without corrupting credentials, queries or existing paths."""
+    parts = urlsplit(url)
+    return urlunsplit(parts._replace(path=f"/{database}"))
 
 
 def validate_secret_key_for_production(secret_key: str) -> None:

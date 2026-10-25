@@ -5,9 +5,12 @@ import hashlib
 import io
 import logging
 import tempfile
+import uuid
 import zipfile
 from pathlib import Path
 
+from django.db import transaction
+from django.db.models import Prefetch
 from django.http import FileResponse, Http404, HttpResponse, StreamingHttpResponse
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
@@ -22,7 +25,7 @@ from security.permissions import (
     get_objects_for_user_with_ownership,
 )
 
-from .downloads import build_document_file_response
+from .downloads import active_original, build_document_file_response, open_document_file
 from .filters import DocumentFilterSet
 from .models import Document, DocumentFile, DocumentType, DocumentVersion
 from .serializers import (
@@ -57,10 +60,14 @@ class DocumentViewSet(viewsets.ModelViewSet):
         if getattr(self, "swagger_fake_view", False):
             return Document.objects.none()
         user = self.request.user
+        queryset = Document.objects.prefetch_related(Prefetch(
+            "version_history", queryset=DocumentVersion.objects.filter(is_active=True).select_related("file"),
+            to_attr="_active_versions",
+        ))
         if user.is_superuser:
-            return Document.objects.all()
+            return queryset
         return get_objects_for_user_with_ownership(
-            user, "documents.view_document", Document.objects.all(),
+            user, "documents.view_document", queryset,
         )
 
     def get_serializer_class(self):
@@ -69,10 +76,15 @@ class DocumentViewSet(viewsets.ModelViewSet):
         return DocumentSerializer
 
     def perform_create(self, serializer):
-        serializer.save(
-            owner=self.request.user,
-            created_by=self.request.user,
-        )
+        from rest_framework.exceptions import Throttled
+
+        from notifications.quotas import QuotaExceededError, quota_guard
+
+        try:
+            with quota_guard(self.request.user):
+                serializer.save(owner=self.request.user, created_by=self.request.user)
+        except QuotaExceededError as exc:
+            raise Throttled(detail=str(exc)) from exc
 
     def _check_legal_hold(self, instance):
         """Raise 409 if document is under legal hold and user lacks override."""
@@ -137,6 +149,28 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
             return build_pdf_page_preview(doc, request.query_params["page"])
 
+        artifact = active_original(doc)
+        if artifact and artifact.file.name != doc.filename:
+            from PIL import Image
+
+            from .previews import build_pdf_page_preview
+
+            if artifact.mime_type == "application/pdf":
+                page = build_pdf_page_preview(doc, 1)
+                image_source = io.BytesIO(page.content)
+            elif artifact.mime_type.startswith("image/"):
+                image_source = open_document_file(artifact)
+            else:
+                raise Http404("No thumbnail available for the active version.")
+            with image_source, Image.open(image_source) as image:
+                thumbnail = image.convert("RGB")
+                thumbnail.thumbnail((400, 560))
+                output = io.BytesIO()
+                thumbnail.save(output, "WEBP")
+            response = HttpResponse(output.getvalue(), content_type="image/webp")
+            response["Cache-Control"] = "private, no-store"
+            return response
+
         if not doc.thumbnail_path:
             raise Http404("No thumbnail available for this document.")
 
@@ -177,9 +211,11 @@ class DocumentViewSet(viewsets.ModelViewSet):
         methods=["post"],
         url_path="versions/(?P<version_id>[0-9]+)/activate",
     )
+    @transaction.atomic
     def activate_version(self, request, pk=None, version_id=None):
         """Activate a specific version of the document."""
         doc = self.get_object()
+        doc = Document.objects.select_for_update().get(pk=doc.pk)
         self._check_legal_hold(doc)
         try:
             version = doc.version_history.get(pk=version_id)
@@ -190,6 +226,9 @@ class DocumentViewSet(viewsets.ModelViewSet):
         doc.version_history.update(is_active=False)
         version.is_active = True
         version.save(update_fields=["is_active"])
+        from security.models import Signature
+
+        Signature.objects.filter(document=doc).update(verified=False, verified_at=None)
 
         return Response(DocumentVersionSerializer(version).data)
 
@@ -232,7 +271,28 @@ class DocumentViewSet(viewsets.ModelViewSet):
             )
 
         def _get_version_content(ver):
-            """Return the text content for a version (comment + file comment fallback)."""
+            """Compare file text; use OCR content or comments when extraction is unavailable."""
+            if ver.file and ver.file.file.name:
+                try:
+                    with open_document_file(ver.file) as stored:
+                        if ver.file.mime_type.startswith("text/"):
+                            return stored.read(5_000_000).decode("utf-8", errors="replace")
+                        if ver.file.mime_type == "application/pdf":
+                            from processing.parsers.pdf import PDFParser
+
+                            with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temporary:
+                                temporary.write(stored.read())
+                                temporary_path = Path(temporary.name)
+                            try:
+                                content = PDFParser()._extract_text(temporary_path)
+                                if content:
+                                    return content
+                            finally:
+                                temporary_path.unlink(missing_ok=True)
+                    if ver.file.file.name == doc.filename and doc.content:
+                        return doc.content
+                except (FileNotFoundError, OSError):
+                    logger.warning("Could not read file text for version %s", ver.pk)
             parts = []
             if ver.comment:
                 parts.append(ver.comment)
@@ -262,9 +322,11 @@ class DocumentViewSet(viewsets.ModelViewSet):
         )
 
     @action(detail=True, methods=["post"], url_path="files", parser_classes=[MultiPartParser])
+    @transaction.atomic
     def upload_new_version(self, request, pk=None):
         """Upload a new file to create a new version of the document."""
         doc = self.get_object()
+        doc = Document.objects.select_for_update().get(pk=doc.pk)
         self._check_legal_hold(doc)
         file = request.FILES.get("document")
         if not file:
@@ -272,6 +334,46 @@ class DocumentViewSet(viewsets.ModelViewSet):
                 {"error": "No file provided. Use the 'document' form field."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        from collaboration.models import Checkout
+
+        checkout = Checkout.objects.filter(document=doc).first()
+        if checkout and not checkout.is_expired and checkout.block_new_uploads and checkout.user_id != request.user.pk:
+            return Response({"error": "Document is checked out by another user."}, status=status.HTTP_409_CONFLICT)
+
+        from rest_framework.exceptions import Throttled
+
+        from notifications.quotas import QuotaExceededError, quota_guard
+
+        registered_bytes = 0
+        if not doc.version_history.exists() and doc.filename and not doc.files.filter(file=doc.filename).exists():
+            from storage.utils import get_storage_backend
+
+            backend = get_storage_backend()
+            if backend.exists(doc.filename):
+                registered_bytes = backend.size(doc.filename)
+
+        try:
+            with quota_guard(doc.owner, incoming_bytes=file.size + registered_bytes, incoming_documents=0):
+                return self._create_file_version(doc, file, request)
+        except QuotaExceededError as exc:
+            raise Throttled(detail=str(exc)) from exc
+
+    def _create_file_version(self, doc, file, request):
+        # Preserve pre-versioning documents by recording their existing key; no file is moved.
+        if not doc.version_history.exists() and doc.filename:
+            from storage.utils import get_storage_backend
+
+            backend = get_storage_backend()
+            if backend.exists(doc.filename):
+                original = doc.files.filter(file=doc.filename).first()
+                if original is None:
+                    original = DocumentFile.objects.create(
+                        document=doc, file=doc.filename, filename=doc.original_filename or Path(doc.filename).name,
+                        mime_type=doc.mime_type, checksum=doc.checksum, size=backend.size(doc.filename),
+                        page_count=doc.page_count, created_by=doc.created_by,
+                    )
+                DocumentVersion.objects.create(document=doc, version_number=1, file=original, is_active=True)
 
         comment = request.data.get("comment", "")
 
@@ -282,14 +384,34 @@ class DocumentViewSet(viewsets.ModelViewSet):
         file.seek(0)
         checksum = sha256.hexdigest()
 
-        # Create DocumentFile
+        page_count = 0
+        if file.content_type == "application/pdf":
+            import pymupdf
+
+            try:
+                with pymupdf.open(stream=file.read(), filetype="pdf") as pdf:
+                    page_count = len(pdf)
+            except (RuntimeError, ValueError):
+                return Response({"error": "The uploaded PDF is invalid."}, status=status.HTTP_400_BAD_REQUEST)
+            finally:
+                file.seek(0)
+        elif (file.content_type or "").startswith("image/"):
+            page_count = 1
+
+        from storage.utils import get_storage_backend
+
+        backend = get_storage_backend()
+        storage_name = backend.save(f"versions/{doc.uuid}/{uuid.uuid4().hex}{Path(file.name).suffix}", file)
+
+        # Legacy Django uploads remain readable through open_document_file.
         doc_file = DocumentFile.objects.create(
             document=doc,
-            file=file,
+            file=storage_name,
             filename=file.name,
             mime_type=file.content_type or "application/octet-stream",
             checksum=checksum,
             size=file.size,
+            page_count=page_count,
             comment=comment,
             created_by=request.user,
         )
@@ -308,6 +430,9 @@ class DocumentViewSet(viewsets.ModelViewSet):
             file=doc_file,
             created_by=request.user,
         )
+        from security.models import Signature
+
+        Signature.objects.filter(document=doc).update(verified=False, verified_at=None)
 
         return Response(
             DocumentVersionSerializer(version).data,
@@ -350,21 +475,24 @@ class DocumentViewSet(viewsets.ModelViewSet):
 
             with zipfile.ZipFile(buffer, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
                 for doc in queryset:
-                    storage_name = doc.filename
+                    artifact = active_original(doc)
+                    storage_name = artifact.file.name if artifact else doc.filename
                     if not storage_name:
                         continue
-                    if not backend.exists(storage_name):
+                    if not artifact and not backend.exists(storage_name):
                         logger.warning(
                             "bulk_export: file not found in storage for document %s (%s)",
                             doc.pk, storage_name,
                         )
                         continue
 
-                    filename_in_zip = doc.original_filename or Path(storage_name).name
+                    filename_in_zip = (
+                        artifact.filename if artifact else doc.original_filename or Path(storage_name).name
+                    )
                     # Prepend document ID to avoid name collisions
                     filename_in_zip = f"{doc.pk}_{filename_in_zip}"
 
-                    file_handle = backend.open(storage_name)
+                    file_handle = open_document_file(artifact) if artifact else backend.open(storage_name)
                     try:
                         zf.writestr(filename_in_zip, file_handle.read())
                     finally:
@@ -411,7 +539,9 @@ class DocumentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
-        asn_value = str(doc.archive_serial_number)
+        from django.conf import settings
+
+        asn_value = f"{getattr(settings, 'BARCODE_ASN_PREFIX', 'ASN')}{doc.archive_serial_number}"
         code128 = barcode.get_barcode_class("code128")
         buffer = io.BytesIO()
         code128(asn_value, writer=ImageWriter()).write(buffer)
@@ -436,7 +566,7 @@ class DocumentUploadView(APIView):
 
         # Quota enforcement
         from notifications.quotas import check_quota
-        allowed, message = check_quota(request.user)
+        allowed, message = check_quota(request.user, incoming_bytes=file.size)
         if not allowed:
             return Response(
                 {"error": message},

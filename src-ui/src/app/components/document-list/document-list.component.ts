@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, computed, inject } from '@angular/core';
+import { Component, OnInit, signal, computed, inject, effect } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -42,6 +42,11 @@ export interface FilterToken {
   styleUrl: './document-list.component.scss',
 })
 export class DocumentListComponent implements OnInit {
+  constructor() {
+    effect(() => {
+      if (this.uploads.completedTick() > 0) this.loadDocuments();
+    });
+  }
   private readonly documentService = inject(DocumentService);
   private readonly organizationService = inject(OrganizationService);
   private readonly uploads = inject(UploadService);

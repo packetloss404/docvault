@@ -179,7 +179,8 @@ class PortalSubmissionReviewView(APIView):
                 submission.pk, task.task_id,
             )
 
-        submission.save()
+        submission.save(update_fields=["status", "review_notes", "reviewed_by", "reviewed_at"])
+        submission.refresh_from_db()
 
         return Response(PortalSubmissionSerializer(submission).data)
 
@@ -188,6 +189,8 @@ def _queue_submission_ingestion(submission, user):
     """Stage a portal submission file and queue normal document ingestion."""
     from processing.models import ProcessingTask
     from processing.tasks import consume_document
+
+    from .tasks import link_ingested_submission
 
     staging_dir = Path(tempfile.mkdtemp(prefix="docvault_portal_"))
     staged_path = staging_dir / Path(submission.original_filename).name
@@ -201,7 +204,7 @@ def _queue_submission_ingestion(submission, user):
     )
 
     default_tag_ids = list(submission.portal.default_tags.values_list("pk", flat=True))
-    consume_document.delay(
+    consume_document.apply_async(kwargs=dict(
         source_path=str(staged_path),
         original_filename=submission.original_filename,
         task_id=str(task.task_id),
@@ -210,7 +213,7 @@ def _queue_submission_ingestion(submission, user):
         override_tags=default_tag_ids,
         override_owner=user.id,
         cleanup_source_path=True,
-    )
+    ), link=link_ingested_submission.s(submission.pk))
     return task
 
 
@@ -386,6 +389,12 @@ class PublicRequestUploadView(APIView):
         if doc_request.status not in (REQUEST_PENDING, REQUEST_PARTIALLY_FULFILLED):
             return Response(
                 {"error": "This request is no longer accepting submissions."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if doc_request.deadline and doc_request.deadline <= timezone.now():
+            return Response(
+                {"error": "This request is no longer accepting submissions because its deadline has passed."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

@@ -6,7 +6,6 @@ import { DocumentService } from '../../services/document.service';
 import { AuthenticatedDownloadDirective, AuthenticatedSrcDirective } from '../../directives/authenticated-file.directive';
 import { OrganizationService } from '../../services/organization.service';
 import { CollaborationService } from '../../services/collaboration.service';
-import { LegalHoldService } from '../../services/legal-hold.service';
 import { Document, DocumentType, DocumentVersion } from '../../models/document.model';
 import {
   AutocompleteItem,
@@ -102,8 +101,7 @@ export class DocumentDetailComponent implements OnInit {
     { key: 'physical', label: 'Physical' },
   ];
 
-  // Legal hold
-  isHeld = signal(false);
+  readonly isHeld = computed(() => this.document()?.is_held === true);
 
   // Collaboration
   checkoutStatus = signal<CheckoutStatus | null>(null);
@@ -206,7 +204,6 @@ export class DocumentDetailComponent implements OnInit {
     private documentService: DocumentService,
     private orgService: OrganizationService,
     private collaborationService: CollaborationService,
-    private legalHoldService: LegalHoldService,
     private aiService: AIService,
     private esignatureService: EsignatureService,
     private zoneOcrService: ZoneOCRService,
@@ -223,7 +220,6 @@ export class DocumentDetailComponent implements OnInit {
       this.loadDocumentMetadata(id);
       this.loadSignatureRequests(id);
       this.loadPhysicalRecord(id);
-      this.loadLegalHoldStatus(id);
       this.loadCheckoutStatus(id);
       this.loadShareLinks(id);
       this.loadAnnotations(id);
@@ -447,6 +443,102 @@ export class DocumentDetailComponent implements OnInit {
     this.activeAnnotationTool.set(selection);
   }
 
+  annotationText = signal('');
+  annotationRevision = signal(0);
+  private annotationStart: { x: number; y: number } | null = null;
+  private annotationPoints: { x: number; y: number }[] = [];
+
+  startAnnotation(event: PointerEvent): void {
+    if (!this.activeAnnotationTool()?.tool || event.button !== 0) return;
+    event.preventDefault();
+    this.annotationStart = this.annotationPosition(event);
+    this.annotationPoints = [this.annotationStart];
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  }
+
+  moveAnnotation(event: PointerEvent): void {
+    if (this.annotationStart && this.activeAnnotationTool()?.tool === 'freehand' && this.annotationPoints.length < 200) {
+      this.annotationPoints.push(this.annotationPosition(event));
+    }
+  }
+
+  finishAnnotation(event: PointerEvent): void {
+    const start = this.annotationStart;
+    this.annotationStart = null;
+    const doc = this.document();
+    const selection = this.activeAnnotationTool();
+    if (!start || !doc || !selection?.tool) return;
+    const end = this.annotationPosition(event);
+    const pointTool = ['sticky_note', 'text_box', 'rubber_stamp'].includes(selection.tool);
+    if (pointTool && !this.annotationText().trim()) {
+      this.setActionMessage('Enter annotation text before placing it on the page.', true);
+      return;
+    }
+    const coordinates: Record<string, number> = pointTool
+      ? start
+      : {
+          x: Math.min(start.x, end.x), y: Math.min(start.y, end.y),
+          width: Math.max(0.005, Math.abs(end.x - start.x)),
+          height: Math.max(0.005, Math.abs(end.y - start.y)),
+        };
+    if (selection.tool === 'freehand') {
+      [...this.annotationPoints, end].forEach((point, index) => {
+        coordinates[`x${index}`] = point.x;
+        coordinates[`y${index}`] = point.y;
+      });
+    }
+    this.annotationService.createAnnotation(doc.id, {
+      page: this.currentPage(), annotation_type: selection.tool as Annotation['annotation_type'],
+      coordinates, content: this.annotationText().trim(), color: selection.color, opacity: selection.opacity,
+    }).subscribe({
+      next: (annotation) => {
+        this.annotations.update((items) => [...items, annotation]);
+        this.annotationRevision.update((value) => value + 1);
+        this.setActionMessage('Annotation added.', false);
+      },
+      error: (error) => this.setActionMessage(this.mutationError(error, 'Could not save the annotation.'), true),
+    });
+  }
+
+  cancelAnnotation(): void {
+    this.annotationStart = null;
+  }
+
+  private annotationPosition(event: PointerEvent): { x: number; y: number } {
+    const bounds = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    return {
+      x: Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width)),
+      y: Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height)),
+    };
+  }
+
+  annotationPath(annotation: Annotation): string {
+    const points: string[] = [];
+    for (let i = 0; i <= 200; i++) {
+      const x = annotation.coordinates[`x${i}`];
+      const y = annotation.coordinates[`y${i}`];
+      if (typeof x !== 'number' || typeof y !== 'number') break;
+      points.push(`${x},${y}`);
+    }
+    return points.join(' ');
+  }
+
+  exportAnnotations(): void {
+    const doc = this.document();
+    if (!doc) return;
+    this.annotationService.exportAnnotations(doc.id).subscribe({
+      next: (result) => {
+        const url = URL.createObjectURL(new Blob([JSON.stringify(result, null, 2)], { type: 'application/json' }));
+        const link = window.document.createElement('a');
+        link.href = url;
+        link.download = `annotations-${doc.id}.json`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      },
+      error: () => this.setActionMessage('Could not export annotations.', true),
+    });
+  }
+
   onAnnotationVisibility(visible: boolean): void {
     this.annotationsVisible.set(visible);
   }
@@ -570,11 +662,27 @@ export class DocumentDetailComponent implements OnInit {
     });
   }
 
+  showSignatureForm = signal(false);
+  signerName = signal('');
+  signerEmail = signal('');
+
   requestSignature(): void {
+    this.showSignatureForm.set(true);
+  }
+
+  createSignatureRequest(): void {
     const doc = this.document();
-    if (!doc) return;
-    this.esignatureService.createRequest(doc.id, { title: `Signature request for ${doc.title}` }).subscribe({
-      next: () => this.loadSignatureRequests(doc.id),
+    if (!doc || !this.signerName().trim() || !this.signerEmail().trim()) return;
+    this.esignatureService.createRequest(doc.id, {
+      title: `Signature request for ${doc.title}`,
+      signers: [{ name: this.signerName().trim(), email: this.signerEmail().trim(), order: 0, verification_method: 'none' }],
+      fields: [{ signer_index: 0, page: this.currentPage(), x: 0.15, y: 0.6, width: 0.4, height: 0.1, field_type: 'signature', required: true, order: 0 }],
+    }).subscribe({
+      next: (request) => {
+        this.showSignatureForm.set(false);
+        this.router.navigate(['/signature-requests', request.id]);
+      },
+      error: () => this.setActionMessage('Could not create the signature request. Check the signer details.', true),
     });
   }
 
@@ -666,7 +774,11 @@ export class DocumentDetailComponent implements OnInit {
     const doc = this.document();
     if (!doc) return;
     this.documentService.activateVersion(doc.id, versionId).subscribe({
-      next: () => this.loadVersions(doc.id),
+      next: () => {
+        this.currentPage.set(1);
+        this.loadVersions(doc.id);
+        this.loadDocument(doc.id);
+      },
     });
   }
 
@@ -746,17 +858,6 @@ export class DocumentDetailComponent implements OnInit {
     if (!doc) return;
     this.orgService.deleteDocumentMetadata(doc.id, instanceId).subscribe({
       next: () => this.loadDocumentMetadata(doc.id),
-    });
-  }
-
-  // --- Legal Hold ---
-
-  loadLegalHoldStatus(docId: number): void {
-    this.legalHoldService.getHolds({ document: String(docId) }).subscribe({
-      next: (holds) => {
-        this.isHeld.set(holds.some((h) => h.status === 'active'));
-      },
-      error: () => this.isHeld.set(false),
     });
   }
 

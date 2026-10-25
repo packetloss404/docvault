@@ -24,10 +24,28 @@ from esignatures.models import SignatureField, SignatureRequest, Signer
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture(autouse=True)
+def isolate_public_signing_throttle():
+    from django.core.cache import cache
+
+    cache.clear()
+
+
+def test_configured_signing_rate_is_applied(settings):
+    from esignatures.views import SigningRateThrottle
+
+    settings.ESIGNATURE_SIGNING_RATE = "2000/minute"
+    throttle = SigningRateThrottle()
+    assert throttle.rate == "2000/minute"
+    assert throttle.num_requests == 2000
+
+
 @pytest.fixture
-def signing(db):
+def signing(db, prepare_document, prepare_request):
     document = Document.objects.create(title="Contract", filename="contract.pdf")
+    prepare_document(document)
     request = SignatureRequest.objects.create(document=document, title="Sign contract", status=REQUEST_SENT)
+    prepare_request(request)
     signer = Signer.objects.create(request=request, name="Alice", email="alice@example.com")
     field = SignatureField.objects.create(
         request=request, signer=signer, page=1, x=0.1, y=0.1, width=0.3, height=0.1, field_type="signature",
@@ -163,6 +181,31 @@ def test_sms_signer_must_verify_before_signing(signing):
     assert response.status_code == 400
     assert "verif" in response.data["error"].lower()
     assert_unsigned(signer, field)
+
+
+def test_public_preview_does_not_reveal_document_before_signers_turn(signing):
+    request, _, _ = signing
+    second = Signer.objects.create(request=request, name="Bob", email="bob@example.com", order=1)
+    response = APIClient().get(f"/api/v1/sign/{second.token}/preview/?page=1")
+    assert response.status_code == 403
+    assert "turn" in response.data["error"]
+
+
+def test_public_preview_requires_sms_verification(signing):
+    _, signer, _ = signing
+    signer.verification_method = VERIFY_SMS
+    signer.save(update_fields=["verification_method"])
+    response = APIClient().get(f"/api/v1/sign/{signer.token}/preview/?page=1")
+    assert response.status_code == 403
+    assert "Verif" in response.data["error"]
+
+
+def test_expired_public_preview_is_denied(signing):
+    request, signer, _ = signing
+    request.expiration = timezone.now() - timedelta(seconds=1)
+    request.save(update_fields=["expiration"])
+    response = APIClient().get(f"/api/v1/sign/{signer.token}/preview/?page=1")
+    assert response.status_code == 410
 
 
 @patch("esignatures.tasks.generate_completion_certificate.delay")

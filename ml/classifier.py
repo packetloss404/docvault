@@ -10,6 +10,8 @@ Implements the Paperless-ngx classification approach using scikit-learn:
 import hashlib
 import logging
 import pickle
+import tempfile
+from collections import Counter
 from pathlib import Path
 
 from django.conf import settings
@@ -118,7 +120,7 @@ class DocumentClassifier:
                         hidden_layer_sizes=(100,),
                         max_iter=500,
                         random_state=42,
-                        early_stopping=True,
+                        early_stopping=len(contents) >= 20,
                     )
                     clf.fit(features, y)
 
@@ -207,7 +209,7 @@ class DocumentClassifier:
             hidden_layer_sizes=(100,),
             max_iter=500,
             random_state=42,
-            early_stopping=True,
+            early_stopping=len(contents) >= 10 * len(unique_labels) and min(Counter(labels).values()) >= 2,
         )
         clf.fit(features, labels)
 
@@ -247,11 +249,8 @@ class DocumentClassifier:
             if isinstance(probas, list):
                 confidence = float(probas[i][0][1]) if probas[i].shape[1] > 1 else float(probas[i][0][0])
             else:
-                confidence = (
-                    float(probas[0][i])
-                    if probas.shape[1] > len(self.tags_binarizer.classes_)
-                    else threshold + 0.01
-                )
+                column = 1 if len(self.tags_binarizer.classes_) == 1 and probas.shape[1] == 2 else i
+                confidence = float(probas[0][column])
             if confidence >= threshold:
                 results.append((int(tag_id), confidence))
 
@@ -295,8 +294,15 @@ class DocumentClassifier:
         """Serialize the classifier to disk."""
         model_dir = _get_model_dir()
         path = model_dir / "classifier.pkl"
-        with open(path, "wb") as f:
-            pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
+        temporary_path = None
+        try:
+            with tempfile.NamedTemporaryFile(dir=model_dir, prefix=".classifier-", delete=False) as temporary:
+                temporary_path = Path(temporary.name)
+                pickle.dump(self, temporary, protocol=pickle.HIGHEST_PROTOCOL)
+            temporary_path.replace(path)
+        finally:
+            if temporary_path:
+                temporary_path.unlink(missing_ok=True)
         logger.info("Classifier saved to %s", path)
 
     @classmethod
@@ -336,18 +342,30 @@ def _compute_hash(contents, labels):
 
 # Module-level cached classifier instance
 _classifier_instance = None
+_classifier_revision = None
 
 
 def get_classifier() -> DocumentClassifier | None:
     """Get the cached classifier instance, loading from disk if needed."""
-    global _classifier_instance
-    if _classifier_instance is None:
+    global _classifier_instance, _classifier_revision
+    revision = _model_revision()
+    if _classifier_instance is None or revision != _classifier_revision:
         _classifier_instance = DocumentClassifier.load()
+        _classifier_revision = revision
     return _classifier_instance
 
 
 def reload_classifier():
     """Force reload the classifier from disk."""
-    global _classifier_instance
+    global _classifier_instance, _classifier_revision
     _classifier_instance = DocumentClassifier.load()
+    _classifier_revision = _model_revision()
     return _classifier_instance
+
+
+def _model_revision():
+    try:
+        stats = (_get_model_dir() / "classifier.pkl").stat()
+        return stats.st_mtime_ns, stats.st_size
+    except FileNotFoundError:
+        return None

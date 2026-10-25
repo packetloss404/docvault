@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { PaginatedResponse } from '../models/document.model';
+import { getAllPages } from './pagination';
 import {
   AuditLogEntry,
   GPGKey,
@@ -79,7 +80,7 @@ export class SecurityService {
 
   verifyDocumentSignatures(documentId: number): Observable<{ results: Signature[] }> {
     return this.http.post<{ results: Signature[] }>(
-      `${this.apiUrl}/documents/${documentId}/verify-signatures/`,
+      `${this.apiUrl}/documents/${documentId}/verify/`,
       {},
     );
   }
@@ -87,17 +88,17 @@ export class SecurityService {
   // --- GPG Keys ---
 
   getGPGKeys(): Observable<GPGKey[]> {
-    return this.http.get<GPGKey[]>(`${this.apiUrl}/security/gpg-keys/`);
+    return this.http.get<GPGKey[]>(`${this.apiUrl}/gpg-keys/`);
   }
 
   importGPGKey(keyData: string): Observable<GPGKey> {
-    return this.http.post<GPGKey>(`${this.apiUrl}/security/gpg-keys/import/`, {
+    return this.http.post<GPGKey>(`${this.apiUrl}/gpg-keys/import/`, {
       key_data: keyData,
     });
   }
 
   deleteGPGKey(keyId: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/security/gpg-keys/${keyId}/`);
+    return this.http.delete<void>(`${this.apiUrl}/gpg-keys/${keyId}/`);
   }
 
   // --- Audit Log ---
@@ -112,7 +113,7 @@ export class SecurityService {
       }
     }
     return this.http.get<PaginatedResponse<AuditLogEntry>>(
-      `${this.apiUrl}/security/audit-log/`,
+      `${this.apiUrl}/audit-log/`,
       { params: httpParams },
     );
   }
@@ -127,7 +128,7 @@ export class SecurityService {
         httpParams = httpParams.set(key, String(value));
       }
     }
-    return this.http.get(`${this.apiUrl}/security/audit-log/export/`, {
+    return this.http.get(`${this.apiUrl}/audit-log/export/`, {
       params: httpParams,
       responseType: 'blob',
     });
@@ -136,65 +137,65 @@ export class SecurityService {
   // --- Users ---
 
   getUsers(): Observable<User[]> {
-    return this.http.get<User[]>(`${this.apiUrl}/security/users/`);
+    return getAllPages<User>(this.http, `${this.apiUrl}/users/`);
   }
 
   getUser(id: number): Observable<User> {
-    return this.http.get<User>(`${this.apiUrl}/security/users/${id}/`);
+    return this.http.get<User>(`${this.apiUrl}/users/${id}/`);
   }
 
   createUser(data: Partial<User> & { password?: string }): Observable<User> {
-    return this.http.post<User>(`${this.apiUrl}/security/users/`, data);
+    return this.http.post<User>(`${this.apiUrl}/users/`, data);
   }
 
   updateUser(id: number, data: Partial<User> & { password?: string }): Observable<User> {
-    return this.http.patch<User>(`${this.apiUrl}/security/users/${id}/`, data);
+    return this.http.patch<User>(`${this.apiUrl}/users/${id}/`, data);
   }
 
   deleteUser(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/security/users/${id}/`);
+    return this.http.delete<void>(`${this.apiUrl}/users/${id}/`);
   }
 
   // --- Groups ---
 
   getGroups(): Observable<Group[]> {
-    return this.http.get<Group[]>(`${this.apiUrl}/security/groups/`);
+    return getAllPages<Group>(this.http, `${this.apiUrl}/groups/`);
   }
 
   createGroup(data: Partial<Group>): Observable<Group> {
-    return this.http.post<Group>(`${this.apiUrl}/security/groups/`, data);
+    return this.http.post<Group>(`${this.apiUrl}/groups/`, data);
   }
 
   updateGroup(id: number, data: Partial<Group>): Observable<Group> {
-    return this.http.patch<Group>(`${this.apiUrl}/security/groups/${id}/`, data);
+    return this.http.patch<Group>(`${this.apiUrl}/groups/${id}/`, data);
   }
 
   deleteGroup(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/security/groups/${id}/`);
+    return this.http.delete<void>(`${this.apiUrl}/groups/${id}/`);
   }
 
   // --- Roles ---
 
   getRoles(): Observable<Role[]> {
-    return this.http.get<Role[]>(`${this.apiUrl}/security/roles/`);
+    return getAllPages<Role>(this.http, `${this.apiUrl}/roles/`);
   }
 
-  createRole(data: Partial<Role>): Observable<Role> {
-    return this.http.post<Role>(`${this.apiUrl}/security/roles/`, data);
+  createRole(data: Partial<Role> & { permission_ids?: number[]; group_ids?: number[] }): Observable<Role> {
+    return this.http.post<Role>(`${this.apiUrl}/roles/`, data);
   }
 
-  updateRole(id: number, data: Partial<Role>): Observable<Role> {
-    return this.http.patch<Role>(`${this.apiUrl}/security/roles/${id}/`, data);
+  updateRole(id: number, data: Partial<Role> & { permission_ids?: number[]; group_ids?: number[] }): Observable<Role> {
+    return this.http.patch<Role>(`${this.apiUrl}/roles/${id}/`, data);
   }
 
   deleteRole(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/security/roles/${id}/`);
+    return this.http.delete<void>(`${this.apiUrl}/roles/${id}/`);
   }
 
   // --- Permissions ---
 
   getPermissions(): Observable<Permission[]> {
-    return this.http.get<Permission[]>(`${this.apiUrl}/security/permissions/`);
+    return this.http.get<Permission[]>(`${this.apiUrl}/permissions/`);
   }
 
   // --- Scanners ---

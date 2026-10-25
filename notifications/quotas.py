@@ -1,7 +1,10 @@
 """Quota enforcement logic."""
 
 import logging
+from contextlib import contextmanager
 
+from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.db.models import Sum
 
 from documents.models import Document, DocumentFile
@@ -49,7 +52,7 @@ def get_usage(user):
     return document_count, storage_bytes
 
 
-def check_quota(user):
+def check_quota(user, incoming_bytes=0, incoming_documents=1):
     """
     Check whether the user is within their quota.
 
@@ -61,19 +64,37 @@ def check_quota(user):
 
     doc_count, storage_bytes = get_usage(user)
 
-    if quota.max_documents is not None and doc_count >= quota.max_documents:
+    if incoming_documents and quota.max_documents is not None and doc_count + incoming_documents > quota.max_documents:
         return False, (
             f"Document limit reached: {doc_count}/{quota.max_documents} documents."
         )
 
-    if quota.max_storage_bytes is not None and storage_bytes >= quota.max_storage_bytes:
-        used_mb = storage_bytes / (1024 * 1024)
+    if quota.max_storage_bytes is not None and (
+        storage_bytes >= quota.max_storage_bytes or storage_bytes + incoming_bytes > quota.max_storage_bytes
+    ):
+        used_mb = (storage_bytes + incoming_bytes) / (1024 * 1024)
         limit_mb = quota.max_storage_bytes / (1024 * 1024)
         return False, (
             f"Storage limit reached: {used_mb:.1f}MB / {limit_mb:.1f}MB."
         )
 
     return True, "Within quota."
+
+
+class QuotaExceededError(ValueError):
+    pass
+
+
+@contextmanager
+def quota_guard(user, incoming_bytes=0, incoming_documents=1):
+    """Serialize admission and persistence for all managed writes by one owner."""
+    with transaction.atomic():
+        if user is not None:
+            owner = get_user_model().objects.select_for_update().get(pk=user.pk)
+            allowed, message = check_quota(owner, incoming_bytes, incoming_documents)
+            if not allowed:
+                raise QuotaExceededError(message)
+        yield
 
 
 def get_quota_usage_data(user):

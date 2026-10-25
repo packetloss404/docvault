@@ -217,7 +217,14 @@ def poll_s3_sources():
 
         try:
             session = boto3.Session(**session_kwargs)
-            s3 = session.client("s3")
+            client_kwargs = {}
+            if config.get("use_storage_endpoint"):
+                from django.conf import settings
+
+                # Custom destinations are administrator-configured environment settings,
+                # never URLs supplied through the source API.
+                client_kwargs["endpoint_url"] = getattr(settings, "S3_ENDPOINT_URL", "") or None
+            s3 = session.client("s3", **client_kwargs)
         except Exception:
             logger.exception("Failed to create boto3 S3 client for source %s", source.label)
             continue

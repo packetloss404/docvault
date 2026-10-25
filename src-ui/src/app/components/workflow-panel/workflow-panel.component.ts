@@ -35,6 +35,7 @@ export class WorkflowPanelComponent implements OnInit {
   transitionFields = signal<WorkflowTransitionField[]>([]);
   transitionFieldValues = signal<Record<string, string>>({});
   transitionComment = signal('');
+  transitionError = signal('');
 
   // Launch
   launchTemplateId = signal<number | null>(null);
@@ -103,6 +104,7 @@ export class WorkflowPanelComponent implements OnInit {
     this.selectedTransition.set(transition);
     this.transitionFieldValues.set({});
     this.transitionComment.set('');
+    this.transitionError.set('');
 
     // Load fields for this transition
     const inst = this.selectedInstance();
@@ -124,6 +126,7 @@ export class WorkflowPanelComponent implements OnInit {
   }
 
   executeTransition(): void {
+    this.transitionError.set('');
     const inst = this.selectedInstance();
     const trans = this.selectedTransition();
     if (!inst || !trans) return;
@@ -144,6 +147,9 @@ export class WorkflowPanelComponent implements OnInit {
           this.loadAvailableTransitions(updated);
           this.loadLog(updated);
         },
+        error: (error) => this.transitionError.set(
+          error.error?.error || error.error?.detail || 'Could not complete the transition. Check the required fields.',
+        ),
       });
   }
 

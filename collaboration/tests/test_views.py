@@ -337,6 +337,15 @@ class TestDocumentShareCreateView:
         assert resp.status_code == status.HTTP_201_CREATED
         assert resp.data["expiration"] is not None
 
+    def test_post_share_with_absolute_expiration(self, api_client, user, document):
+        api_client.force_authenticate(user=user)
+        expires = timezone.now() + timedelta(seconds=1)
+        response = api_client.post(
+            f"/api/v1/documents/{document.pk}/share/", {"expiration": expires.isoformat()}, format="json",
+        )
+        assert response.status_code == 201
+        assert ShareLink.objects.get(pk=response.data["id"]).expiration == expires
+
 
 @pytest.mark.django_db
 class TestShareLinkListView:

@@ -8,6 +8,9 @@ See .env.example for required configuration.
 from pathlib import Path
 
 import environ
+from celery.schedules import crontab
+
+from .validators import redis_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -172,12 +175,29 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Redis
 REDIS_URL = env("REDIS_URL")
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": env.str("CACHE_URL", default=redis_database_url(REDIS_URL, 1)),
+    },
+}
+
+EMAIL_BACKEND = env.str("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = env.str("EMAIL_HOST", default="localhost")
+EMAIL_PORT = env.int("EMAIL_PORT", default=25)
+EMAIL_HOST_USER = env.str("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=False)
+EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
+EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=10)
+DEFAULT_FROM_EMAIL = env.str("DEFAULT_FROM_EMAIL", default="webmaster@localhost")
 
 # Sites framework (required by allauth)
 SITE_ID = 1
 
 # Authentication backends
 AUTHENTICATION_BACKENDS = [
+    "security.authentication.RolePermissionBackend",
     "django.contrib.auth.backends.ModelBackend",
     "guardian.backends.ObjectPermissionBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
@@ -292,15 +312,33 @@ STORAGES = {
 LDAP_ENABLED = env("LDAP_ENABLED")
 
 # Celery
-CELERY_BROKER_URL = env("REDIS_URL") + "/0"
-CELERY_RESULT_BACKEND = env("REDIS_URL") + "/0"
+CELERY_BROKER_URL = env.str("CELERY_BROKER_URL", default=redis_database_url(REDIS_URL, 0))
+CELERY_RESULT_BACKEND = env.str("CELERY_RESULT_BACKEND", default=redis_database_url(REDIS_URL, 0))
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
+CELERY_TASK_DEFAULT_QUEUE = "default"
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 1800  # 30 minutes max
 CELERY_TASK_SOFT_TIME_LIMIT = 1500  # 25 minutes soft limit
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_BEAT_SCHEDULE = {
+    "workflow-escalations": {"task": "workflows.tasks.check_workflow_escalations", "schedule": 300.0},
+    "scheduled-rules": {"task": "workflows.tasks.execute_scheduled_rules", "schedule": 900.0},
+    "mail-poll": {"task": "sources.tasks.fetch_all_mail", "schedule": 300.0},
+    "watch-folders": {"task": "sources.tasks.poll_watch_folders", "schedule": 60.0},
+    "staging-sources": {"task": "sources.tasks.poll_staging_sources", "schedule": 60.0},
+    "s3-sources": {"task": "sources.tasks.poll_s3_sources", "schedule": 300.0},
+    "retention-check": {"task": "legal_hold.tasks.reevaluate_holds", "schedule": crontab(hour=2, minute=0)},
+    "retention-enforcement": {
+        "task": "notifications.tasks.enforce_retention", "schedule": crontab(hour=2, minute=15),
+    },
+    "es-optimize": {"task": "search.optimize_index", "schedule": crontab(hour=3, minute=0)},
+    "physical-overdue": {"task": "physical_records.check_overdue_charge_outs", "schedule": 300.0},
+    "signature-expiry": {"task": "esignatures.tasks.expire_signature_requests", "schedule": 300.0},
+    "portal-expiry": {"task": "portal.tasks.expire_overdue_requests", "schedule": 300.0},
+    "portal-reminders": {"task": "portal.tasks.check_deadline_reminders", "schedule": 3600.0},
+}
 
 # Django Channels
 ASGI_APPLICATION = "docvault.asgi.application"
@@ -312,6 +350,7 @@ CHANNEL_LAYERS = {
 
 # DocVault storage
 STORAGE_BACKEND = env("STORAGE_BACKEND")
+RETENTION_HARD_DELETE_ENABLED = env.bool("RETENTION_HARD_DELETE_ENABLED", default=False)
 STORAGE_DIR = Path(env("MEDIA_ROOT")) / "documents"
 
 # Content-Addressable Storage
@@ -380,6 +419,10 @@ LLM_API_KEY = env.str("LLM_API_KEY", default="")
 LLM_API_ENDPOINT = env.str("LLM_API_ENDPOINT", default="")
 EMBEDDING_MODEL = env.str("EMBEDDING_MODEL", default="text-embedding-3-small")
 EMBEDDING_DIM = env.int("EMBEDDING_DIM", default=1536)
+OLLAMA_REQUEST_TIMEOUT = env.float("OLLAMA_REQUEST_TIMEOUT", default=60.0)
+OLLAMA_MAX_TOKENS = env.int("OLLAMA_MAX_TOKENS", default=512)
+OLLAMA_NUM_THREADS = env.int("OLLAMA_NUM_THREADS", default=0)
+OLLAMA_CONTEXT_WINDOW = env.int("OLLAMA_CONTEXT_WINDOW", default=4096)
 
 # Storage Encryption
 STORAGE_ENCRYPTION_ENABLED = env.bool("STORAGE_ENCRYPTION_ENABLED", default=False)
@@ -425,6 +468,7 @@ SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "DENY"
 IP_WHITELIST = env.list("IP_WHITELIST", default=[])
 IP_BLACKLIST = env.list("IP_BLACKLIST", default=[])
+TRUSTED_PROXY_IPS = env.list("TRUSTED_PROXY_IPS", default=[])
 
 # Sentry (optional)
 SENTRY_DSN = env.str("SENTRY_DSN", default="")

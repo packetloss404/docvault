@@ -42,6 +42,20 @@ class TagSerializer(serializers.ModelSerializer):
     def get_children_count(self, obj) -> int:
         return obj.get_children().count()
 
+    def validate_parent(self, parent):
+        from django.db.models import Max
+
+        subtree_depth = 0
+        if self.instance:
+            if parent and (parent == self.instance or parent.is_descendant_of(self.instance)):
+                raise serializers.ValidationError("A tag cannot be moved inside its own subtree.")
+            deepest = self.instance.get_descendants().aggregate(level=Max("level"))["level"]
+            subtree_depth = (deepest or self.instance.level) - self.instance.level
+        new_level = parent.level + 1 if parent else 0
+        if new_level + subtree_depth >= 5:
+            raise serializers.ValidationError("Tags support at most five levels.")
+        return parent
+
 
 class TagTreeSerializer(serializers.ModelSerializer):
     """Recursive serializer for Tag hierarchy."""
@@ -106,6 +120,22 @@ class CabinetSerializer(serializers.ModelSerializer):
 
     def get_children_count(self, obj) -> int:
         return obj.get_children().count()
+
+
+class CabinetMoveSerializer(serializers.Serializer):
+    target = serializers.PrimaryKeyRelatedField(queryset=Cabinet.objects.all(), required=False, allow_null=True)
+    parent = serializers.PrimaryKeyRelatedField(queryset=Cabinet.objects.all(), required=False, allow_null=True)
+    position = serializers.ChoiceField(
+        choices=["left", "right", "first-child", "last-child"], default="last-child",
+    )
+
+    def validate(self, attrs):
+        if "target" in attrs and "parent" in attrs:
+            raise serializers.ValidationError("Choose target or parent, not both.")
+        if attrs["position"] in {"left", "right"}:
+            if "parent" in attrs or not attrs.get("target"):
+                raise serializers.ValidationError("Sibling moves require a target cabinet.")
+        return attrs
 
 
 class CabinetTreeSerializer(serializers.ModelSerializer):

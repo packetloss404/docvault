@@ -469,4 +469,4 @@ class NonDestructiveStorageTests(TestCase):
 
         self.assertTrue(result.success)
         doc = Document.objects.get(pk=ctx.document_id)
-        self.assertEqual(doc.archive_filename, "")
+        self.assertIsNone(doc.archive_filename)

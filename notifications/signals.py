@@ -2,7 +2,7 @@
 
 import logging
 
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
 from documents.models import Document
@@ -35,9 +35,22 @@ def notify_document_added(sender, instance, created, **kwargs):
     )
 
 
+@receiver(pre_save, sender=ProcessingTask)
+def remember_processing_status(sender, instance, update_fields=None, raw=False, **kwargs):
+    if raw or (update_fields is not None and "status" not in update_fields):
+        return
+    instance._notification_previous_status = (
+        sender.objects.filter(pk=instance.pk).values_list("status", flat=True).first() if instance.pk else None
+    )
+
+
 @receiver(post_save, sender=ProcessingTask)
-def notify_processing_complete(sender, instance, **kwargs):
+def notify_processing_complete(sender, instance, update_fields=None, raw=False, **kwargs):
     """Send notification when document processing completes or fails."""
+    if raw or (update_fields is not None and "status" not in update_fields):
+        return
+    if getattr(instance, "_notification_previous_status", None) == instance.status:
+        return
     if instance.status == ProcessingTask.Status.SUCCESS:
         if not instance.document or not instance.document.owner:
             return
@@ -49,10 +62,8 @@ def notify_processing_complete(sender, instance, **kwargs):
             document=instance.document,
         )
     elif instance.status == ProcessingTask.Status.FAILURE:
-        # Try to find the user who submitted the task
-        user = None
-        if instance.document and instance.document.owner:
-            user = instance.document.owner
+        document = instance.document if instance.document_id else None
+        user = document.owner if document and document.owner_id else instance.owner
         if not user:
             return
         send_notification(
@@ -60,5 +71,5 @@ def notify_processing_complete(sender, instance, **kwargs):
             event_type=EVENT_PROCESSING_FAILED,
             title="Processing failed",
             body=f"Processing failed for task {instance.task_id}: {instance.result or 'Unknown error'}",
-            document=instance.document,
+            document=document,
         )

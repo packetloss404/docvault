@@ -30,6 +30,7 @@ def spa_fallback(request, *args, **kwargs):
     return HttpResponse(template.render({}, request))
 
 urlpatterns = [
+    re_path(r"^admin/(?:users|groups|roles|storage|permissions)/?$", spa_fallback, name="spa-admin"),
     path("admin/", admin.site.urls),
     # Health / Observability (no auth)
     path("health/", health_view, name="health"),

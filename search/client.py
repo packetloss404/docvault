@@ -101,7 +101,12 @@ def create_index():
         logger.info("Index '%s' already exists.", index_name)
         return True
 
-    client.indices.create(index=index_name, body=INDEX_MAPPING)
+    try:
+        client.indices.create(index=index_name, body=INDEX_MAPPING)
+    except Exception:
+        # Another indexing worker may have created the same index after our check.
+        if not client.indices.exists(index=index_name):
+            raise
     logger.info("Created index '%s'.", index_name)
     return True
 

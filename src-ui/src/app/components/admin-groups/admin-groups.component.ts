@@ -1,14 +1,15 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 import { SecurityService } from '../../services/security.service';
-import { Group, Permission } from '../../models/security.model';
+import { Group } from '../../models/security.model';
 import { SubnavComponent } from '../subnav/subnav.component';
 
 @Component({
   selector: 'app-admin-groups',
   standalone: true,
-  imports: [CommonModule, FormsModule, SubnavComponent],
+  imports: [CommonModule, FormsModule, RouterModule, SubnavComponent],
   styleUrl: './admin-groups.component.scss',
   template: `
     <div class="dv-screen dv-screen--tight">
@@ -67,27 +68,7 @@ import { SubnavComponent } from '../subnav/subnav.component';
               </div>
             </div>
 
-            <div class="ag-perms">
-              <span class="dv-field__label">permissions</span>
-              @if (permissions().length === 0) {
-                <span class="dv-meta">No permissions available.</span>
-              } @else {
-                <div class="dv-well ag-perms__box">
-                  @for (perm of permissions(); track perm.id) {
-                    <label class="ag-check" [for]="'perm-' + perm.id">
-                      <input
-                        class="dv-checkbox"
-                        type="checkbox"
-                        [id]="'perm-' + perm.id"
-                        [checked]="formPermissions.includes(perm.id)"
-                        (change)="togglePermission(perm.id, $event)"
-                      />
-                      <span>{{ perm.name }}</span>
-                    </label>
-                  }
-                </div>
-              }
-            </div>
+            <p class="dv-meta">Assign permissions to groups through <a class="dv-link" routerLink="/admin/roles">Roles</a>.</p>
 
             <div class="ag-form__actions">
               <button
@@ -119,13 +100,7 @@ import { SubnavComponent } from '../subnav/subnav.component';
               <div class="dv-card dv-card--r10 ag-row">
                 <span class="ag-row__name">{{ group.name }}</span>
                 <span class="dv-chip dv-chip--well dv-push">
-                  @if (group.permissions.length === 0) {
-                    no permissions
-                  } @else {
-                    {{ group.permissions.length }} permission{{
-                      group.permissions.length !== 1 ? 's' : ''
-                    }}
-                  }
+                  {{ group.user_count }} members
                 </span>
                 <span class="ag-actions">
                   <button type="button" class="ag-action" (click)="startEdit(group)">edit</button>
@@ -147,7 +122,6 @@ import { SubnavComponent } from '../subnav/subnav.component';
 })
 export class AdminGroupsComponent implements OnInit {
   groups = signal<Group[]>([]);
-  permissions = signal<Permission[]>([]);
   loading = signal(false);
   saving = signal(false);
   showForm = signal(false);
@@ -157,7 +131,6 @@ export class AdminGroupsComponent implements OnInit {
 
   // Form fields
   formName = '';
-  formPermissions: number[] = [];
 
   constructor(private securityService: SecurityService) {}
 
@@ -177,22 +150,17 @@ export class AdminGroupsComponent implements OnInit {
         this.loading.set(false);
       },
     });
-    this.securityService.getPermissions().subscribe({
-      next: (perms) => this.permissions.set(perms),
-    });
   }
 
   startCreate(): void {
     this.editing.set(null);
     this.formName = '';
-    this.formPermissions = [];
     this.showForm.set(true);
   }
 
   startEdit(group: Group): void {
     this.editing.set(group);
     this.formName = group.name;
-    this.formPermissions = [...group.permissions];
     this.showForm.set(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -202,19 +170,9 @@ export class AdminGroupsComponent implements OnInit {
     this.editing.set(null);
   }
 
-  togglePermission(id: number, event: Event): void {
-    const checked = (event.target as HTMLInputElement).checked;
-    if (checked) {
-      this.formPermissions = [...this.formPermissions, id];
-    } else {
-      this.formPermissions = this.formPermissions.filter((p) => p !== id);
-    }
-  }
-
   save(): void {
     const data: Partial<Group> = {
       name: this.formName.trim(),
-      permissions: this.formPermissions,
     };
 
     this.saving.set(true);

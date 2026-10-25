@@ -2,6 +2,8 @@
 
 from rest_framework import serializers
 
+from documents.models import DocumentType
+
 from .models import (
     WorkflowAction,
     WorkflowInstance,
@@ -25,7 +27,8 @@ class WorkflowTemplateSerializer(serializers.ModelSerializer):
     document_type_ids = serializers.PrimaryKeyRelatedField(
         source="document_types",
         many=True,
-        read_only=True,
+        queryset=DocumentType.objects.all(),
+        required=False,
     )
 
     class Meta:
@@ -83,7 +86,7 @@ class WorkflowTransitionFieldSerializer(serializers.ModelSerializer):
         model = WorkflowTransitionField
         fields = [
             "id", "transition", "name", "label",
-            "field_type", "required", "default", "help_text",
+            "field_type", "required", "default", "help_text", "choices",
         ]
         read_only_fields = ["id", "transition"]
 
@@ -164,7 +167,7 @@ class TransitionExecuteSerializer(serializers.Serializer):
     """Serializer for executing a transition."""
 
     field_values = serializers.DictField(
-        child=serializers.CharField(allow_blank=True),
+        child=serializers.JSONField(),
         required=False,
         default=dict,
     )

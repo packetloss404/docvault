@@ -56,6 +56,14 @@ describe('EsignatureService', () => {
   // --- Authenticated endpoints ---
 
   describe('getRequests', () => {
+    it('loads paginated summary responses and hydrates the signer data used by the UI', () => {
+      service.getRequests({ document: '10' }).subscribe((result) => expect(result).toEqual([mockRequest]));
+      httpMock.expectOne((request) => request.url === `${SIG_URL}/`).flush({
+        results: [{ id: 1, document: 10, title: 'Contract', signer_count: 0 }], next: `${SIG_URL}/?page=2`,
+      });
+      httpMock.expectOne(`${SIG_URL}/?page=2`).flush({ results: [], next: null });
+      httpMock.expectOne(`${SIG_URL}/1/`).flush(mockRequest);
+    });
     it('should GET all signature requests with no params', () => {
       service.getRequests().subscribe((result) => {
         expect(result).toEqual([mockRequest]);
@@ -130,7 +138,8 @@ describe('EsignatureService', () => {
       const req = httpMock.expectOne(`${SIG_URL}/1/send/`);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({});
-      req.flush(sent);
+      req.flush({ status: 'sent' });
+      httpMock.expectOne(`${SIG_URL}/1/`).flush(sent);
     });
   });
 
@@ -144,7 +153,8 @@ describe('EsignatureService', () => {
 
       const req = httpMock.expectOne(`${SIG_URL}/1/cancel/`);
       expect(req.request.method).toBe('POST');
-      req.flush(cancelled);
+      req.flush({ status: 'cancelled' });
+      httpMock.expectOne(`${SIG_URL}/1/`).flush(cancelled);
     });
   });
 
@@ -202,6 +212,16 @@ describe('EsignatureService', () => {
   // --- Public signing endpoints ---
 
   describe('getSigningInfo', () => {
+    it('maps the actual public serializer page count and signer status', () => {
+      service.getSigningInfo('tok123').subscribe((result) => {
+        expect(result.page_count).toBe(2);
+        expect(result.status).toBe('viewed');
+      });
+      httpMock.expectOne(`${SIGN_URL}/tok123/`).flush({
+        request_title: 'Contract', document_title: 'NDA', signer_name: 'Alice', signer_role: 'Signer',
+        document_page_count: 2, signer_status: 'viewed', viewed_pages: [1], fields: [],
+      });
+    });
     it('should GET public signing info by token', () => {
       const info = {
         request_title: 'Contract',
@@ -247,7 +267,7 @@ describe('EsignatureService', () => {
 
       const req = httpMock.expectOne(`${SIGN_URL}/tok123/complete/`);
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ fields });
+      expect(req.request.body).toEqual({ fields: [{ field_id: 1, value: 'Alice' }] });
       req.flush({ detail: 'Signed.' });
     });
   });

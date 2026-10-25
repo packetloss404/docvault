@@ -239,8 +239,8 @@ export class PublicPortalComponent implements OnInit {
 
     const formData = new FormData();
     formData.append('file', file);
-    if (this.submitterEmail()) formData.append('submitter_email', this.submitterEmail());
-    if (this.submitterName()) formData.append('submitter_name', this.submitterName());
+    if (this.submitterEmail()) formData.append('email', this.submitterEmail());
+    if (this.submitterName()) formData.append('name', this.submitterName());
 
     this.portalService.publicUpload(this.slug, formData).subscribe({
       next: () => {

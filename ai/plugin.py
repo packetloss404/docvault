@@ -45,13 +45,14 @@ class AIPlugin(ProcessingPlugin):
             ).prefetch_related("tags").get(pk=context.document_id)
 
             from .embeddings import generate_document_embedding
-            from .vector_store import get_vector_store
+            from .vector_store import get_vector_store, vector_store_write_lock
 
             embedding = generate_document_embedding(document)
             if embedding:
-                store = get_vector_store()
-                store.add(document.pk, embedding)
-                store.save()
+                with vector_store_write_lock():
+                    store = get_vector_store()
+                    store.add(document.pk, embedding)
+                    store.save()
                 logger.info("Generated and stored embedding for document %s", document.pk)
             else:
                 logger.debug("No embedding generated for document %s", document.pk)

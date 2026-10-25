@@ -3,7 +3,7 @@
 from datetime import timedelta
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from documents.constants import (
@@ -129,6 +129,7 @@ class RetentionEnforcementTest(TestCase):
         self.assertIsNone(doc.deleted_at)
         self.assertEqual(result["trashed"], 0)
 
+    @override_settings(RETENTION_HARD_DELETE_ENABLED=True)
     def test_delete_trashed_documents(self):
         """Trashed documents past the delete deadline should be hard-deleted."""
         doc_type_with_delete = DocumentType.objects.create(
@@ -154,6 +155,7 @@ class RetentionEnforcementTest(TestCase):
         self.assertFalse(Document.all_objects.filter(pk=doc.pk).exists())
         self.assertEqual(result["deleted"], 1)
 
+    @override_settings(RETENTION_HARD_DELETE_ENABLED=True)
     def test_skip_recently_trashed(self):
         """Recently trashed documents within delete period are not hard-deleted."""
         doc_type_with_delete = DocumentType.objects.create(
@@ -228,6 +230,37 @@ class RetentionEnforcementTest(TestCase):
         self.assertIsInstance(result["deleted"], int)
         self.assertIsInstance(result["dry_run"], bool)
         self.assertFalse(result["dry_run"])
+
+    @override_settings(RETENTION_HARD_DELETE_ENABLED=False)
+    def test_hard_deletion_requires_explicit_opt_in(self):
+        self.doc_type.delete_time_period = 0
+        self.doc_type.delete_time_unit = TIME_UNIT_DAYS
+        self.doc_type.save()
+        document = self._create_document("Preserved trash")
+        document.soft_delete()
+        Document.all_objects.filter(pk=document.pk).update(deleted_at=timezone.now() - timedelta(days=30))
+        result = enforce_retention()
+        self.assertTrue(Document.all_objects.filter(pk=document.pk).exists())
+        self.assertEqual(result["deleted"], 0)
+
+    @override_settings(RETENTION_HARD_DELETE_ENABLED=True)
+    def test_held_documents_survive_both_retention_phases(self):
+        self.doc_type.delete_time_period = 0
+        self.doc_type.delete_time_unit = TIME_UNIT_DAYS
+        self.doc_type.save()
+        active = self._create_document("Held active")
+        held_trash = self._create_document("Held trash")
+        unheld_trash = self._create_document("Unheld trash")
+        held_trash.soft_delete()
+        unheld_trash.soft_delete()
+        Document.all_objects.filter(pk__in=[active.pk, held_trash.pk]).update(is_held=True)
+        Document.all_objects.filter(pk=active.pk).update(added=timezone.now() - timedelta(days=30))
+        result = enforce_retention()
+        self.assertTrue(Document.objects.filter(pk=active.pk).exists())
+        self.assertTrue(Document.all_objects.filter(pk=held_trash.pk).exists())
+        self.assertFalse(Document.all_objects.filter(pk=unheld_trash.pk).exists())
+        self.assertEqual(result["trashed"], 0)
+        self.assertEqual(result["deleted"], 1)
 
     def test_return_counts_dry_run(self):
         """Dry run should return dry_run=True in the result."""

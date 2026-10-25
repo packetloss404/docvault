@@ -26,7 +26,15 @@ class StorePlugin(ProcessingPlugin):
         return context.source_path is not None and context.checksum != ""
 
     def process(self, context: ProcessingContext) -> PluginResult:
-        from documents.models import Document
+        from notifications.quotas import quota_guard
+
+        owner_id = context.override_owner or context.user_id
+        owner = User.objects.filter(pk=owner_id).first() if owner_id else None
+        with quota_guard(owner, incoming_bytes=context.source_path.stat().st_size):
+            return self._store(context, owner)
+
+    def _store(self, context, owner):
+        from documents.models import Document, DocumentFile, DocumentVersion
         from storage.utils import get_storage_backend
 
         backend = get_storage_backend()
@@ -48,7 +56,7 @@ class StorePlugin(ProcessingPlugin):
         if non_destructive and context.archive_path and context.archive_path.is_file():
             archive_name = f"archive/{file_uuid}.pdf"
             with open(context.archive_path, "rb") as f:
-                backend.save(archive_name, f)
+                archive_name = backend.save(archive_name, f)
             archive_checksum = self._calculate_checksum(context.archive_path)
             self.update_progress(context, 0.85, "Archive file stored")
 
@@ -57,16 +65,9 @@ class StorePlugin(ProcessingPlugin):
         if context.thumbnail_path and context.thumbnail_path.is_file():
             thumbnail_name = f"thumbnails/{file_uuid}.webp"
             with open(context.thumbnail_path, "rb") as f:
-                backend.save(thumbnail_name, f)
+                thumbnail_name = backend.save(thumbnail_name, f)
 
         self.update_progress(context, 0.88, "Creating document record")
-
-        # Resolve owner
-        owner = None
-        if context.override_owner:
-            owner = User.objects.filter(pk=context.override_owner).first()
-        elif context.user_id:
-            owner = User.objects.filter(pk=context.user_id).first()
 
         # Resolve document type
         document_type = None
@@ -93,7 +94,7 @@ class StorePlugin(ProcessingPlugin):
             archive_checksum=archive_checksum,
             page_count=context.page_count,
             filename=storage_name,
-            archive_filename=archive_name or "",
+            archive_filename=archive_name,
             language=context.language or "en",
             archive_serial_number=context.override_asn,
             owner=owner,
@@ -113,7 +114,9 @@ class StorePlugin(ProcessingPlugin):
         if doc.storage_path_id:
             try:
                 rendered_path = doc.storage_path.render(doc)
-                if rendered_path:
+                from storage.backends.content_addressed import ContentAddressedStorageBackend
+
+                if rendered_path and not isinstance(backend, ContentAddressedStorageBackend):
                     # Keep the UUID so matching templates cannot overwrite each other's files.
                     target_name = f"{rendered_path}_{file_uuid}{ext}"
                     with backend.open(storage_name) as original:
@@ -133,6 +136,19 @@ class StorePlugin(ProcessingPlugin):
                     doc.pk,
                 )
 
+        original = DocumentFile.objects.create(
+            document=doc,
+            file=doc.filename,
+            filename=context.original_filename,
+            mime_type=context.mime_type,
+            checksum=context.checksum,
+            size=context.file_size or context.source_path.stat().st_size,
+            page_count=context.page_count,
+            created_by=owner,
+        )
+        DocumentVersion.objects.create(
+            document=doc, version_number=1, file=original, is_active=True, created_by=owner,
+        )
         context.document_id = doc.pk
         self.update_progress(context, 0.95, "Document created")
         return PluginResult(success=True, message=f"Document #{doc.pk} created")

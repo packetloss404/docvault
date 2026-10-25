@@ -2,7 +2,9 @@
 
 import logging
 import pickle
+import tempfile
 import threading
+from contextlib import contextmanager
 from pathlib import Path
 
 import numpy as np
@@ -14,14 +16,30 @@ logger = logging.getLogger(__name__)
 
 _lock = threading.Lock()
 _store = None
+_store_revision = None
+
+
+@contextmanager
+def vector_store_write_lock():
+    """Serialize publishers across worker processes using a stable database row."""
+    from django.contrib.contenttypes.models import ContentType
+    from django.db import transaction
+
+    from documents.models import Document
+
+    with transaction.atomic():
+        content_type = ContentType.objects.get_for_model(Document)
+        ContentType.objects.select_for_update().get(pk=content_type.pk)
+        yield
 
 
 class VectorStore:
     """FAISS-based vector store for document embeddings."""
 
-    def __init__(self, dimension: int = DEFAULT_EMBEDDING_DIM):
+    def __init__(self, dimension: int | None = None):
         import faiss
 
+        dimension = dimension or getattr(settings, "EMBEDDING_DIM", DEFAULT_EMBEDDING_DIM)
         self.dimension = dimension
         self.index = faiss.IndexFlatIP(dimension)  # Inner product (cosine after normalize)
         self.doc_ids: list[int] = []  # Maps FAISS row index → document ID
@@ -115,14 +133,21 @@ class VectorStore:
         path.mkdir(parents=True, exist_ok=True)
         import faiss
 
-        faiss.write_index(self.index, str(path / "index.faiss"))
-
-        with open(path / "metadata.pkl", "wb") as f:
-            pickle.dump({
+        payload = {
+                "index": faiss.serialize_index(self.index),
                 "doc_ids": self.doc_ids,
                 "id_to_idx": self._id_to_idx,
                 "dimension": self.dimension,
-            }, f)
+        }
+        temporary_path = None
+        try:
+            with tempfile.NamedTemporaryFile(dir=path, prefix=".snapshot-", delete=False) as temporary:
+                temporary_path = Path(temporary.name)
+                pickle.dump(payload, temporary, protocol=pickle.HIGHEST_PROTOCOL)
+            temporary_path.replace(path / "snapshot.pkl")
+        finally:
+            if temporary_path:
+                temporary_path.unlink(missing_ok=True)
 
         logger.info("Saved vector store (%d vectors) to %s", self.count, path)
 
@@ -133,6 +158,17 @@ class VectorStore:
             path = cls._default_path()
 
         import faiss
+
+        snapshot = path / "snapshot.pkl"
+        if snapshot.exists():
+            with snapshot.open("rb") as stored:
+                data = pickle.load(stored)
+            store = cls.__new__(cls)
+            store.index = faiss.deserialize_index(data["index"])
+            store.doc_ids = data["doc_ids"]
+            store._id_to_idx = data["id_to_idx"]
+            store.dimension = data["dimension"]
+            return store
 
         index_path = path / "index.faiss"
         meta_path = path / "metadata.pkl"
@@ -168,19 +204,34 @@ class VectorStore:
 
 
 def get_vector_store() -> VectorStore:
-    """Return the global vector store singleton, loading from disk if needed."""
-    global _store
-    if _store is not None:
+    """Reload worker-published snapshots when another process updates the index."""
+    global _store, _store_revision
+    revision = _disk_revision()
+    if _store is not None and revision == _store_revision:
         return _store
 
     with _lock:
-        if _store is not None:
+        revision = _disk_revision()
+        if _store is not None and revision == _store_revision:
             return _store
         _store = VectorStore.load()
+        _store_revision = revision
     return _store
+
+
+def _disk_revision():
+    path = VectorStore._default_path()
+    for name in ("snapshot.pkl", "metadata.pkl"):
+        try:
+            stats = (path / name).stat()
+            return stats.st_mtime_ns, stats.st_size
+        except FileNotFoundError:
+            continue
+    return None
 
 
 def reset_vector_store():
     """Reset the vector store singleton (for testing)."""
-    global _store
+    global _store, _store_revision
     _store = None
+    _store_revision = None

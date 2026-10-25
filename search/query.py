@@ -199,6 +199,13 @@ def build_search_query(
             "correspondent_facets": {
                 "terms": {"field": "correspondent_id", "size": 20},
             },
+            "entity_facets": {
+                "nested": {"path": "entities"},
+                "aggs": {"values": {
+                    "terms": {"field": "entities.value", "size": 30},
+                    "aggs": {"documents": {"reverse_nested": {}}},
+                }},
+            },
             "date_histogram": {
                 "date_histogram": {
                     "field": "created",
@@ -470,6 +477,11 @@ def _format_results(response, page, page_size):
         facets["date_histogram"] = [
             {"key": b["key_as_string"], "count": b["doc_count"]}
             for b in aggs["date_histogram"]["buckets"]
+        ]
+    if "entity_facets" in aggs:
+        facets["entities"] = [
+            {"key": bucket["key"], "count": bucket["documents"]["doc_count"]}
+            for bucket in aggs["entity_facets"]["values"]["buckets"]
         ]
 
     return {

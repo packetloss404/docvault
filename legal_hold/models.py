@@ -44,6 +44,7 @@ class LegalHold(AuditableModel):
         ordering = ["-created_at"]
         verbose_name = "legal hold"
         verbose_name_plural = "legal holds"
+        permissions = [("override_hold", "Can override document preservation under legal hold")]
 
     def __str__(self):
         return f"{self.name} ({self.status})"

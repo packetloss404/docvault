@@ -6,6 +6,7 @@ import re
 
 from django.core.mail import send_mail
 
+from legal_hold.permissions import ensure_document_mutable
 from workflows.constants import (
     ACTION_ADD_TAG,
     ACTION_LAUNCH_WORKFLOW,
@@ -22,6 +23,7 @@ from workflows.constants import (
     MATCH_LITERAL,
     MATCH_NONE,
     MATCH_REGEX,
+    TRIGGER_CONSUMPTION,
     TRIGGER_SCHEDULED,
 )
 
@@ -54,12 +56,14 @@ def get_matching_rules(trigger_type, document=None, context=None):
 
 def _trigger_matches(trigger, document, context):
     """Check if a trigger's filters match the document/context."""
-    if not document and trigger.type != TRIGGER_SCHEDULED:
+    consumption = trigger.type == TRIGGER_CONSUMPTION and context is not None
+    if not document and trigger.type != TRIGGER_SCHEDULED and not consumption:
         return False
 
     # Filename filter
-    if trigger.filter_filename and document:
-        filename = getattr(document, "filename", "") or ""
+    if trigger.filter_filename and (document or consumption):
+        source = document or context
+        filename = getattr(source, "original_filename", "") or getattr(source, "filename", "") or ""
         if not fnmatch.fnmatch(filename.lower(), trigger.filter_filename.lower()):
             return False
 
@@ -70,25 +74,27 @@ def _trigger_matches(trigger, document, context):
             return False
 
     # Tag filter
-    if trigger.filter_has_tags.exists() and document:
+    if trigger.filter_has_tags.exists() and (document or consumption):
         required_tags = set(trigger.filter_has_tags.values_list("pk", flat=True))
-        doc_tags = set(document.tags.values_list("pk", flat=True))
+        doc_tags = set(document.tags.values_list("pk", flat=True)) if document else set(context.override_tags or [])
         if not required_tags.issubset(doc_tags):
             return False
 
     # Correspondent filter
-    if trigger.filter_has_correspondent_id and document:
-        if document.correspondent_id != trigger.filter_has_correspondent_id:
+    if trigger.filter_has_correspondent_id and (document or consumption):
+        correspondent_id = document.correspondent_id if document else context.override_correspondent
+        if correspondent_id != trigger.filter_has_correspondent_id:
             return False
 
     # Document type filter
-    if trigger.filter_has_document_type_id and document:
-        if document.document_type_id != trigger.filter_has_document_type_id:
+    if trigger.filter_has_document_type_id and (document or consumption):
+        document_type_id = document.document_type_id if document else context.override_document_type
+        if document_type_id != trigger.filter_has_document_type_id:
             return False
 
     # Text pattern matching
-    if trigger.match_pattern and document:
-        if not _matches_pattern(trigger, document):
+    if trigger.match_pattern and (document or consumption):
+        if not _matches_pattern(trigger, document or context):
             return False
 
     return True
@@ -129,6 +135,7 @@ def _matches_pattern(trigger, document):
 
 def execute_rule_actions(rule, document, user=None):
     """Execute all enabled actions for a rule against a document."""
+    ensure_document_mutable(document, user)
     actions = rule.actions.filter(enabled=True).order_by("order", "id")
     for action in actions:
         try:
@@ -158,19 +165,19 @@ def _execute_action(action, document, user=None):
 
     elif action.type == ACTION_SET_CORRESPONDENT:
         correspondent_id = config.get("correspondent_id")
-        if correspondent_id:
+        if correspondent_id and document.correspondent_id != correspondent_id:
             document.correspondent_id = correspondent_id
             document.save(update_fields=["correspondent_id"])
 
     elif action.type == ACTION_SET_TYPE:
         doc_type_id = config.get("document_type_id")
-        if doc_type_id:
+        if doc_type_id and document.document_type_id != doc_type_id:
             document.document_type_id = doc_type_id
             document.save(update_fields=["document_type_id"])
 
     elif action.type == ACTION_SET_STORAGE_PATH:
         path_id = config.get("storage_path_id")
-        if path_id:
+        if path_id and document.storage_path_id != path_id:
             document.storage_path_id = path_id
             document.save(update_fields=["storage_path_id"])
 
@@ -180,11 +187,9 @@ def _execute_action(action, document, user=None):
         field_id = config.get("field_id")
         value = config.get("value")
         if field_id is not None:
-            CustomFieldInstance.objects.update_or_create(
-                document=document,
-                field_id=field_id,
-                defaults={"value_json": value},
-            )
+            instance, _ = CustomFieldInstance.objects.get_or_create(document=document, field_id=field_id)
+            instance.value = value
+            instance.save()
 
     elif action.type == ACTION_SEND_EMAIL:
         _send_email_action(config, document)
@@ -299,3 +304,7 @@ def apply_consumption_overrides(rules, context):
                 tid = config.get("document_type_id")
                 if tid:
                     context.override_document_type = tid
+            elif action.type == ACTION_SET_STORAGE_PATH:
+                path_id = config.get("storage_path_id")
+                if path_id:
+                    context.override_storage_path = path_id

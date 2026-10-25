@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { WebSocketService } from './websocket.service';
+import { NotificationWebSocketService, WebSocketService } from './websocket.service';
 
 // ---------------------------------------------------------------------------
 // Minimal WebSocket mock
@@ -153,6 +153,26 @@ describe('WebSocketService', () => {
 
       service.connect(); // should be a no-op
       expect(lastSocket).toBe(first);
+    });
+
+    it('keeps only one pending connection and allows a new session after disconnect', () => {
+      service.connect();
+      const first = lastSocket;
+      service.connect();
+      expect(lastSocket).toBe(first);
+      service.disconnect();
+      service.connect();
+      expect(lastSocket).not.toBe(first);
+    });
+
+    it('listens for actual notifications on the separate notification channel', () => {
+      const notifications = TestBed.inject(NotificationWebSocketService);
+      notifications.connect();
+      expect(lastSocket!.url).toContain('/ws/notifications/');
+      const message = { id: 1, event_type: 'document.added', title: 'Document added', body: '', document: 1, read: false, created_at: '2026-10-25T00:00:00Z' };
+      lastSocket!.triggerMessage(message);
+      expect(notifications.notification()).toEqual(message);
+      notifications.disconnect();
     });
   });
 

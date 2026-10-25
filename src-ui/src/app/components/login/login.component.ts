@@ -1,4 +1,4 @@
-import { Component, ElementRef, ViewChildren, QueryList, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, ViewChildren, QueryList, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
@@ -16,6 +16,7 @@ const OTP_LENGTH = 6;
 export class LoginComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly changeDetector = inject(ChangeDetectorRef);
 
   @ViewChildren('otpBox') otpBoxes!: QueryList<ElementRef<HTMLInputElement>>;
 
@@ -51,6 +52,7 @@ export class LoginComponent {
           this.useBackupCode = false;
           this.resetOtp();
           this.loading = false;
+          this.changeDetector.markForCheck();
           setTimeout(() => this.focusOtp(0), 0);
           return;
         }
@@ -63,6 +65,7 @@ export class LoginComponent {
           err.error?.otp_code?.[0] ||
           err.error?.detail ||
           'Login failed. Please check your credentials.';
+        this.changeDetector.markForCheck();
       },
     });
   }

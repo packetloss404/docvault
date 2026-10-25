@@ -48,7 +48,7 @@ import { SubnavComponent } from '../subnav/subnav.component';
 
         @if (!loading() && !error()) {
           <div class="dv-thead dv-grid" style="--dv-cols: minmax(0, 1fr) minmax(0, 1fr) 120px 70px">
-            <span>codename</span><span>display name</span><span>content type</span>
+            <span>codename</span><span>display name</span><span>namespace</span>
             <span class="dv-num">id</span>
           </div>
 
@@ -59,7 +59,7 @@ import { SubnavComponent } from '../subnav/subnav.component';
             >
               <span class="dv-mono dv-accent dv-clip">{{ perm.codename }}</span>
               <span class="dv-clip">{{ perm.name }}</span>
-              <span><span class="dv-chip dv-chip--well">ct {{ perm.content_type }}</span></span>
+              <span><span class="dv-chip dv-chip--well">{{ perm.namespace }}</span></span>
               <span class="dv-meta dv-num">{{ perm.id }}</span>
             </div>
           } @empty {

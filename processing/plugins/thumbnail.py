@@ -55,7 +55,7 @@ class ThumbnailPlugin(ProcessingPlugin):
         thumbnail_name = f"thumbnails/{_uuid.uuid4().hex}.webp"
 
         with open(thumb_path, "rb") as f:
-            backend.save(thumbnail_name, f)
+            thumbnail_name = backend.save(thumbnail_name, f)
 
         try:
             doc = Document.objects.get(pk=context.document_id)

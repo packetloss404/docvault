@@ -111,6 +111,15 @@ class TestLegalHoldList:
 
 class TestLegalHoldCreate:
     @pytest.mark.django_db
+    def test_create_hold_with_custodians(self, client, staff_user, user):
+        client.force_authenticate(user=staff_user)
+        response = client.post(HOLDS_URL, {
+            "name": "Custodian hold", "custodian_ids": [user.pk, user.pk],
+        }, format="json")
+        assert response.status_code == 201
+        assert LegalHoldCustodian.objects.filter(hold_id=response.data["id"], user=user).count() == 1
+
+    @pytest.mark.django_db
     def test_create_hold(self, client, staff_user):
         client.force_authenticate(user=staff_user)
         data = {
@@ -401,6 +410,13 @@ class TestLegalHoldExport:
 
 
 class TestLegalHoldDelete:
+    @pytest.mark.django_db
+    def test_active_hold_cannot_be_deleted_without_release(self, client, staff_user, active_hold):
+        client.force_authenticate(user=staff_user)
+        response = client.delete(f"{HOLDS_URL}{active_hold.pk}/")
+        assert response.status_code == 400
+        assert LegalHold.objects.filter(pk=active_hold.pk).exists()
+
     @pytest.mark.django_db
     def test_delete_hold(self, client, staff_user, hold):
         client.force_authenticate(user=staff_user)

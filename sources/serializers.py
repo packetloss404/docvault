@@ -13,12 +13,28 @@ class SourceSerializer(serializers.ModelSerializer):
         many=True,
         read_only=True,
     )
+    configuration = serializers.JSONField(write_only=True, required=False)
+
+    def validate_configuration(self, value):
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Source configuration must be an object.")
+        allowed = {
+            "path", "bucket", "prefix", "aws_access_key_id", "aws_secret_access_key", "region_name",
+            "use_storage_endpoint",
+        }
+        unknown = set(value) - allowed
+        if unknown:
+            raise serializers.ValidationError(f"Unsupported source settings: {', '.join(sorted(unknown))}.")
+        if "use_storage_endpoint" in value and not isinstance(value["use_storage_endpoint"], bool):
+            raise serializers.ValidationError("use_storage_endpoint must be a boolean.")
+        return value
 
     class Meta:
         model = Source
         fields = [
             "id", "label", "enabled", "source_type",
             "document_type", "tag_ids", "owner",
+            "configuration",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]

@@ -10,6 +10,26 @@ from relationships.models import DocumentRelationship, RelationshipType
 User = get_user_model()
 
 
+@pytest.mark.django_db
+def test_supersession_requires_change_permission_on_target(client, user, admin_user, doc_a, doc_b):
+    from guardian.shortcuts import assign_perm
+
+    doc_b.owner = admin_user
+    doc_b.save(update_fields=["owner"])
+    assign_perm("documents.view_document", user, doc_b)
+    relationship_type, _ = RelationshipType.objects.get_or_create(
+        slug="supersedes", defaults={"label": "Supersedes", "is_directional": True},
+    )
+    client.force_authenticate(user=user)
+    response = client.post(f"/api/v1/documents/{doc_a.pk}/relationships/", {
+        "target_document": doc_b.pk, "relationship_type": relationship_type.pk,
+    }, format="json")
+    assert response.status_code == 404
+    doc_b.refresh_from_db()
+    assert not doc_b.is_obsolete
+    assert not DocumentRelationship.objects.filter(source_document=doc_a, target_document=doc_b).exists()
+
+
 @pytest.fixture
 def client():
     return APIClient()

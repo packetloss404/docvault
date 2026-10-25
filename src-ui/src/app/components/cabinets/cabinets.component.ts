@@ -35,6 +35,8 @@ export class CabinetsComponent implements OnInit {
   tree = signal<CabinetTreeNode[]>([]);
   editing = signal<Cabinet | null>(null);
   creating = signal(false);
+  reordering = signal(false);
+  actionError = signal('');
 
   formName = signal('');
   formParent = signal<number | null>(null);
@@ -98,15 +100,23 @@ export class CabinetsComponent implements OnInit {
   }
 
   onDrop(event: CdkDragDrop<Cabinet[]>): void {
-    if (event.previousIndex === event.currentIndex) return;
+    if (event.previousIndex === event.currentIndex || this.reordering()) return;
 
     const list = [...this.cabinets()];
+    const moved = list[event.previousIndex];
+    const target = list[event.currentIndex];
+    if (!moved || !target) return;
     moveItemInArray(list, event.previousIndex, event.currentIndex);
     this.cabinets.set(list);
-
-    // Persist the new order: PATCH each cabinet with its updated position index
-    list.forEach((cabinet, index) => {
-      this.orgService.updateCabinet(cabinet.id, { order: index }).subscribe();
+    this.reordering.set(true);
+    this.actionError.set('');
+    this.orgService.reorderCabinet(moved.id, target.id, event.currentIndex < event.previousIndex ? 'left' : 'right').subscribe({
+      next: () => { this.reordering.set(false); this.load(); },
+      error: (error) => {
+        this.reordering.set(false);
+        this.actionError.set(error.error?.detail || 'Unable to reorder cabinets.');
+        this.load();
+      },
     });
   }
 }

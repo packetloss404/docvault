@@ -87,6 +87,10 @@ class BarcodePlugin(ProcessingPlugin):
                 self._submit_split_segments(segments[1:], context)
                 # Continue processing with the first segment
                 context.source_path = segments[0]
+                from .preflight import PreflightPlugin
+
+                context.checksum = PreflightPlugin._calculate_checksum(context.source_path)
+                context.file_size = context.source_path.stat().st_size
                 logger.info(
                     "Document split into %d segments at separator pages %s",
                     len(segments), separator_pages,
@@ -143,11 +147,21 @@ class BarcodePlugin(ProcessingPlugin):
             from processing.models import ProcessingTask
             task = ProcessingTask.objects.create(
                 task_name="document_consumption",
+                owner_id=context.override_owner or context.user_id,
                 status_message=f"Split segment {i + 1} from {context.original_filename}",
             )
+            from pathlib import Path
+
+            original = Path(context.original_filename)
             consume_document.delay(
                 source_path=str(segment_path),
-                original_filename=f"{context.original_filename}_segment_{i + 1}",
+                original_filename=f"{original.stem}_segment_{i + 1}{original.suffix}",
                 task_id=str(task.task_id),
                 user_id=context.user_id,
+                override_owner=context.override_owner,
+                override_document_type=context.override_document_type,
+                override_correspondent=context.override_correspondent,
+                override_tags=context.override_tags,
+                override_storage_path=context.override_storage_path,
+                cleanup_source_path=True,
             )

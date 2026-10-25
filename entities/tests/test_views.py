@@ -224,6 +224,28 @@ class TestDocumentEntityListView:
         assert response.status_code == 404
 
 
+@pytest.mark.django_db
+def test_cooccurrence_counts_distinct_permitted_documents_and_hides_private_neighbors(
+    regular_client, regular_user, document, entity_type, entity_type_org,
+):
+    for index in range(2):
+        visible = Document.objects.create(title=f'Visible {index}', owner=regular_user)
+        for value, kind in [('John Doe', entity_type), ('Acme Corp', entity_type_org), ('Acme Corp', entity_type_org)]:
+            Entity.objects.create(document=visible, entity_type=kind, value=value, raw_value=value)
+    Entity.objects.create(document=document, entity_type=entity_type, value='John Doe', raw_value='John Doe')
+    Entity.objects.create(
+        document=document, entity_type=entity_type_org, value='Private organization', raw_value='Private',
+    )
+
+    response = regular_client.get('/api/v1/entities/PERSON/John%20Doe/cooccurrence/')
+    assert response.status_code == 200
+    assert len(response.data) == 1
+    assert response.data[0]['entity']['value'] == 'Acme Corp'
+    assert response.data[0]['entity']['entity_type'] == 'ORGANIZATION'
+    assert response.data[0]['count'] == response.data[0]['entity']['document_count'] == 2
+    assert regular_client.get('/api/v1/entities/PERSON/Unknown/cooccurrence/').data == []
+    assert APIClient().get('/api/v1/entities/PERSON/John%20Doe/cooccurrence/').status_code == 401
+
 # ---- Entity documents list ----
 
 

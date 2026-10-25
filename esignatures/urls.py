@@ -36,6 +36,16 @@ urlpatterns = [
         name="public-signing-view-page",
     ),
     path(
+        "sign/<uuid:token>/preview/",
+        views.PublicSigningPreviewView.as_view(),
+        name="public-signing-preview",
+    ),
+    path(
+        "sign/<uuid:token>/document/",
+        views.PublicSigningDocumentView.as_view(),
+        name="public-signing-document",
+    ),
+    path(
         "sign/<uuid:token>/complete/",
         views.PublicSigningCompleteView.as_view(),
         name="public-signing-complete",

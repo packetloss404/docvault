@@ -35,7 +35,8 @@ export interface WorkflowTransitionField {
   transition: number;
   name: string;
   label: string;
-  field_type: 'char' | 'integer' | 'date' | 'boolean' | 'text';
+  field_type: 'char' | 'integer' | 'date' | 'boolean' | 'text' | 'select';
+  choices?: string[];
   required: boolean;
   default: string;
   help_text: string;

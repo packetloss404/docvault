@@ -4,6 +4,7 @@ import logging
 from datetime import timedelta
 
 from celery import shared_task
+from django.conf import settings
 from django.utils import timezone
 
 from documents.constants import (
@@ -60,6 +61,7 @@ def enforce_retention(dry_run=False):
         docs = Document.objects.filter(
             document_type=doc_type,
             added__lt=deadline,
+            is_held=False,
         )
         for doc in docs:
             if dry_run:
@@ -80,12 +82,15 @@ def enforce_retention(dry_run=False):
         delete_time_period__isnull=False,
         delete_time_unit__isnull=False,
     )
+    if not getattr(settings, "RETENTION_HARD_DELETE_ENABLED", False):
+        doc_types_with_delete = doc_types_with_delete.none()
     for doc_type in doc_types_with_delete:
         delta = _to_timedelta(doc_type.delete_time_period, doc_type.delete_time_unit)
         # Trashed documents: use all_objects to include soft-deleted
         trashed_docs = Document.all_objects.filter(
             document_type=doc_type,
             deleted_at__isnull=False,
+            is_held=False,
         )
         for doc in trashed_docs:
             delete_deadline = doc.deleted_at + delta

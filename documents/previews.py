@@ -5,9 +5,9 @@ from rest_framework.exceptions import ValidationError
 
 
 def build_pdf_page_preview(document, page_number):
-    import pymupdf
-
     from storage.utils import get_storage_backend
+
+    from .downloads import active_original, open_document_file
 
     try:
         page_number = int(page_number)
@@ -16,18 +16,40 @@ def build_pdf_page_preview(document, page_number):
     if page_number < 1:
         raise ValidationError({"page": "Use a positive page number."})
 
-    if document.archive_filename:
+    artifact = active_original(document)
+    if artifact and artifact.file.name != document.filename:
+        if artifact.mime_type != "application/pdf":
+            raise Http404("No PDF preview available for the active version.")
+        with open_document_file(artifact) as source:
+            data = source.read()
+    elif document.archive_filename:
         storage_name = document.archive_filename
+        data = None
     elif document.mime_type == "application/pdf":
         storage_name = document.filename
+        data = None
     else:
         raise Http404("No PDF preview available.")
 
-    backend = get_storage_backend()
-    if not storage_name or not backend.exists(storage_name):
-        raise Http404("PDF file not found.")
-    with backend.open(storage_name) as source:
-        data = source.read()
+    if data is None:
+        backend = get_storage_backend()
+        if not storage_name or not backend.exists(storage_name):
+            raise Http404("PDF file not found.")
+        with backend.open(storage_name) as source:
+            data = source.read()
+    return render_pdf_page_preview(data, page_number)
+
+
+def render_pdf_page_preview(data, page_number):
+    """Render the supplied verified PDF bytes without reopening a mutable file."""
+    import pymupdf
+
+    try:
+        page_number = int(page_number)
+    except (TypeError, ValueError):
+        raise ValidationError({"page": "Use a positive page number."})
+    if page_number < 1:
+        raise ValidationError({"page": "Use a positive page number."})
     try:
         pdf = pymupdf.open(stream=data, filetype="pdf")
     except (RuntimeError, ValueError):

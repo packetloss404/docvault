@@ -8,8 +8,28 @@ Requires python-ldap and django-auth-ldap to be installed separately.
 import logging
 
 from django.conf import settings
+from django.contrib.auth.backends import BaseBackend
 
 logger = logging.getLogger("docvault.security")
+
+
+class RolePermissionBackend(BaseBackend):
+    """Resolve administrator-managed roles into Django global permissions."""
+
+    def get_all_permissions(self, user_obj, obj=None):
+        if not user_obj.is_active or user_obj.is_anonymous:
+            return set()
+        from .models import Permission
+
+        return {
+            f"{namespace}.{codename}"
+            for namespace, codename in Permission.objects.filter(
+                roles__groups__user=user_obj,
+            ).values_list("namespace", "codename").distinct()
+        }
+
+    def has_perm(self, user_obj, perm, obj=None):
+        return perm in self.get_all_permissions(user_obj, obj)
 
 
 def configure_ldap_backend():

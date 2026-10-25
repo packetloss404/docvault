@@ -1,5 +1,6 @@
 import {
   Component,
+  ChangeDetectorRef,
   ElementRef,
   EventEmitter,
   HostListener,
@@ -13,8 +14,8 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subject, Subscription } from 'rxjs';
-import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
+import { EMPTY, Subject, Subscription } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 import { SearchService } from '../../services/search.service';
 import { UploadService } from '../../services/upload.service';
 import { SearchResult } from '../../models/search.model';
@@ -124,7 +125,9 @@ interface PaletteCommand {
               }
             }
 
-            @if (query.trim() && !loading && searched && results.length === 0) {
+            @if (errorMessage) {
+              <div class="dv-empty" role="alert">{{ errorMessage }}</div>
+            } @else if (query.trim() && !loading && searched && results.length === 0) {
               <div class="dv-empty">
                 No documents match <strong>{{ query }}</strong>
               </div>
@@ -150,12 +153,14 @@ export class GlobalSearchOverlayComponent implements OnChanges, OnDestroy {
   private readonly searchService = inject(SearchService);
   private readonly router = inject(Router);
   private readonly uploads = inject(UploadService);
+  private readonly changeDetector = inject(ChangeDetectorRef);
 
   query = '';
   results: SearchResult[] = [];
   recentQueries: string[] = [];
   loading = false;
   searched = false;
+  errorMessage = '';
   focusedIndex = -1;
 
   private readonly commands: PaletteCommand[] = [
@@ -196,10 +201,21 @@ export class GlobalSearchOverlayComponent implements OnChanges, OnDestroy {
             this.results = [];
             this.loading = false;
             this.searched = false;
-            return [];
+            this.errorMessage = '';
+            this.changeDetector.markForCheck();
+            return EMPTY;
           }
           this.loading = true;
-          return this.searchService.search({ query: q, page_size: 8 });
+          this.errorMessage = '';
+          this.changeDetector.markForCheck();
+          return this.searchService.search({ query: q, page_size: 8 }).pipe(catchError(() => {
+            this.loading = false;
+            this.searched = true;
+            this.results = [];
+            this.errorMessage = 'Search is unavailable. Please try again.';
+            this.changeDetector.markForCheck();
+            return EMPTY;
+          }));
         }),
       )
       .subscribe({
@@ -208,6 +224,7 @@ export class GlobalSearchOverlayComponent implements OnChanges, OnDestroy {
           this.searched = true;
           this.results = resp.results ?? [];
           this.focusedIndex = this.firstSelectableIndex();
+          this.changeDetector.markForCheck();
         },
         error: () => {
           this.loading = false;

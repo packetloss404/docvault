@@ -105,10 +105,10 @@ describe('SecurityService', () => {
   });
 
   describe('verifyDocumentSignatures', () => {
-    it('sends POST to /documents/:id/verify-signatures/ with empty body', () => {
+    it('sends POST to /documents/:id/verify/ with empty body', () => {
       service.verifyDocumentSignatures(42).subscribe();
       const req = httpTesting.expectOne(
-        `${API}/documents/42/verify-signatures/`,
+        `${API}/documents/42/verify/`,
       );
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({});
@@ -119,19 +119,19 @@ describe('SecurityService', () => {
   // --- GPG Keys ---
 
   describe('getGPGKeys', () => {
-    it('sends GET to /security/gpg-keys/', () => {
+    it('sends GET to /gpg-keys/', () => {
       service.getGPGKeys().subscribe();
-      const req = httpTesting.expectOne(`${API}/security/gpg-keys/`);
+      const req = httpTesting.expectOne(`${API}/gpg-keys/`);
       expect(req.request.method).toBe('GET');
       req.flush([]);
     });
   });
 
   describe('importGPGKey', () => {
-    it('sends POST to /security/gpg-keys/import/ with key_data', () => {
+    it('sends POST to /gpg-keys/import/ with key_data', () => {
       const keyData = '-----BEGIN PGP PUBLIC KEY BLOCK-----\n...';
       service.importGPGKey(keyData).subscribe();
-      const req = httpTesting.expectOne(`${API}/security/gpg-keys/import/`);
+      const req = httpTesting.expectOne(`${API}/gpg-keys/import/`);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({ key_data: keyData });
       req.flush({ key_id: 'ABCD1234', fingerprint: 'ABCD', uids: [], expires: '', length: '4096' });
@@ -139,9 +139,9 @@ describe('SecurityService', () => {
   });
 
   describe('deleteGPGKey', () => {
-    it('sends DELETE to /security/gpg-keys/:keyId/', () => {
+    it('sends DELETE to /gpg-keys/:keyId/', () => {
       service.deleteGPGKey('ABCD1234').subscribe();
-      const req = httpTesting.expectOne(`${API}/security/gpg-keys/ABCD1234/`);
+      const req = httpTesting.expectOne(`${API}/gpg-keys/ABCD1234/`);
       expect(req.request.method).toBe('DELETE');
       req.flush(null);
     });
@@ -150,10 +150,10 @@ describe('SecurityService', () => {
   // --- Audit Log ---
 
   describe('getAuditLog', () => {
-    it('sends GET to /security/audit-log/ with no params by default', () => {
+    it('sends GET to /audit-log/ with no params by default', () => {
       service.getAuditLog().subscribe();
       const req = httpTesting.expectOne(
-        (r) => r.url === `${API}/security/audit-log/`,
+        (r) => r.url === `${API}/audit-log/`,
       );
       expect(req.request.method).toBe('GET');
       req.flush({ results: [], count: 0 });
@@ -162,7 +162,7 @@ describe('SecurityService', () => {
     it('sends query params when provided', () => {
       service.getAuditLog({ page: 2, user: 5, action: 'create' }).subscribe();
       const req = httpTesting.expectOne(
-        (r) => r.url === `${API}/security/audit-log/`,
+        (r) => r.url === `${API}/audit-log/`,
       );
       expect(req.request.params.get('page')).toBe('2');
       expect(req.request.params.get('user')).toBe('5');
@@ -173,7 +173,7 @@ describe('SecurityService', () => {
     it('omits params that are undefined or empty string', () => {
       service.getAuditLog({ page: 1, action: '', model_type: undefined }).subscribe();
       const req = httpTesting.expectOne(
-        (r) => r.url === `${API}/security/audit-log/`,
+        (r) => r.url === `${API}/audit-log/`,
       );
       expect(req.request.params.get('page')).toBe('1');
       expect(req.request.params.has('action')).toBe(false);
@@ -183,10 +183,10 @@ describe('SecurityService', () => {
   });
 
   describe('exportAuditLog', () => {
-    it('sends GET to /security/audit-log/export/ with format=csv', () => {
+    it('sends GET to /audit-log/export/ with format=csv', () => {
       service.exportAuditLog('csv').subscribe();
       const req = httpTesting.expectOne(
-        (r) => r.url === `${API}/security/audit-log/export/`,
+        (r) => r.url === `${API}/audit-log/export/`,
       );
       expect(req.request.method).toBe('GET');
       expect(req.request.params.get('format')).toBe('csv');
@@ -196,7 +196,7 @@ describe('SecurityService', () => {
     it('sends GET with format=json and additional params', () => {
       service.exportAuditLog('json', { user: 3 }).subscribe();
       const req = httpTesting.expectOne(
-        (r) => r.url === `${API}/security/audit-log/export/`,
+        (r) => r.url === `${API}/audit-log/export/`,
       );
       expect(req.request.params.get('format')).toBe('json');
       expect(req.request.params.get('user')).toBe('3');
@@ -207,28 +207,28 @@ describe('SecurityService', () => {
   // --- Users ---
 
   describe('getUsers', () => {
-    it('sends GET to /security/users/', () => {
+    it('sends GET to /users/', () => {
       service.getUsers().subscribe();
-      const req = httpTesting.expectOne(`${API}/security/users/`);
+      const req = httpTesting.expectOne(`${API}/users/`);
       expect(req.request.method).toBe('GET');
       req.flush([]);
     });
   });
 
   describe('getUser', () => {
-    it('sends GET to /security/users/:id/', () => {
+    it('sends GET to /users/:id/', () => {
       service.getUser(3).subscribe();
-      const req = httpTesting.expectOne(`${API}/security/users/3/`);
+      const req = httpTesting.expectOne(`${API}/users/3/`);
       expect(req.request.method).toBe('GET');
       req.flush({ id: 3 });
     });
   });
 
   describe('createUser', () => {
-    it('sends POST to /security/users/ with payload', () => {
+    it('sends POST to /users/ with payload', () => {
       const data = { username: 'jdoe', email: 'jdoe@example.com', password: 'secret' };
       service.createUser(data).subscribe();
-      const req = httpTesting.expectOne(`${API}/security/users/`);
+      const req = httpTesting.expectOne(`${API}/users/`);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual(data);
       req.flush({ id: 1, ...data });
@@ -236,10 +236,10 @@ describe('SecurityService', () => {
   });
 
   describe('updateUser', () => {
-    it('sends PATCH to /security/users/:id/ with payload', () => {
+    it('sends PATCH to /users/:id/ with payload', () => {
       const data = { email: 'new@example.com' };
       service.updateUser(3, data).subscribe();
-      const req = httpTesting.expectOne(`${API}/security/users/3/`);
+      const req = httpTesting.expectOne(`${API}/users/3/`);
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual(data);
       req.flush({ id: 3, ...data });
@@ -247,9 +247,9 @@ describe('SecurityService', () => {
   });
 
   describe('deleteUser', () => {
-    it('sends DELETE to /security/users/:id/', () => {
+    it('sends DELETE to /users/:id/', () => {
       service.deleteUser(3).subscribe();
-      const req = httpTesting.expectOne(`${API}/security/users/3/`);
+      const req = httpTesting.expectOne(`${API}/users/3/`);
       expect(req.request.method).toBe('DELETE');
       req.flush(null);
     });
@@ -258,19 +258,19 @@ describe('SecurityService', () => {
   // --- Groups ---
 
   describe('getGroups', () => {
-    it('sends GET to /security/groups/', () => {
+    it('sends GET to /groups/', () => {
       service.getGroups().subscribe();
-      const req = httpTesting.expectOne(`${API}/security/groups/`);
+      const req = httpTesting.expectOne(`${API}/groups/`);
       expect(req.request.method).toBe('GET');
       req.flush([]);
     });
   });
 
   describe('createGroup', () => {
-    it('sends POST to /security/groups/ with payload', () => {
-      const data = { name: 'Editors', permissions: [1, 2] };
+    it('sends POST to /groups/ with payload', () => {
+      const data = { name: 'Editors' };
       service.createGroup(data).subscribe();
-      const req = httpTesting.expectOne(`${API}/security/groups/`);
+      const req = httpTesting.expectOne(`${API}/groups/`);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual(data);
       req.flush({ id: 1, ...data });
@@ -278,10 +278,10 @@ describe('SecurityService', () => {
   });
 
   describe('updateGroup', () => {
-    it('sends PATCH to /security/groups/:id/ with payload', () => {
+    it('sends PATCH to /groups/:id/ with payload', () => {
       const data = { name: 'Senior Editors' };
       service.updateGroup(1, data).subscribe();
-      const req = httpTesting.expectOne(`${API}/security/groups/1/`);
+      const req = httpTesting.expectOne(`${API}/groups/1/`);
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual(data);
       req.flush({ id: 1, ...data });
@@ -289,9 +289,9 @@ describe('SecurityService', () => {
   });
 
   describe('deleteGroup', () => {
-    it('sends DELETE to /security/groups/:id/', () => {
+    it('sends DELETE to /groups/:id/', () => {
       service.deleteGroup(1).subscribe();
-      const req = httpTesting.expectOne(`${API}/security/groups/1/`);
+      const req = httpTesting.expectOne(`${API}/groups/1/`);
       expect(req.request.method).toBe('DELETE');
       req.flush(null);
     });
@@ -300,19 +300,19 @@ describe('SecurityService', () => {
   // --- Roles ---
 
   describe('getRoles', () => {
-    it('sends GET to /security/roles/', () => {
+    it('sends GET to /roles/', () => {
       service.getRoles().subscribe();
-      const req = httpTesting.expectOne(`${API}/security/roles/`);
+      const req = httpTesting.expectOne(`${API}/roles/`);
       expect(req.request.method).toBe('GET');
       req.flush([]);
     });
   });
 
   describe('createRole', () => {
-    it('sends POST to /security/roles/ with payload', () => {
-      const data = { name: 'Admin', permissions: [1, 2, 3] };
+    it('sends POST to /roles/ with payload', () => {
+      const data = { name: 'Admin', permission_ids: [1, 2, 3] };
       service.createRole(data).subscribe();
-      const req = httpTesting.expectOne(`${API}/security/roles/`);
+      const req = httpTesting.expectOne(`${API}/roles/`);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual(data);
       req.flush({ id: 1, ...data });
@@ -320,10 +320,10 @@ describe('SecurityService', () => {
   });
 
   describe('updateRole', () => {
-    it('sends PATCH to /security/roles/:id/ with payload', () => {
+    it('sends PATCH to /roles/:id/ with payload', () => {
       const data = { name: 'Super Admin' };
       service.updateRole(1, data).subscribe();
-      const req = httpTesting.expectOne(`${API}/security/roles/1/`);
+      const req = httpTesting.expectOne(`${API}/roles/1/`);
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual(data);
       req.flush({ id: 1, ...data });
@@ -331,9 +331,9 @@ describe('SecurityService', () => {
   });
 
   describe('deleteRole', () => {
-    it('sends DELETE to /security/roles/:id/', () => {
+    it('sends DELETE to /roles/:id/', () => {
       service.deleteRole(1).subscribe();
-      const req = httpTesting.expectOne(`${API}/security/roles/1/`);
+      const req = httpTesting.expectOne(`${API}/roles/1/`);
       expect(req.request.method).toBe('DELETE');
       req.flush(null);
     });
@@ -342,9 +342,9 @@ describe('SecurityService', () => {
   // --- Permissions ---
 
   describe('getPermissions', () => {
-    it('sends GET to /security/permissions/', () => {
+    it('sends GET to /permissions/', () => {
       service.getPermissions().subscribe();
-      const req = httpTesting.expectOne(`${API}/security/permissions/`);
+      const req = httpTesting.expectOne(`${API}/permissions/`);
       expect(req.request.method).toBe('GET');
       req.flush([]);
     });

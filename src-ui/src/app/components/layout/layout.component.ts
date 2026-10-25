@@ -4,6 +4,7 @@ import {
   OnDestroy,
   OnInit,
   computed,
+  effect,
   inject,
   signal,
 } from '@angular/core';
@@ -20,6 +21,9 @@ import { NotificationService } from '../../services/notification.service';
 import { ShellStatsService } from '../../services/shell-stats.service';
 import { ThemeService } from '../../services/theme.service';
 import { UploadService } from '../../services/upload.service';
+import { SearchService } from '../../services/search.service';
+import { SavedViewListItem } from '../../models/search.model';
+import { NotificationWebSocketService, WebSocketService } from '../../services/websocket.service';
 import { GlobalSearchOverlayComponent } from '../global-search-overlay/global-search-overlay.component';
 import { IconComponent } from '../icon/icon.component';
 import { RAIL, RailItem, isUnder } from '../../nav';
@@ -40,6 +44,33 @@ export class LayoutComponent implements OnInit, OnDestroy {
   readonly uploads = inject(UploadService);
   private readonly router = inject(Router);
   private readonly notifications = inject(NotificationService);
+  private readonly liveTasks = inject(WebSocketService);
+  private readonly liveNotifications = inject(NotificationWebSocketService);
+  private readonly search = inject(SearchService);
+  readonly sidebarViews = signal<SavedViewListItem[]>([]);
+  private sidebarRequest?: Subscription;
+
+  constructor() {
+    effect(() => {
+      const task = this.liveTasks.taskProgress();
+      if (task?.status === 'success' || task?.status === 'failure') {
+        this.uploads.processingCompleted();
+        this.stats.refresh(this.isStaff());
+        this.loadUnreadCount();
+      }
+    });
+    effect(() => {
+      if (this.liveNotifications.notification()) this.loadUnreadCount();
+    });
+    effect(() => {
+      this.url();
+      this.sidebarRequest?.unsubscribe();
+      this.sidebarRequest = this.search.getSidebarViews().subscribe({
+        next: (views) => this.sidebarViews.set(views),
+        error: () => this.sidebarViews.set([]),
+      });
+    });
+  }
 
   readonly unreadCount = signal(0);
   readonly paletteOpen = signal(false);
@@ -77,6 +108,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
   );
 
   ngOnInit(): void {
+    this.liveTasks.connect();
+    this.liveNotifications.connect();
     this.auth.getProfile().subscribe({
       next: () => this.stats.refresh(this.isStaff()),
       error: () => this.stats.refresh(false),
@@ -90,11 +123,18 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.liveTasks.disconnect();
+    this.liveNotifications.disconnect();
     this.pollSubscription?.unsubscribe();
+    this.sidebarRequest?.unsubscribe();
   }
 
   isActive(item: RailItem): boolean {
     return item.match.some((prefix) => isUnder(this.url(), prefix));
+  }
+
+  isPinnedViewActive(id: number): boolean {
+    return isUnder(this.url(), `/saved-views/${id}/results`);
   }
 
   @HostListener('document:keydown', ['$event'])

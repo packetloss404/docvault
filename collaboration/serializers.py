@@ -87,12 +87,18 @@ class ShareLinkCreateSerializer(serializers.Serializer):
         required=False, default=None, allow_null=True,
         min_value=1, max_value=8760,
     )
+    expiration = serializers.DateTimeField(required=False, allow_null=True)
     password = serializers.CharField(required=False, default="", allow_blank=True)
     file_version = serializers.ChoiceField(
         choices=["original", "archive"],
         required=False,
         default="original",
     )
+
+    def validate(self, attrs):
+        if attrs.get("expiration") is not None and attrs.get("expiration_hours") is not None:
+            raise serializers.ValidationError("Choose an expiration timestamp or a duration, not both.")
+        return attrs
 
 
 class ShareLinkAccessSerializer(serializers.Serializer):

@@ -72,7 +72,7 @@ Source: `work/features/FEAT-NG-*.md`
 
 - [x] Angular client for `ws/status/` task progress (Channels).
 - [x] Document version **compare** API + UI.
-- [x] Document detail preview: PDF.js-style controls (zoom in/out with #zoom=).
+- [x] Document detail preview: authenticated page images with pagination and zoom controls.
 - [x] Content tab: in-text search + highlight for matches.
 - [x] Document list: user-configurable columns.
 - [x] Apply `StoragePath` Jinja templates in storage pipeline.
@@ -150,7 +150,7 @@ Source: `work/features/FEAT-NG-*.md`
 
 ## L — E-signatures & annotations (Sprint 21)
 
-- [x] SMS / `verify` path for external signers.
+- [x] External signer verification endpoint; code provisioning and delivery require an external operator/service.
 - [x] Wire `annotation-toolbar` / `annotation-panel` into document viewer route.
 - [x] E-signature "request" flow reachable from document detail (distinct from GPG panel).
 
@@ -196,4 +196,13 @@ Source: `work/features/FEAT-NG-*.md`
 
 ---
 
-**All items complete.** 4 items formally deferred (Mail OAuth, i18n locales, visual workflow designer, user docs).
+These checkboxes track implementation work, not a guarantee that every advertised feature has passed acceptance testing. See [feature verification and limitations](../../docs/feature-verification.md) for executed evidence and prerequisites. Mail OAuth, i18n locales, the visual workflow designer and user docs remain deferred.
+
+## Q — Full-stack acceptance campaign (2026-10-25)
+
+- [x] Inventory every README feature and record executed evidence or an explicit limitation.
+- [x] Exercise real browser journeys against PostgreSQL, Redis, Celery, Beat and configured integration services.
+- [x] Repair confirmed failures and add regression coverage.
+- [x] Require the acceptance suite in CI, including retained failure traces.
+- [ ] Run complete validation, review the fixes, push and verify CI.
+- [ ] Redeploy the accepted commit and smoke-test the live service.

@@ -24,12 +24,27 @@ class OllamaClient(LLMClient):
 
     def __init__(self):
         api_endpoint = getattr(settings, "LLM_API_ENDPOINT", "http://localhost:11434")
-        self._client = ollama.Client(host=api_endpoint)
+        timeout = getattr(settings, "OLLAMA_REQUEST_TIMEOUT", 60)
+        self._client = ollama.Client(host=api_endpoint, timeout=timeout if timeout and timeout > 0 else 60)
+        self._max_tokens = self._positive_int(getattr(settings, "OLLAMA_MAX_TOKENS", 512)) or 512
+        self._runtime_options = {}
+        for setting, option in (("OLLAMA_NUM_THREADS", "num_thread"), ("OLLAMA_CONTEXT_WINDOW", "num_ctx")):
+            value = self._positive_int(getattr(settings, setting, None))
+            if value:
+                self._runtime_options[option] = value
         self._model = getattr(settings, "LLM_MODEL", DEFAULT_OLLAMA_MODEL)
         self._embedding_model = getattr(
             settings, "EMBEDDING_MODEL", DEFAULT_EMBEDDING_MODEL_OLLAMA
         )
         self._embedding_dim = getattr(settings, "EMBEDDING_DIM", EMBEDDING_DIM_OLLAMA)
+
+    @staticmethod
+    def _positive_int(value):
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            return None
+        return parsed if parsed > 0 else None
 
     def generate(self, prompt: str, context: str = "", **kwargs) -> str:
         full_prompt = prompt
@@ -45,8 +60,9 @@ class OllamaClient(LLMClient):
                     model=self._model,
                     messages=[{"role": "user", "content": full_prompt}],
                     options={
+                        **self._runtime_options,
                         "temperature": kwargs.get("temperature", 0.3),
-                        "num_predict": kwargs.get("max_tokens", 2000),
+                        "num_predict": self._positive_int(kwargs.get("max_tokens")) or self._max_tokens,
                     },
                 )
                 return response.message.content or ""
@@ -67,6 +83,7 @@ class OllamaClient(LLMClient):
                 response = self._client.embed(
                     model=self._embedding_model,
                     input=text,
+                    options=self._runtime_options,
                 )
                 return response.embeddings[0]
             except Exception as e:
@@ -86,6 +103,7 @@ class OllamaClient(LLMClient):
                 response = self._client.embed(
                     model=self._embedding_model,
                     input=texts,
+                    options=self._runtime_options,
                 )
                 return response.embeddings
             except Exception as e:

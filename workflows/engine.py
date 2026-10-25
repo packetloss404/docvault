@@ -6,6 +6,7 @@ from datetime import timedelta
 
 from django.utils import timezone
 
+from legal_hold.permissions import ensure_document_mutable
 from workflows.constants import ON_ENTRY, ON_EXIT, UNIT_DAYS, UNIT_HOURS, UNIT_MINUTES, UNIT_WEEKS
 
 logger = logging.getLogger(__name__)
@@ -19,6 +20,8 @@ def launch(document, template, user=None):
     then runs entry actions for that state.
     """
     from workflows.models import WorkflowInstance, WorkflowState
+
+    ensure_document_mutable(document, user)
 
     initial_state = WorkflowState.objects.filter(
         workflow=template, initial=True
@@ -58,6 +61,8 @@ def do_transition(instance, transition, user=None, field_values=None, comment=""
     from workflows.conditions import evaluate_condition
     from workflows.models import WorkflowInstanceLogEntry
 
+    ensure_document_mutable(instance.document, user)
+
     if instance.current_state_id != transition.origin_state_id:
         raise ValueError(
             f"Instance is in state '{instance.current_state.label}', "
@@ -68,11 +73,7 @@ def do_transition(instance, transition, user=None, field_values=None, comment=""
     if instance.is_complete:
         raise ValueError("Cannot transition a completed workflow instance.")
 
-    # Validate required fields
-    field_values = field_values or {}
-    for field in transition.fields.filter(required=True):
-        if field.name not in field_values or not field_values[field.name]:
-            raise ValueError(f"Required field '{field.label}' is missing.")
+    field_values = _validate_transition_values(transition, field_values or {})
 
     # Check condition
     if transition.condition:
@@ -108,6 +109,38 @@ def do_transition(instance, transition, user=None, field_values=None, comment=""
     # Run entry actions on new state
     _run_state_actions(instance, transition.destination_state, ON_ENTRY)
     return instance
+
+
+def _validate_transition_values(transition, field_values):
+    from rest_framework import serializers
+
+    values = dict(field_values)
+    field_types = {
+        "char": serializers.CharField,
+        "text": serializers.CharField,
+        "integer": serializers.IntegerField,
+        "date": serializers.DateField,
+        "boolean": serializers.BooleanField,
+    }
+    for field in transition.fields.all():
+        if field.name not in values:
+            if field.default != "":
+                values[field.name] = field.default
+            elif field.required:
+                raise ValueError(f"Required field '{field.label}' is missing.")
+            else:
+                continue
+        if field.field_type == "select":
+            validator = serializers.ChoiceField(choices=field.choices or [], allow_blank=not field.required)
+        else:
+            options = {"allow_blank": not field.required} if field.field_type in {"char", "text"} else {}
+            validator = field_types[field.field_type](**options)
+        try:
+            validated = validator.run_validation(values[field.name])
+        except serializers.ValidationError as exc:
+            raise ValueError(f"Invalid value for '{field.label}': {exc.detail}") from exc
+        values[field.name] = validated.isoformat() if field.field_type == "date" else validated
+    return values
 
 
 def get_available_transitions(instance, user=None):

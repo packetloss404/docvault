@@ -24,6 +24,21 @@
       </a>
     }
 
+    @if (sidebarViews().length) {
+      <div class="dv-rail__pins" role="group" aria-label="Pinned saved views">
+        @for (view of sidebarViews(); track view.id) {
+          <a
+            class="dv-rail__item"
+            [class.is-active]="isPinnedViewActive(view.id)"
+            [attr.aria-current]="isPinnedViewActive(view.id) ? 'page' : null"
+            [routerLink]="['/saved-views', view.id, 'results']"
+            [title]="view.name"
+            [attr.aria-label]="view.name"
+          ><dv-icon name="folder" [size]="15" /></a>
+        }
+      </div>
+    }
+
     <div class="dv-rail__foot">
       <button
         type="button"

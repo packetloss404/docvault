@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, forkJoin, map, of, switchMap } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
   PortalConfig,
@@ -10,6 +10,7 @@ import {
   PublicRequestInfo,
 } from '../models/portal.model';
 import { PaginatedResponse } from '../models/document.model';
+import { getAllPages } from './pagination';
 
 @Injectable({ providedIn: 'root' })
 export class PortalService {
@@ -20,8 +21,9 @@ export class PortalService {
   // --- Portal Admin ---
 
   getPortals(): Observable<PaginatedResponse<PortalConfig>> {
-    return this.http.get<PaginatedResponse<PortalConfig>>(
-      `${this.apiUrl}/portals/`,
+    return getAllPages<Pick<PortalConfig, 'id'>>(this.http, `${this.apiUrl}/portals/`).pipe(
+      switchMap((summaries) => summaries.length ? forkJoin(summaries.map((portal) => this.getPortal(portal.id))) : of([] as PortalConfig[])),
+      map((results) => ({ count: results.length, next: null, previous: null, results })),
     );
   }
 
@@ -88,9 +90,8 @@ export class PortalService {
         httpParams = httpParams.set(key, String(value));
       }
     }
-    return this.http.get<PaginatedResponse<PortalSubmission>>(
-      `${this.apiUrl}/portal-submissions/`,
-      { params: httpParams },
+    return getAllPages<PortalSubmission>(this.http, `${this.apiUrl}/portal-submissions/`, httpParams).pipe(
+      map((results) => ({ count: results.length, next: null, previous: null, results })),
     );
   }
 

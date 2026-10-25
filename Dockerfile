@@ -43,8 +43,8 @@ FROM python:3.13-slim
 
 LABEL maintainer="DocVault <dev@docvault.io>"
 LABEL org.opencontainers.image.title="DocVault"
-LABEL org.opencontainers.image.description="The Ultimate Open-Source Document Management System"
-LABEL org.opencontainers.image.version="1.0.0"
+LABEL org.opencontainers.image.description="Document management with OCR, permissions and configurable workflows"
+LABEL org.opencontainers.image.version="0.1.0"
 
 # Runtime system dependencies only — no compilers
 RUN apt-get update && apt-get install -y --no-install-recommends \

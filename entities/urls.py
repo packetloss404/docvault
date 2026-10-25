@@ -16,6 +16,11 @@ urlpatterns = [
         name="document-entity-list",
     ),
     path(
+        "entities/<str:entity_type>/<path:value>/cooccurrence/",
+        views.EntityCooccurrenceView.as_view(),
+        name="entity-cooccurrence",
+    ),
+    path(
         "entities/<str:entity_type>/<path:value>/documents/",
         views.EntityDocumentsView.as_view(),
         name="entity-documents",

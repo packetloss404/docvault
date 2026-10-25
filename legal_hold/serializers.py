@@ -1,5 +1,7 @@
 """DRF serializers for the legal_hold module."""
 
+from django.contrib.auth import get_user_model
+from django.db import transaction
 from rest_framework import serializers
 
 from .models import (
@@ -152,6 +154,9 @@ class LegalHoldCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating a legal hold with nested criteria."""
 
     criteria = LegalHoldCriteriaSerializer(many=True, required=False)
+    custodian_ids = serializers.PrimaryKeyRelatedField(
+        queryset=get_user_model().objects.all(), many=True, required=False, write_only=True,
+    )
 
     class Meta:
         model = LegalHold
@@ -161,14 +166,20 @@ class LegalHoldCreateSerializer(serializers.ModelSerializer):
             "matter_number",
             "description",
             "criteria",
+            "custodian_ids",
         ]
         read_only_fields = ["id"]
 
+    @transaction.atomic
     def create(self, validated_data):
         criteria_data = validated_data.pop("criteria", [])
+        custodians = validated_data.pop("custodian_ids", [])
         hold = LegalHold.objects.create(**validated_data)
         for criterion in criteria_data:
             LegalHoldCriteria.objects.create(hold=hold, **criterion)
+        LegalHoldCustodian.objects.bulk_create([
+            LegalHoldCustodian(hold=hold, user=user) for user in dict.fromkeys(custodians)
+        ])
         return hold
 
 

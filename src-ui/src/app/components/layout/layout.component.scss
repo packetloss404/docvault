@@ -3,6 +3,12 @@
   display: block;
 }
 
+.dv-rail__pins {
+  max-height: 25vh;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 // Full-window veil shown while files are dragged over the app.
 .dv-dropveil {
   position: fixed;

@@ -3,7 +3,7 @@
 import hashlib
 import logging
 
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 
 logger = logging.getLogger(__name__)
 
@@ -23,18 +23,31 @@ class Command(BaseCommand):
             default=100,
             help="Number of DocumentFile records to process per batch (default: 100).",
         )
+        parser.add_argument("--document-ids", nargs="+", type=int, help="Limit migration to the given documents.")
 
     def handle(self, *args, **options):
+        from documents.downloads import open_document_file
         from documents.models import DocumentFile
+        from storage.backends.content_addressed import ContentAddressedStorageBackend
         from storage.models import ContentBlob
+        from storage.utils import get_storage_backend
 
         dry_run = options["dry_run"]
         batch_size = options["batch_size"]
+        if batch_size < 1:
+            raise CommandError("--batch-size must be positive.")
+        backend = get_storage_backend()
+        cas = (
+            backend if isinstance(backend, ContentAddressedStorageBackend)
+            else ContentAddressedStorageBackend(backend)
+        )
 
         if dry_run:
             self.stdout.write(self.style.WARNING("DRY RUN — no changes will be saved."))
 
         qs = DocumentFile.objects.filter(blob__isnull=True).select_related("document")
+        if options["document_ids"]:
+            qs = qs.filter(document_id__in=options["document_ids"])
         total = qs.count()
 
         if total == 0:
@@ -47,9 +60,11 @@ class Command(BaseCommand):
         skipped = 0
         errors = 0
 
-        offset = 0
-        while offset < total:
-            batch = qs[offset : offset + batch_size]
+        last_pk = 0
+        while True:
+            batch = list(qs.filter(pk__gt=last_pk).order_by("pk")[:batch_size])
+            if not batch:
+                break
 
             for doc_file in batch:
                 # Determine the actual storage path of the file.
@@ -68,7 +83,7 @@ class Command(BaseCommand):
                     # Compute SHA-256 by reading the file from storage.
                     sha256 = hashlib.sha256()
                     file_size = 0
-                    with doc_file.file.open("rb") as fh:
+                    with open_document_file(doc_file) as fh:
                         for chunk in iter(lambda: fh.read(65536), b""):
                             sha256.update(chunk)
                             file_size += len(chunk)
@@ -81,27 +96,17 @@ class Command(BaseCommand):
                     )
 
                     if not dry_run:
-                        blob, created = ContentBlob.objects.get_or_create(
-                            sha256_hash=digest,
-                            defaults={
-                                "size": file_size,
-                                "storage_path": storage_path,
-                            },
-                        )
-
-                        if not created:
-                            # Increment the reference count for existing blobs.
-                            ContentBlob.objects.filter(sha256_hash=digest).update(
-                                reference_count=blob.reference_count + 1
-                            )
+                        if not (isinstance(backend, ContentAddressedStorageBackend) and storage_path == digest):
+                            with open_document_file(doc_file) as original:
+                                cas.save(storage_path, original)
+                        blob = ContentBlob.objects.get(pk=digest)
 
                         doc_file.blob = blob
                         doc_file.save(update_fields=["blob"])
                         logger.debug(
-                            "Linked DocumentFile #%s to ContentBlob %s (created=%s)",
+                            "Linked DocumentFile #%s to ContentBlob %s; original retained",
                             doc_file.pk,
                             digest[:12],
-                            created,
                         )
 
                     migrated += 1
@@ -115,7 +120,7 @@ class Command(BaseCommand):
                     logger.exception("migrate_to_cas: error on DocumentFile #%s", doc_file.pk)
                     errors += 1
 
-            offset += batch_size
+            last_pk = batch[-1].pk
 
         summary = (
             f"Migration {'(dry run) ' if dry_run else ''}complete: "

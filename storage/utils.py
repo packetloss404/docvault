@@ -50,6 +50,11 @@ def get_storage_backend() -> StorageBackend:
     if getattr(settings, "STORAGE_ENCRYPTION_ENABLED", False):
         from .backends.encrypted import EncryptedStorageBackend
 
-        return EncryptedStorageBackend(delegate=backend)
+        backend = EncryptedStorageBackend(delegate=backend)
+
+    if getattr(settings, "STORAGE_CONTENT_ADDRESSED", False):
+        from .backends.content_addressed import ContentAddressedStorageBackend
+
+        backend = ContentAddressedStorageBackend(underlying_backend=backend)
 
     return backend

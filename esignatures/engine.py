@@ -25,7 +25,7 @@ from .constants import (
     SIGNER_VIEWED,
     VERIFY_SMS,
 )
-from .models import SignatureAuditEvent, SignatureRequest, Signer
+from .models import SignatureAuditEvent, SignatureField, SignatureRequest, Signer
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +54,14 @@ def send_request(signature_request):
         InvalidStateError: If the request is not in DRAFT status.
         ValidationError: If there are no signers or no fields.
     """
+    from documents.models import Document
+
+    from .snapshots import SnapshotError, freeze_document
+
+    SignatureRequest.objects.select_for_update().get(pk=signature_request.pk)
+    signature_request.refresh_from_db()
+    document = Document.objects.select_for_update().get(pk=signature_request.document_id)
+
     if signature_request.status != REQUEST_DRAFT:
         raise InvalidStateError(
             f"Cannot send request in '{signature_request.status}' status. "
@@ -66,13 +74,21 @@ def send_request(signature_request):
     if not signature_request.fields.exists():
         raise ValidationError("Cannot send a request with no signature fields.")
 
+    try:
+        signature_request.document_snapshot = freeze_document(signature_request, document)
+    except SnapshotError as exc:
+        raise ValidationError(str(exc)) from exc
+    SignatureField.objects.filter(request=signature_request, page=0).update(page=1)
     signature_request.status = REQUEST_SENT
-    signature_request.save(update_fields=["status", "updated_at"])
+    signature_request.save(update_fields=["status", "document_snapshot", "updated_at"])
 
     SignatureAuditEvent.objects.create(
         request=signature_request,
         event_type=EVENT_SENT,
-        detail={"signing_order": signature_request.signing_order},
+        detail={
+            "signing_order": signature_request.signing_order,
+            "document_snapshot": signature_request.document_snapshot,
+        },
     )
 
     from .tasks import send_signature_email
@@ -174,15 +190,14 @@ def complete_signing(signer, field_values, ip_address=None, user_agent=""):
     """
     request = _lock_signing_request(signer)
 
-    if signer.status not in (SIGNER_PENDING, SIGNER_VIEWED):
-        raise InvalidStateError(
-            f"Signer '{signer.email}' is in '{signer.status}' status "
-            f"and cannot complete signing."
-        )
+    validate_signing_access(signer)
 
-    _validate_signing_state(signer)
-    if signer.verification_method == VERIFY_SMS and not signer.verified:
-        raise ValidationError("Verify your identity before completing signing.")
+    from .snapshots import SnapshotError, verify_snapshot
+
+    try:
+        verify_snapshot(request)
+    except SnapshotError as exc:
+        raise ValidationError(str(exc)) from exc
 
     value_map = {fv["field_id"]: fv["value"] for fv in field_values}
 
@@ -386,6 +401,23 @@ def _validate_signing_state(signer):
             raise InvalidStateError("It is not your turn to sign this request.")
 
 
+def validate_signing_access(signer):
+    """Authorize document review and completion against the same signer state."""
+    if signer.status not in (SIGNER_PENDING, SIGNER_VIEWED):
+        raise InvalidStateError(
+            f"Signer '{signer.email}' is in '{signer.status}' status and cannot complete signing."
+        )
+    _validate_signing_state(signer)
+    if signer.verification_method == VERIFY_SMS and not signer.verified:
+        raise ValidationError("Verify your identity before completing signing.")
+    from .snapshots import SnapshotError, require_snapshot
+
+    try:
+        require_snapshot(signer.request)
+    except SnapshotError as exc:
+        raise ValidationError(str(exc)) from exc
+
+
 def _mark_completed(signature_request):
     """Mark a request as completed and trigger certificate generation."""
     now = timezone.now()
@@ -407,7 +439,7 @@ def _mark_completed(signature_request):
 
     from .tasks import generate_completion_certificate
 
-    generate_completion_certificate.delay(signature_request.pk)
+    transaction.on_commit(lambda: generate_completion_certificate.delay(signature_request.pk))
 
     logger.info(
         "Signature request %s completed",

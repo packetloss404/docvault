@@ -31,15 +31,18 @@
           (toolSelected)="onAnnotationTool($event)"
           (visibilityChanged)="onAnnotationVisibility($event)"
           (authorFilterChanged)="onAnnotationAuthorFilter($event)"
+          (exportRequested)="exportAnnotations()"
         />
       </div>
 
-      <!--
-        Annotation overlays. Coordinates are normalised 0–1 against the page, so
-        they are only drawn over a surface that maps 1:1 to the page box (the
-        rendered image, thumbnail, or placeholder) — never over the embedded PDF
-        viewer, whose internal layout we cannot address.
-      -->
+      @if (activeAnnotationTool()?.tool) {
+        <div class="dd-annotation-entry">
+          <label class="dv-field__label" for="dd-annotation-text">annotation text</label>
+          <input id="dd-annotation-text" class="dv-input" [ngModel]="annotationText()" (ngModelChange)="annotationText.set($event)" />
+          <span class="dv-meta">Click to place a note or stamp. Drag to draw a shape.</span>
+        </div>
+      }
+
       <ng-template #overlays>
         @for (box of overlayBoxes(); track box.id) {
           <span
@@ -49,6 +52,13 @@
             [style.width.%]="coord(box, 'width')"
             [style.height.%]="coord(box, 'height')"
             [title]="box.annotation_type + ' · ' + box.author_name"
+            [style.background]="box.annotation_type === 'highlight' ? box.color : 'transparent'"
+            [style.border-color]="box.color"
+            [style.border-style]="box.annotation_type === 'rectangle' ? 'solid' : 'none'"
+            [style.opacity]="box.opacity"
+            [style.border-bottom-style]="box.annotation_type === 'underline' ? 'solid' : null"
+            [style.border-bottom-width.px]="box.annotation_type === 'underline' ? 2 : null"
+            [class.dd-strike]="box.annotation_type === 'strikethrough'"
           ></span>
         }
         @for (note of overlayNotes(); track note.id) {
@@ -56,6 +66,7 @@
             class="dv-note dd-note"
             [style.left.%]="coord(note, 'x')"
             [style.top.%]="coord(note, 'y')"
+            [style.border-color]="note.color"
           >
             {{ note.content }}
             <div class="dv-meta">
@@ -63,21 +74,29 @@
             </div>
           </div>
         }
+        @for (annotation of pageAnnotations(); track annotation.id) {
+          @if (annotation.annotation_type === 'freehand') {
+            <svg class="dd-drawing" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true">
+              <polyline [attr.points]="annotationPath(annotation)" fill="none" [attr.stroke]="annotation.color" [attr.opacity]="annotation.opacity" stroke-width="2" vector-effect="non-scaling-stroke" />
+            </svg>
+          }
+        }
       </ng-template>
 
       <div class="dv-viewer dd-viewer">
         @switch (previewKind()) {
           @case ('pdf') {
-            <div class="dd-page-wrap" [style.width.%]="zoom()">
+            <div class="dd-page-wrap" [style.width.%]="zoom()" (pointerdown)="startAnnotation($event)" (pointermove)="moveAnnotation($event)" (pointerup)="finishAnnotation($event)" (pointercancel)="cancelAnnotation()">
               <img
                 class="dd-image"
                 [authenticatedSrc]="previewPageUrl()"
                 [alt]="'Document preview, page ' + currentPage()"
               />
+              <ng-container [ngTemplateOutlet]="overlays" />
             </div>
           }
           @case ('image') {
-            <div class="dd-page-wrap" [style.width.%]="zoom()">
+            <div class="dd-page-wrap" [style.width.%]="zoom()" (pointerdown)="startAnnotation($event)" (pointermove)="moveAnnotation($event)" (pointerup)="finishAnnotation($event)" (pointercancel)="cancelAnnotation()">
               <img
                 class="dd-image"
                 [authenticatedSrc]="getDownloadUrl('original')"
@@ -87,7 +106,7 @@
             </div>
           }
           @case ('thumb') {
-            <div class="dd-page-wrap" [style.width.%]="zoom()">
+            <div class="dd-page-wrap" [style.width.%]="zoom()" (pointerdown)="startAnnotation($event)" (pointermove)="moveAnnotation($event)" (pointerup)="finishAnnotation($event)" (pointercancel)="cancelAnnotation()">
               <img
                 class="dd-image"
                 [authenticatedSrc]="getPreviewUrl()"
@@ -198,6 +217,18 @@
             <button class="dv-link dv-push" (click)="clearActionMessage()" aria-label="Dismiss">
               ✕
             </button>
+          </div>
+        }
+        @if (showSignatureForm()) {
+          <div class="dv-card dv-card--pad">
+            <div class="dv-card__title">New signature request</div>
+            <label class="dv-field__label" for="dd-signer-name">signer name</label>
+            <input id="dd-signer-name" class="dv-input" [ngModel]="signerName()" (ngModelChange)="signerName.set($event)" />
+            <label class="dv-field__label" for="dd-signer-email">signer email</label>
+            <input id="dd-signer-email" class="dv-input" type="email" [ngModel]="signerEmail()" (ngModelChange)="signerEmail.set($event)" />
+            <p class="dv-meta">The signer uses a private link. A signature field is placed on the current page. Review the draft before sending.</p>
+            <button class="dv-btn dv-btn--primary" (click)="createSignatureRequest()" [disabled]="!signerName().trim() || !signerEmail().trim()">Create signature request</button>
+            <button class="dv-btn dv-btn--ghost" (click)="showSignatureForm.set(false)">Cancel</button>
           </div>
         }
       </div>
@@ -541,7 +572,9 @@
               [documentId]="doc.id"
               [currentPage]="currentPage()"
               [authorFilter]="annotationAuthorFilter()"
+              [refreshToken]="annotationRevision()"
               (annotationSelected)="onAnnotationSelected($event)"
+              (annotationDeleted)="loadAnnotations(doc.id)"
             />
           </div>
         }
@@ -933,7 +966,7 @@
 
         <!-- ---------------- Signatures ---------------- -->
         @if (activeTab() === 'signatures') {
-          <app-document-signatures [documentId]="doc.id" />
+          <app-document-signatures [documentId]="doc.id" [documentChecksum]="doc.checksum" />
         }
 
         <!-- ---------------- Zone OCR ---------------- -->

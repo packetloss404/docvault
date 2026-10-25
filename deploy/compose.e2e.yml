@@ -1,0 +1,143 @@
+name: docvault-e2e
+
+x-app: &app
+  image: docvault:e2e
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile.e2e
+  init: true
+  working_dir: /workspace
+  environment: &environment
+    DJANGO_SETTINGS_MODULE: docvault.settings.e2e
+    DOCVAULT_E2E: "1"
+    DJANGO_SECRET_KEY: docvault-acceptance-stack-only-secret-never-for-production-2026
+    DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,web
+    DATABASE_URL: postgres://docvault:e2e-only-postgres@db:5432/docvault
+    REDIS_URL: redis://redis:6379
+    MEDIA_ROOT: /data/media
+    STATIC_ROOT: /app/staticfiles
+    FRONTEND_DIR: /app/staticfiles/frontend
+    TMPDIR: /data/consume
+    CELERY_CONCURRENCY: "2"
+    CELERY_BEAT_SCHEDULE_FILE: /data/export/celerybeat-schedule
+    ELASTICSEARCH_ENABLED: "true"
+    ELASTICSEARCH_URL: http://elasticsearch:9200
+    ELASTICSEARCH_INDEX: docvault-e2e
+    STORAGE_BACKEND: local
+    S3_ENDPOINT_URL: http://minio:9000
+    S3_ACCESS_KEY: docvault-e2e
+    S3_SECRET_KEY: e2e-only-minio-password
+    S3_BUCKET_NAME: docvault-e2e
+    S3_AUTO_CREATE_BUCKET: "true"
+    S3_PROVIDER: minio
+    NER_ENABLED: "true"
+    LLM_ENABLED: ${E2E_LLM_ENABLED:-false}
+    LLM_PROVIDER: ollama
+    LLM_API_ENDPOINT: http://ollama:11434
+    LLM_MODEL: qwen2.5:0.5b
+    OLLAMA_REQUEST_TIMEOUT: "60"
+    OLLAMA_MAX_TOKENS: "128"
+    OLLAMA_NUM_THREADS: "2"
+    OLLAMA_CONTEXT_WINDOW: "2048"
+    EMBEDDING_MODEL: all-minilm
+    EMBEDDING_DIM: "384"
+  volumes:
+    - ..:/workspace:ro
+    - media:/data/media
+    - staging:/data/consume
+    - export:/data/export
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    elasticsearch:
+      condition: service_healthy
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: docvault
+      POSTGRES_USER: docvault
+      POSTGRES_PASSWORD: e2e-only-postgres
+    volumes: [postgres:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U docvault -d docvault]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.0
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    mem_limit: 2g
+    healthcheck:
+      test: [CMD-SHELL, "curl -fsS 'http://localhost:9200/_cluster/health?wait_for_status=yellow' >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+  web:
+    <<: *app
+    command: [web]
+    ports: [127.0.0.1:18086:8000]
+    healthcheck:
+      test: [CMD, curl, -fsS, http://127.0.0.1:8000/health/]
+      interval: 3s
+      timeout: 5s
+      start_period: 90s
+      retries: 60
+  worker:
+    <<: *app
+    command: [worker]
+    healthcheck: {disable: true}
+    depends_on:
+      web:
+        condition: service_healthy
+  beat:
+    <<: *app
+    command: [beat]
+    healthcheck: {disable: true}
+    depends_on:
+      web:
+        condition: service_healthy
+  minio:
+    profiles: [integrations]
+    image: docvault-e2e-minio:source
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.minio-e2e
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: docvault-e2e
+      MINIO_ROOT_PASSWORD: e2e-only-minio-password
+  ollama:
+    profiles: [integrations]
+    image: ollama/ollama:0.13.0
+    environment:
+      OLLAMA_MAX_LOADED_MODELS: "2"
+      OLLAMA_NUM_PARALLEL: "1"
+    mem_limit: 2g
+    cpus: 2
+    volumes: [ollama:/root/.ollama]
+  greenmail:
+    profiles: [integrations]
+    image: greenmail/standalone:2.1.13
+    environment:
+      GREENMAIL_OPTS: -Dgreenmail.setup.test.all -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.users=e2e:e2e-password@acceptance.test
+
+volumes:
+  postgres:
+  media:
+  staging:
+  export:
+  ollama:

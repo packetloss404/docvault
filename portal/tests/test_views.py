@@ -673,6 +673,16 @@ class TestPublicRequestUpload:
         assert "no longer accepting" in response.data["error"].lower()
 
     @pytest.mark.django_db
+    def test_upload_rejects_past_deadline_before_scheduler_runs(self, client, doc_request):
+        doc_request.deadline = timezone.now() - timezone.timedelta(seconds=1)
+        doc_request.save(update_fields=["deadline"])
+        response = client.post(
+            f"/api/v1/request/{doc_request.token}/upload/", {"file": _make_upload_file()}, format="multipart",
+        )
+        assert response.status_code == 400
+        assert not PortalSubmission.objects.filter(request=doc_request).exists()
+
+    @pytest.mark.django_db
     def test_upload_partially_fulfilled_still_works(self, client, doc_request):
         """A partially fulfilled request should still accept uploads."""
         doc_request.status = REQUEST_PARTIALLY_FULFILLED

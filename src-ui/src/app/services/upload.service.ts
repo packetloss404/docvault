@@ -28,6 +28,10 @@ export class UploadService {
     this.dragActiveSignal.set(active);
   }
 
+  processingCompleted(): void {
+    this.tickSignal.update((value) => value + 1);
+  }
+
   /** Opens a file picker and uploads whatever is chosen. */
   pick(): void {
     const input = document.createElement('input');

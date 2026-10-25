@@ -2,6 +2,7 @@
 
 import hashlib
 import logging
+from contextlib import contextmanager
 from typing import BinaryIO
 
 from django.db.models import Avg, Count, Sum
@@ -23,6 +24,24 @@ class ContentAddressedStorageBackend(StorageBackend):
 
     def __init__(self, underlying_backend: StorageBackend):
         self.underlying = underlying_backend
+
+    @staticmethod
+    @contextmanager
+    def _blob_lock(name):
+        from django.contrib.contenttypes.models import ContentType
+        from django.db import connection, transaction
+
+        from storage.models import ContentBlob
+
+        with transaction.atomic():
+            if connection.vendor == "postgresql":
+                key = int.from_bytes(hashlib.sha256(f"docvault-cas:{name}".encode()).digest()[:8], signed=True)
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT pg_advisory_xact_lock(%s)", [key])
+            else:
+                content_type = ContentType.objects.get_for_model(ContentBlob)
+                ContentType.objects.select_for_update().get(pk=content_type.pk)
+            yield
 
     @staticmethod
     def _compute_hash(content: BinaryIO) -> tuple[str, int]:
@@ -65,9 +84,12 @@ class ContentAddressedStorageBackend(StorageBackend):
         Returns:
             The SHA-256 hash of the stored content.
         """
-        from storage.models import ContentBlob
-
         sha256_hash, size = self._compute_hash(content)
+        with self._blob_lock(sha256_hash):
+            return self._save_blob(name, content, sha256_hash, size)
+
+    def _save_blob(self, name, content, sha256_hash, size):
+        from storage.models import ContentBlob
 
         try:
             blob = ContentBlob.objects.get(pk=sha256_hash)
@@ -123,6 +145,9 @@ class ContentAddressedStorageBackend(StorageBackend):
         try:
             blob = ContentBlob.objects.get(pk=name)
         except ContentBlob.DoesNotExist:
+            # Existing document keys remain readable when CAS is enabled later.
+            if self._is_legacy_document_key(name):
+                return self.underlying.open(name)
             raise FileNotFoundError(f"No content blob found for hash {name}")
 
         blob.last_accessed = timezone.now()
@@ -137,6 +162,10 @@ class ContentAddressedStorageBackend(StorageBackend):
         Args:
             name: SHA-256 hash of the content.
         """
+        with self._blob_lock(name):
+            self._delete_blob(name)
+
+    def _delete_blob(self, name):
         from storage.models import ContentBlob
 
         try:
@@ -171,7 +200,9 @@ class ContentAddressedStorageBackend(StorageBackend):
         """
         from storage.models import ContentBlob
 
-        return ContentBlob.objects.filter(pk=name).exists()
+        return ContentBlob.objects.filter(pk=name).exists() or (
+            self._is_legacy_document_key(name) and self.underlying.exists(name)
+        )
 
     def url(self, name: str) -> str:
         """
@@ -212,7 +243,22 @@ class ContentAddressedStorageBackend(StorageBackend):
             blob = ContentBlob.objects.get(pk=name)
             return blob.size
         except ContentBlob.DoesNotExist:
+            if self._is_legacy_document_key(name):
+                return self.underlying.size(name)
             raise FileNotFoundError(f"No content blob found for hash {name}")
+
+    @staticmethod
+    def _is_legacy_document_key(name):
+        from django.db.models import Q
+
+        from documents.models import Document, DocumentFile
+        from esignatures.models import SignatureRequest
+
+        return Document.all_objects.filter(
+            Q(filename=name) | Q(archive_filename=name) | Q(thumbnail_path=name),
+        ).exists() or DocumentFile.objects.filter(file=name).exists() or SignatureRequest.objects.filter(
+            Q(document_snapshot__source_key=name) | Q(document_snapshot__review_key=name),
+        ).exists()
 
     def list_files(self, prefix: str = "") -> list[str]:
         """

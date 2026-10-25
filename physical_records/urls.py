@@ -48,5 +48,10 @@ urlpatterns = [
         views.DestructionCertificateView.as_view(),
         name="destruction-certificate",
     ),
+    path(
+        "physical-records/<int:pk>/destruction-certificates/<int:certificate_id>/download/",
+        views.DestructionCertificateDownloadView.as_view(),
+        name="destruction-certificate-download",
+    ),
     path("", include(router.urls)),
 ]

@@ -1,6 +1,7 @@
 """Search API views."""
 
 from datetime import timedelta
+from time import perf_counter
 
 from django.db.models import Count
 from django.db.models.functions import TruncDate
@@ -52,6 +53,7 @@ class SearchView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
+        started = perf_counter()
         query = request.query_params.get("query", "")
         page = int(request.query_params.get("page", 1))
         page_size = int(request.query_params.get("page_size", 25))
@@ -97,6 +99,13 @@ class SearchView(APIView):
             filters=filters,
             page=page,
             page_size=page_size,
+        )
+
+        SearchQuery.objects.create(
+            user=request.user,
+            query_text=query,
+            results_count=results["count"],
+            response_time_ms=max(0, round((perf_counter() - started) * 1000)),
         )
 
         return Response(results)

@@ -1,7 +1,8 @@
-import { Component, Input, OnInit, signal } from '@angular/core';
+import { Component, Input, OnChanges, OnDestroy, SimpleChanges, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { SecurityService } from '../../services/security.service';
 import { Signature } from '../../models/security.model';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-document-signatures',
@@ -97,8 +98,10 @@ import { Signature } from '../../models/security.model';
     </div>
   `,
 })
-export class DocumentSignaturesComponent implements OnInit {
+export class DocumentSignaturesComponent implements OnChanges, OnDestroy {
   @Input() documentId!: number;
+  @Input() documentChecksum = '';
+  private signatureRequest?: Subscription;
 
   signatures = signal<Signature[]>([]);
   loading = signal(false);
@@ -109,13 +112,24 @@ export class DocumentSignaturesComponent implements OnInit {
 
   constructor(private securityService: SecurityService) {}
 
-  ngOnInit(): void {
-    this.loadSignatures();
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['documentId'] || changes['documentChecksum']) {
+      this.signatures.set([]);
+      this.successMessage.set('');
+      this.errorMessage.set('');
+      this.loadSignatures();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.signatureRequest?.unsubscribe();
   }
 
   loadSignatures(): void {
+    if (!this.documentId) return;
+    this.signatureRequest?.unsubscribe();
     this.loading.set(true);
-    this.securityService.getDocumentSignatures(this.documentId).subscribe({
+    this.signatureRequest = this.securityService.getDocumentSignatures(this.documentId).subscribe({
       next: (sigs) => {
         this.signatures.set(sigs);
         this.loading.set(false);

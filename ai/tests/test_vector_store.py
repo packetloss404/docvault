@@ -211,3 +211,19 @@ class TestGetVectorStoreSingleton:
         assert store1 is store2
         # load() should only be called once
         mock_load.assert_called_once()
+
+    def test_worker_published_snapshot_is_visible_without_restarting_web(self, settings, tmp_path):
+        settings.MEDIA_ROOT = tmp_path
+        assert get_vector_store().count == 0
+        published = VectorStore(dimension=64)
+        published.add(123, _random_embedding(64))
+        published.save()
+        loaded = get_vector_store()
+        assert loaded.count == 1
+        assert loaded.doc_ids == [123]
+        assert loaded.dimension == 64
+
+    def test_empty_store_uses_configured_embedding_dimension(self, settings, tmp_path):
+        settings.MEDIA_ROOT = tmp_path
+        settings.EMBEDDING_DIM = 384
+        assert get_vector_store().dimension == 384

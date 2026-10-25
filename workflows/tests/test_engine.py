@@ -154,6 +154,32 @@ class DoTransitionTest(TestCase):
         self.instance.refresh_from_db()
         self.assertEqual(self.instance.current_state, self.review)
 
+    def test_typed_required_fields_accept_zero_false_and_select_values(self):
+        for name, field_type, choices in [
+            ("count", "integer", None), ("confirmed", "boolean", None),
+            ("date", "date", None), ("choice", "select", ["approve", "reject"]),
+        ]:
+            WorkflowTransitionField.objects.create(
+                transition=self.submit, name=name, label=name, field_type=field_type,
+                required=True, choices=choices,
+            )
+        do_transition(self.instance, self.submit, field_values={
+            "count": 0, "confirmed": False, "date": "2026-01-02", "choice": "approve",
+        })
+        self.instance.refresh_from_db()
+        self.assertEqual(self.instance.context, {
+            "count": 0, "confirmed": False, "date": "2026-01-02", "choice": "approve",
+        })
+
+    def test_invalid_typed_field_does_not_transition(self):
+        WorkflowTransitionField.objects.create(
+            transition=self.submit, name="count", label="Count", field_type="integer", required=True,
+        )
+        with self.assertRaisesRegex(ValueError, "Count"):
+            do_transition(self.instance, self.submit, field_values={"count": "invalid"})
+        self.instance.refresh_from_db()
+        self.assertEqual(self.instance.current_state, self.draft)
+
     def test_transition_with_condition_pass(self):
         self.submit.condition = "True"
         self.submit.save(update_fields=["condition"])

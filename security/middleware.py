@@ -1,6 +1,7 @@
 """Security middleware for DocVault."""
 
 import logging
+from ipaddress import ip_address
 
 from django.conf import settings
 from django.http import HttpResponseForbidden
@@ -71,8 +72,30 @@ class IPAccessControlMiddleware:
 
     @staticmethod
     def _get_client_ip(request):
-        """Extract client IP from request, respecting X-Forwarded-For."""
-        x_forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
-        if x_forwarded_for:
-            return x_forwarded_for.split(",")[0].strip()
-        return request.META.get("REMOTE_ADDR", "")
+        """Trust forwarded addresses only across explicitly configured proxy hops."""
+        remote = request.META.get("REMOTE_ADDR", "")
+        forwarded = request.META.pop("HTTP_X_FORWARDED_FOR", "")
+        try:
+            remote_ip = ip_address(remote)
+        except ValueError:
+            return ""
+        trusted = set()
+        for configured in getattr(settings, "TRUSTED_PROXY_IPS", []):
+            try:
+                trusted.add(ip_address(configured))
+            except ValueError:
+                logger.warning("Ignoring invalid trusted proxy IP configuration.")
+        if remote_ip not in trusted or not forwarded:
+            return str(remote_ip)
+        try:
+            chain = [ip_address(value.strip()) for value in forwarded.split(",")]
+        except ValueError:
+            return str(remote_ip)
+        client = remote_ip
+        for hop in reversed(chain):
+            client = hop
+            if hop not in trusted:
+                break
+        # Downstream audit helpers and DRF throttles receive one verified address.
+        request.META["HTTP_X_FORWARDED_FOR"] = str(client)
+        return str(client)

@@ -86,6 +86,17 @@ class TriggerMatchingTest(TestCase):
         rules = get_matching_rules(TRIGGER_SCHEDULED, document=None)
         self.assertEqual(len(rules), 1)
 
+    def test_consumption_trigger_matches_context_filename_without_document(self):
+        from pathlib import Path
+
+        from processing.context import ProcessingContext
+
+        rule = self._make_rule(TRIGGER_CONSUMPTION, filter_filename="invoice*.pdf")
+        context = ProcessingContext(source_path=Path("/staging/item"), original_filename="invoice-1.pdf")
+        self.assertEqual(get_matching_rules(TRIGGER_CONSUMPTION, context=context), [rule])
+        context.original_filename = "receipt.pdf"
+        self.assertEqual(get_matching_rules(TRIGGER_CONSUMPTION, context=context), [])
+
     def test_non_scheduled_trigger_requires_document(self):
         """Non-scheduled triggers return nothing without a document."""
         self._make_rule(TRIGGER_DOCUMENT_ADDED)

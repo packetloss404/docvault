@@ -76,6 +76,7 @@ def send_signature_reminder(request_id):
     sig_request = SignatureRequest.objects.select_related("document").get(
         pk=request_id,
     )
+
     pending_signers = sig_request.signers.filter(
         status__in=[SIGNER_PENDING, SIGNER_VIEWED],
     )
@@ -186,6 +187,7 @@ def generate_completion_certificate(request_id):
     - SHA-256 hash of the original document
     """
     import io
+    from xml.sax.saxutils import escape
 
     from django.core.files.base import ContentFile
     from django.utils import timezone
@@ -195,6 +197,10 @@ def generate_completion_certificate(request_id):
     sig_request = SignatureRequest.objects.select_related("document").get(
         pk=request_id,
     )
+
+    from .snapshots import verify_snapshot
+
+    snapshot = verify_snapshot(sig_request)
 
     try:
         from reportlab.lib import colors
@@ -251,13 +257,13 @@ def generate_completion_certificate(request_id):
     # Document info
     story.append(Paragraph("Document Information", heading_style))
     story.append(Paragraph(
-        f"<b>Request Title:</b> {sig_request.title}", body_style,
+        f"<b>Request Title:</b> {escape(sig_request.title)}", body_style,
     ))
     story.append(Paragraph(
-        f"<b>Document:</b> {sig_request.document.title}", body_style,
+        f"<b>Document:</b> {escape(snapshot['document_title'])}", body_style,
     ))
     story.append(Paragraph(
-        f"<b>Document ID:</b> {sig_request.document.pk}", body_style,
+        f"<b>Document ID:</b> {snapshot['document_id']}", body_style,
     ))
     story.append(Paragraph(
         f"<b>Completed At:</b> "
@@ -266,11 +272,18 @@ def generate_completion_certificate(request_id):
     ))
 
     # Document hash
-    checksum = sig_request.document.checksum
+    checksum = snapshot["source_checksum"]
     if checksum:
         story.append(Paragraph(
             f"<b>Document SHA-256:</b> {checksum}", body_style,
         ))
+    if snapshot["review_checksum"] != checksum:
+        story.append(Paragraph(
+            f"<b>Review PDF SHA-256:</b> {snapshot['review_checksum']}", body_style,
+        ))
+    story.append(Paragraph(
+        f"<b>Frozen Version:</b> {snapshot['source_version_number'] or 'Original'}", body_style,
+    ))
     story.append(Spacer(1, 12))
 
     # Signer details table
@@ -354,7 +367,8 @@ def generate_completion_certificate(request_id):
     buffer.close()
 
     filename = f"certificate_{sig_request.pk}.pdf"
-    sig_request.certificate_pdf.save(filename, ContentFile(pdf_content), save=True)
+    sig_request.certificate_pdf.save(filename, ContentFile(pdf_content), save=False)
+    SignatureRequest.objects.filter(pk=request_id).update(certificate_pdf=sig_request.certificate_pdf.name)
 
     logger.info(
         "Generated completion certificate for request %s (%d bytes)",

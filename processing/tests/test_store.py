@@ -64,6 +64,20 @@ def test_template_collision_preserves_existing_file(context, storage_backend):
 
 
 @pytest.mark.django_db
+def test_multiple_documents_without_archives_keep_nullable_unique_keys(context, storage_backend):
+    StorePlugin().process(context)
+    StorePlugin().process(context)
+
+    assert Document.objects.count() == 2
+    assert not Document.objects.exclude(archive_filename__isnull=True).exists()
+    for document in Document.objects.all():
+        version = document.version_history.get()
+        assert version.version_number == 1
+        assert version.file.size == len(context.source_path.read_bytes())
+        assert version.file.file.name == document.filename
+
+
+@pytest.mark.django_db
 def test_failed_template_storage_keeps_original(context, storage_backend, monkeypatch):
     path = StoragePath.objects.create(name="Invoices", path="invoices/{{ title }}")
     context.override_storage_path = path.pk

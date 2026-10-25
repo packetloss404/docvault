@@ -373,12 +373,10 @@ export class EntityBrowserComponent implements OnInit {
       .subscribe({
         next: (docs) => this.entityDocuments.set(docs),
       });
-    if (entity.id != null) {
-      this.entityService.getCooccurrence(entity.id).subscribe({
+    this.entityService.getCooccurrence(entity.entity_type, entity.value).subscribe({
         next: (items) => this.cooccurrence.set(items),
         error: () => this.cooccurrence.set([]),
-      });
-    }
+    });
   }
 
   clearSelection(): void {

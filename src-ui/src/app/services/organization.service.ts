@@ -124,6 +124,13 @@ export class OrganizationService {
     );
   }
 
+  reorderCabinet(id: number, targetId: number, position: 'left' | 'right'): Observable<Cabinet> {
+    return this.http.post<Cabinet>(`${this.baseUrl}/cabinets/${id}/move/`, {
+      target: targetId,
+      position,
+    });
+  }
+
   autocompleteCabinet(q: string): Observable<AutocompleteItem[]> {
     return this.http.get<AutocompleteItem[]>(
       `${this.baseUrl}/cabinets/autocomplete/`,

@@ -24,6 +24,7 @@ export interface Document {
   archive_serial_number: number | null;
   language: string;
   owner: number | null;
+  is_held?: boolean;
   created_at: string;
   updated_at: string;
 }

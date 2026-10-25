@@ -48,24 +48,26 @@ def other_user(db):
 
 
 @pytest.fixture
-def document(user):
-    return Document.objects.create(
+def document(user, prepare_document):
+    document = Document.objects.create(
         title="View Test Doc",
         filename="view_test_doc.pdf",
         owner=user,
         page_count=5,
     )
+    prepare_document(document)
+    return document
 
 
 @pytest.fixture
-def signature_request(document, user):
-    return SignatureRequest.objects.create(
+def signature_request(document, user, prepare_request):
+    return prepare_request(SignatureRequest.objects.create(
         document=document,
         title="Test Request",
         message="Please sign",
         signing_order=ORDER_SEQUENTIAL,
         created_by=user,
-    )
+    ))
 
 
 @pytest.fixture

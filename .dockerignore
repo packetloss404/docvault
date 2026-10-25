@@ -16,6 +16,8 @@ env
 src-ui/node_modules
 src-ui/dist
 src-ui/.angular
+src-ui/playwright-report
+src-ui/test-results
 
 # Local state — never belongs in an image
 .env

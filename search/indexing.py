@@ -100,6 +100,10 @@ def index_document(document):
     if not client:
         return False
 
+    from .client import create_index
+
+    create_index()
+
     body = document_to_index_body(document)
     client.index(
         index=get_index_name(),

@@ -63,21 +63,22 @@ describe('EntityService', () => {
   });
 
   describe('getEntities', () => {
+    it('maps the backend aggregate entity type name for document and co-occurrence drilldown', () => {
+      service.getEntities().subscribe((response) => expect(response.results[0].entity_type).toBe('PERSON'));
+      const request = httpMock.expectOne((request) => request.url === `${API}/entities/`);
+      expect(request.request.params.get('aggregate')).toBe('true');
+      request.flush([{ value: 'Alice Johnson', entity_type_name: 'PERSON', entity_type_color: '#f00', document_count: 1 }]);
+    });
     it('should GET entities without params', () => {
-      const mockPage = {
-        count: 2,
-        results: [
-          { value: 'Alice', entity_type: 'person', document_count: 3 },
-        ],
-      };
+      const entity = { value: 'Alice', entity_type_name: 'PERSON', document_count: 3 };
 
       service.getEntities().subscribe((result) => {
-        expect(result).toEqual(mockPage);
+        expect(result).toEqual({ count: 1, next: null, previous: null, results: [{ ...entity, entity_type: 'PERSON' }] });
       });
 
-      const req = httpMock.expectOne(`${API}/entities/`);
+      const req = httpMock.expectOne((request) => request.url === `${API}/entities/`);
       expect(req.request.method).toBe('GET');
-      req.flush(mockPage);
+      req.flush([entity]);
     });
 
     it('should pass entity_type and search params', () => {
@@ -87,23 +88,29 @@ describe('EntityService', () => {
         (r) =>
           r.url === `${API}/entities/` &&
           r.params.get('entity_type') === 'person' &&
-          r.params.get('search') === 'Alice',
+          r.params.get('value') === 'Alice',
       );
       expect(req.request.method).toBe('GET');
-      req.flush({ count: 0, results: [] });
+      req.flush([]);
     });
 
-    it('should pass page and page_size params', () => {
-      service.getEntities({ page: 2, page_size: 20 }).subscribe();
+    it('paginates the bare aggregate response without requesting unsupported server pagination', () => {
+      service.getEntities({ page: 2, page_size: 1 }).subscribe((response) => {
+        expect(response.count).toBe(2);
+        expect(response.results.map((entity) => entity.value)).toEqual(['Bob']);
+      });
 
       const req = httpMock.expectOne(
         (r) =>
           r.url === `${API}/entities/` &&
-          r.params.get('page') === '2' &&
-          r.params.get('page_size') === '20',
+          !r.params.has('page') &&
+          !r.params.has('page_size'),
       );
       expect(req.request.method).toBe('GET');
-      req.flush({ count: 0, results: [] });
+      req.flush([
+        { value: 'Alice', entity_type_name: 'PERSON', document_count: 3 },
+        { value: 'Bob', entity_type_name: 'PERSON', document_count: 1 },
+      ]);
     });
 
     it('should omit undefined and empty string params', () => {
@@ -113,10 +120,10 @@ describe('EntityService', () => {
         (r) =>
           r.url === `${API}/entities/` &&
           !r.params.has('entity_type') &&
-          !r.params.has('search'),
+          !r.params.has('value'),
       );
       expect(req.request.method).toBe('GET');
-      req.flush({ count: 0, results: [] });
+      req.flush([]);
     });
   });
 
@@ -158,7 +165,7 @@ describe('EntityService', () => {
 
       const req = httpMock.expectOne(`${API}/entities/person/Alice/documents/`);
       expect(req.request.method).toBe('GET');
-      req.flush(docs);
+      req.flush([{ id: 3, title: 'Report' }]);
     });
 
     it('should URL-encode special characters in the entity value', () => {
@@ -181,11 +188,11 @@ describe('EntityService', () => {
         },
       ];
 
-      service.getCooccurrence(1).subscribe((result) => {
+      service.getCooccurrence('person', 'Alice').subscribe((result) => {
         expect(result).toEqual(mockData);
       });
 
-      const req = httpMock.expectOne(`${API}/entities/1/cooccurrence/`);
+      const req = httpMock.expectOne(`${API}/entities/person/Alice/cooccurrence/`);
       expect(req.request.method).toBe('GET');
       req.flush(mockData);
     });

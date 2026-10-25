@@ -2,6 +2,7 @@
 
 from rest_framework import serializers
 
+from .constants import DESTRUCTION_METHOD_CHOICES
 from .models import ChargeOut, DestructionCertificate, PhysicalLocation, PhysicalRecord
 
 
@@ -193,7 +194,7 @@ class DestructionCertificateSerializer(serializers.ModelSerializer):
 class DestructionCertificateCreateSerializer(serializers.Serializer):
     """Serializer for generating a destruction certificate."""
 
-    method = serializers.CharField(max_length=32)
+    method = serializers.ChoiceField(choices=DESTRUCTION_METHOD_CHOICES)
     witness = serializers.CharField(
         max_length=256, required=False, default="", allow_blank=True
     )

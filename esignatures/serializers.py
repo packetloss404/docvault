@@ -130,6 +130,7 @@ class SignatureRequestSerializer(serializers.ModelSerializer):
             "expiration",
             "completed_at",
             "certificate_pdf",
+            "document_snapshot",
             "signers",
             "fields_data",
             "signer_count",
@@ -143,6 +144,7 @@ class SignatureRequestSerializer(serializers.ModelSerializer):
             "status",
             "completed_at",
             "certificate_pdf",
+            "document_snapshot",
             "signer_count",
             "field_count",
             "created_at",
@@ -210,7 +212,7 @@ class FieldCreateSerializer(serializers.Serializer):
         min_value=0,
         help_text="Index into the signers list (0-based).",
     )
-    page = serializers.IntegerField(min_value=0)
+    page = serializers.IntegerField(min_value=0, help_text="1-based page; 0 is accepted as a legacy alias for page 1.")
     x = serializers.FloatField(min_value=0.0, max_value=1.0)
     y = serializers.FloatField(min_value=0.0, max_value=1.0)
     width = serializers.FloatField(min_value=0.0, max_value=1.0)
@@ -218,6 +220,9 @@ class FieldCreateSerializer(serializers.Serializer):
     field_type = serializers.ChoiceField(choices=FIELD_TYPE_CHOICES)
     required = serializers.BooleanField(default=True)
     order = serializers.IntegerField(min_value=0, default=0)
+
+    def validate_page(self, value):
+        return max(value, 1)
 
 
 class SignatureRequestCreateSerializer(serializers.Serializer):
@@ -410,10 +415,11 @@ class PublicSigningSerializer(serializers.Serializer):
 
     # Document info
     document_id = serializers.IntegerField(source="request.document.pk")
-    document_title = serializers.CharField(source="request.document.title")
+    document_title = serializers.CharField(source="request.document_snapshot.document_title")
     document_page_count = serializers.IntegerField(
-        source="request.document.page_count",
+        source="request.document_snapshot.review_page_count",
     )
+    document_checksum = serializers.CharField(source="request.document_snapshot.source_checksum")
 
     # Signer info
     signer_id = serializers.IntegerField(source="pk")

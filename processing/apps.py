@@ -9,6 +9,7 @@ class ProcessingConfig(AppConfig):
     verbose_name = "Processing"
 
     def ready(self):
+        from . import signals  # noqa: F401
         from .parsers.base import register_parser
         from .parsers.email_parser import EmailParser
         from .parsers.image import ImageParser

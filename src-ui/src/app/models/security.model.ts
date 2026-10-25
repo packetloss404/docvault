@@ -61,19 +61,20 @@ export interface Permission {
   id: number;
   codename: string;
   name: string;
-  content_type: number;
+  namespace: string;
 }
 
 export interface Group {
   id: number;
   name: string;
-  permissions: number[];
+  user_count: number;
 }
 
 export interface Role {
   id: number;
   name: string;
-  permissions: number[];
+  permissions: Permission[];
+  groups?: number[];
 }
 
 export interface User {

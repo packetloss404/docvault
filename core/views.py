@@ -107,12 +107,16 @@ class BulkOperationView(APIView):
 
         elif action == "set_correspondent":
             correspondent_id = request.data.get("correspondent_id")
-            documents.update(correspondent_id=correspondent_id)
+            for doc in documents:
+                doc.correspondent_id = correspondent_id
+                doc.save(update_fields=["correspondent"])
             return Response({"action": "set_correspondent", "affected": count})
 
         elif action == "set_document_type":
             document_type_id = request.data.get("document_type_id")
-            documents.update(document_type_id=document_type_id)
+            for doc in documents:
+                doc.document_type_id = document_type_id
+                doc.save(update_fields=["document_type"])
             return Response({"action": "set_document_type", "affected": count})
 
         elif action == "delete":

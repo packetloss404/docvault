@@ -168,6 +168,13 @@
                   [ngModel]="transitionFieldValues()[field.name] || ''"
                   (ngModelChange)="setFieldValue(field.name, $event)"
                 ></textarea>
+              } @else if (field.field_type === 'select') {
+                <select [id]="'wp-f-' + field.id" class="dv-select" [ngModel]="transitionFieldValues()[field.name] || ''" (ngModelChange)="setFieldValue(field.name, $event)">
+                  <option value="">Select…</option>
+                  @for (choice of field.choices || []; track choice) {
+                    <option [value]="choice">{{ choice }}</option>
+                  }
+                </select>
               } @else if (field.field_type === 'boolean') {
                 <select
                   [id]="'wp-f-' + field.id"
@@ -214,6 +221,9 @@
         </div>
 
         <div class="wp-modal__foot">
+          @if (transitionError()) {
+            <div class="dv-danger" role="alert">{{ transitionError() }}</div>
+          }
           <button
             type="button"
             class="dv-btn dv-btn--ghost dv-btn--md"

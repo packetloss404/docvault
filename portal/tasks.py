@@ -8,6 +8,18 @@ logger = logging.getLogger(__name__)
 
 
 @shared_task
+def link_ingested_submission(result, submission_id):
+    """Link a reviewed submission after its independent ingestion task completes."""
+    from processing.models import ProcessingTask
+
+    from .models import PortalSubmission
+
+    if result.get("status") == ProcessingTask.Status.SUCCESS and result.get("document_id"):
+        PortalSubmission.objects.filter(pk=submission_id).update(ingested_document_id=result["document_id"])
+    return result
+
+
+@shared_task
 def send_request_email(request_id):
     """Send document request email to assignee with token link."""
     from django.conf import settings

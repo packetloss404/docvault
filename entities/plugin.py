@@ -93,6 +93,14 @@ class NERPlugin(ProcessingPlugin):
                 )
                 created += 1
 
+            from django.conf import settings
+            from django.db import transaction
+
+            if getattr(settings, "ELASTICSEARCH_ENABLED", False):
+                from search.tasks import index_document_task
+
+                transaction.on_commit(lambda: index_document_task.delay(context.document_id))
+
             logger.info(
                 "Extracted %d unique entities for document %s",
                 created,

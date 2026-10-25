@@ -219,6 +219,14 @@ describe('OrganizationService', () => {
     });
   });
 
+  it('persists cabinet drag order through the tree move endpoint', () => {
+    service.reorderCabinet(2, 10, 'left').subscribe();
+    const request = httpTesting.expectOne(`${API}/cabinets/2/move/`);
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ target: 10, position: 'left' });
+    request.flush({ id: 2, parent: 4 });
+  });
+
   describe('autocompleteCabinet', () => {
     it('sends GET to /cabinets/autocomplete/ with q param', () => {
       service.autocompleteCabinet('fin').subscribe();

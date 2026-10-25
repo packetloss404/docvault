@@ -74,6 +74,21 @@ class TagViewSetTest(TestCase):
         resp = self.client.get(f"/api/v1/tags/{tag.pk}/")
         self.assertEqual(resp.data["document_count"], 1)
 
+    def test_tag_depth_limit_and_subtree_move(self):
+        chain = []
+        for level in range(5):
+            response = self.client.post("/api/v1/tags/", {
+                "name": f"Depth {level}", "parent": chain[-1].pk if chain else None,
+            }, format="json")
+            self.assertEqual(response.status_code, 201)
+            chain.append(Tag.objects.get(pk=response.data["id"]))
+        response = self.client.post("/api/v1/tags/", {"name": "Too deep", "parent": chain[-1].pk})
+        self.assertEqual(response.status_code, 400)
+        subtree = Tag.objects.create(name="Subtree", owner=self.user)
+        Tag.objects.create(name="Subtree child", parent=subtree, owner=self.user)
+        response = self.client.patch(f"/api/v1/tags/{subtree.pk}/", {"parent": chain[3].pk})
+        self.assertEqual(response.status_code, 400)
+
 
 class CorrespondentViewSetTest(TestCase):
     """Tests for the Correspondent API endpoints."""
@@ -141,6 +156,58 @@ class CabinetViewSetTest(TestCase):
         cab = Cabinet.objects.create(name="Del", owner=self.user)
         resp = self.client.delete(f"/api/v1/cabinets/{cab.pk}/")
         self.assertEqual(resp.status_code, status.HTTP_204_NO_CONTENT)
+
+    def test_sibling_reorder_persists_in_list_and_tree(self):
+        parent = Cabinet.objects.create(name="Parent", owner=self.user)
+        first = Cabinet.objects.create(name="A", parent=parent, owner=self.user)
+        second = Cabinet.objects.create(name="B", parent=parent, owner=self.user)
+        third = Cabinet.objects.create(name="C", parent=parent, owner=self.user)
+        response = self.client.post(f"/api/v1/cabinets/{third.pk}/move/", {
+            "target": first.pk, "position": "left",
+        }, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["parent"], parent.pk)
+        tree = self.client.get("/api/v1/cabinets/tree/").data
+        self.assertEqual([item["id"] for item in tree[0]["children"]], [third.pk, first.pk, second.pk])
+        response = self.client.post(f"/api/v1/cabinets/{third.pk}/move/", {
+            "target": second.pk, "position": "right",
+        }, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(list(Cabinet.objects.filter(parent=parent).values_list("pk", flat=True)), [
+            first.pk, second.pk, third.pk,
+        ])
+
+    def test_child_moves_and_legacy_parent_payload(self):
+        parent = Cabinet.objects.create(name="Parent", owner=self.user)
+        first = Cabinet.objects.create(name="A", parent=parent, owner=self.user)
+        moved = Cabinet.objects.create(name="Z", owner=self.user)
+        for position, expected in [("first-child", [moved.pk, first.pk]), ("last-child", [first.pk, moved.pk])]:
+            response = self.client.post(f"/api/v1/cabinets/{moved.pk}/move/", {
+                "target": parent.pk, "position": position,
+            }, format="json")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(list(Cabinet.objects.filter(parent=parent).values_list("pk", flat=True)), expected)
+        response = self.client.post(f"/api/v1/cabinets/{moved.pk}/move/", {"parent": None}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.data["parent"])
+
+    def test_invalid_moves_are_rejected_without_tree_changes(self):
+        parent = Cabinet.objects.create(name="Parent", owner=self.user)
+        child = Cabinet.objects.create(name="Child", parent=parent, owner=self.user)
+        for data in [
+            {"target": parent.pk, "position": "left"},
+            {"target": child.pk, "position": "last-child"},
+            {"target": child.pk, "position": "invalid"},
+            {"target": 999999, "position": "left"},
+            {"target": None, "position": "left"},
+            {"parent": child.pk, "target": child.pk},
+        ]:
+            response = self.client.post(f"/api/v1/cabinets/{parent.pk}/move/", data, format="json")
+            self.assertEqual(response.status_code, 400, data)
+        child.refresh_from_db()
+        parent.refresh_from_db()
+        self.assertEqual(child.parent_id, parent.pk)
+        self.assertIsNone(parent.parent_id)
 
 
 class StoragePathViewSetTest(TestCase):

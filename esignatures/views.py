@@ -1,12 +1,18 @@
 """API views for the e-signatures app."""
 
 import logging
+from io import BytesIO
 
+from django.conf import settings
+from django.db import transaction
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
@@ -22,6 +28,7 @@ from .engine import (
     record_page_view,
     record_view,
     send_request,
+    validate_signing_access,
 )
 from .engine import (
     ValidationError as EngineValidationError,
@@ -38,6 +45,7 @@ from .serializers import (
     SigningCompleteSerializer,
     ViewPageSerializer,
 )
+from .snapshots import SnapshotError, read_snapshot, require_snapshot
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +66,11 @@ def _get_client_ip(request):
 class SigningRateThrottle(AnonRateThrottle):
     """Rate throttle for public signing endpoints."""
 
-    rate = "30/minute"
+    scope = "public_signing"
+    rate = None
+
+    def get_rate(self):
+        return getattr(settings, "ESIGNATURE_SIGNING_RATE", "30/minute")
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +114,12 @@ class SignatureRequestViewSet(viewsets.ModelViewSet):
             updated_by=self.request.user,
         )
 
+    @transaction.atomic
     def perform_update(self, serializer):
+        locked = SignatureRequest.objects.select_for_update().get(pk=serializer.instance.pk)
+        if locked.status != "draft":
+            raise ValidationError("A sent signing request cannot be edited. Cancel it and issue a new request.")
+        serializer.instance = locked
         if "document" in serializer.validated_data:
             get_document_for_user(
                 self.request.user,
@@ -274,6 +291,11 @@ def _check_request_active(signer):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    try:
+        require_snapshot(sig_request)
+    except SnapshotError as exc:
+        return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
+
     return None
 
 
@@ -301,6 +323,62 @@ class PublicSigningView(APIView):
         signer.refresh_from_db()
         serializer = PublicSigningSerializer(signer)
         return Response(serializer.data)
+
+
+class PublicSigningPreviewView(APIView):
+    """Render only the document assigned to an active, eligible public signer."""
+
+    permission_classes = []
+    authentication_classes = []
+    throttle_classes = [SigningRateThrottle]
+
+    @extend_schema(responses={(200, "image/png"): OpenApiTypes.BINARY})
+    def get(self, request, token):
+        signer = _get_signer_or_404(token)
+        error_response = _check_request_active(signer)
+        if error_response:
+            return error_response
+        try:
+            validate_signing_access(signer)
+        except (InvalidStateError, EngineValidationError) as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
+
+        from documents.previews import render_pdf_page_preview
+
+        try:
+            data = read_snapshot(signer.request)
+        except SnapshotError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
+        return render_pdf_page_preview(data, request.query_params.get("page", 1))
+
+
+class PublicSigningDocumentView(APIView):
+    """Download the frozen original that this token authorizes the signer to review."""
+
+    permission_classes = []
+    authentication_classes = []
+    throttle_classes = [SigningRateThrottle]
+
+    @extend_schema(responses={(200, "application/octet-stream"): OpenApiTypes.BINARY})
+    def get(self, request, token):
+        signer = _get_signer_or_404(token)
+        error_response = _check_request_active(signer)
+        if error_response:
+            return error_response
+        try:
+            validate_signing_access(signer)
+            data = read_snapshot(signer.request, "source")
+        except (InvalidStateError, EngineValidationError) as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_403_FORBIDDEN)
+        except SnapshotError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_409_CONFLICT)
+        snapshot = signer.request.document_snapshot
+        response = FileResponse(
+            BytesIO(data), content_type=snapshot["source_mime_type"], as_attachment=True,
+            filename=snapshot["source_filename"],
+        )
+        response["Cache-Control"] = "private, no-store"
+        return response
 
 
 class PublicViewPageView(APIView):

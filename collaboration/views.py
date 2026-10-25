@@ -219,7 +219,9 @@ class DocumentShareCreateView(APIView):
         )
 
         hours = serializer.validated_data.get("expiration_hours")
-        if hours:
+        if serializer.validated_data.get("expiration"):
+            link.expiration = serializer.validated_data["expiration"]
+        elif hours:
             link.expiration = timezone.now() + timedelta(hours=hours)
 
         password = serializer.validated_data.get("password", "")

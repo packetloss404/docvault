@@ -1,6 +1,6 @@
 """Views for the entities app."""
 
-from django.db.models import Count, F
+from django.db.models import Count, F, Q
 from rest_framework import permissions, viewsets
 from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
@@ -151,3 +151,28 @@ class EntityDocumentsView(APIView):
 
         serializer = DocumentListSerializer(documents, many=True)
         return Response(serializer.data)
+
+
+class EntityCooccurrenceView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, entity_type, value):
+        permitted_documents = get_objects_for_user_with_ownership(
+            request.user, "documents.view_document", Document.objects.all(),
+        )
+        shared_documents = Entity.objects.filter(
+            document__in=permitted_documents, entity_type__name=entity_type, value=value,
+        ).values("document_id")
+        neighbors = (
+            Entity.objects.filter(document_id__in=shared_documents)
+            .exclude(Q(entity_type__name=entity_type) & Q(value=value))
+            .values(
+                "value", entity_type_name=F("entity_type__name"), entity_type_color=F("entity_type__color"),
+            )
+            .annotate(document_count=Count("document_id", distinct=True))
+            .order_by("-document_count", "entity_type_name", "value")[:100]
+        )
+        return Response([
+            {"entity": {**row, "entity_type": row["entity_type_name"]}, "count": row["document_count"]}
+            for row in neighbors
+        ])

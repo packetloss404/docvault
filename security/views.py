@@ -5,10 +5,12 @@ import csv
 import logging
 
 from django.contrib.auth.models import Group, User
+from django.db import transaction
 from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.authtoken.models import Token
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -50,7 +52,16 @@ class LoginView(APIView):
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except ValidationError:
+            log_audit_event(
+                action=AuditLogEntry.ACTION_LOGIN_FAILED,
+                detail="Invalid username, password, or login request.",
+                ip_address=request.META.get("REMOTE_ADDR"),
+                user_agent=request.META.get("HTTP_USER_AGENT", "")[:512],
+            )
+            raise
         user = serializer.validated_data["user"]
         otp_code = serializer.validated_data.get("otp_code", "")
 
@@ -83,6 +94,11 @@ class LoginView(APIView):
                 device.save(update_fields=["backup_codes"])
 
         token, _ = Token.objects.get_or_create(user=user)
+        log_audit_event(
+            user=user, action=AuditLogEntry.ACTION_LOGIN,
+            ip_address=request.META.get("REMOTE_ADDR"),
+            user_agent=request.META.get("HTTP_USER_AGENT", "")[:512],
+        )
         return Response({
             "token": token.key,
             "user_id": user.pk,
@@ -95,6 +111,7 @@ class LogoutView(APIView):
     """Invalidate the current token."""
 
     def post(self, request):
+        log_audit_event(user=request.user, action=AuditLogEntry.ACTION_LOGOUT)
         Token.objects.filter(user=request.user).delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -206,19 +223,23 @@ class PermissionListView(generics.ListAPIView):
 class DocumentSignView(APIView):
     """Sign a document with GPG."""
 
+    @transaction.atomic
     def post(self, request, document_id):
+        from documents.downloads import active_original, open_document_file
         from storage.utils import get_storage_backend
 
         from .signing import sign_data
 
         document = get_document_for_user(request.user, document_id, action="change")
+        document = type(document).objects.select_for_update().get(pk=document.pk)
 
         serializer = SignDocumentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         try:
             backend = get_storage_backend()
-            file_handle = backend.open(document.filename)
+            artifact = active_original(document)
+            file_handle = open_document_file(artifact) if artifact else backend.open(document.filename)
             file_data = file_handle.read()
             if hasattr(file_handle, "close"):
                 file_handle.close()
@@ -267,19 +288,23 @@ class DocumentSignatureListView(APIView):
 class DocumentVerifyView(APIView):
     """Verify document signatures."""
 
+    @transaction.atomic
     def post(self, request, document_id):
+        from documents.downloads import active_original, open_document_file
         from storage.utils import get_storage_backend
 
         from .signing import verify_signature
 
         document = get_document_for_user(request.user, document_id, action="change")
+        document = type(document).objects.select_for_update().get(pk=document.pk)
 
         serializer = VerifyDocumentSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         try:
             backend = get_storage_backend()
-            file_handle = backend.open(document.filename)
+            artifact = active_original(document)
+            file_handle = open_document_file(artifact) if artifact else backend.open(document.filename)
             file_data = file_handle.read()
             if hasattr(file_handle, "close"):
                 file_handle.close()

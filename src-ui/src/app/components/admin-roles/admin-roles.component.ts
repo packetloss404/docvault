@@ -2,7 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { SecurityService } from '../../services/security.service';
-import { Role, Permission } from '../../models/security.model';
+import { Group, Role, Permission } from '../../models/security.model';
 import { SubnavComponent } from '../subnav/subnav.component';
 
 /** Permission chips shown on a role card before collapsing into "+N more". */
@@ -92,6 +92,16 @@ const ROLE_CHIP_LIMIT = 6;
               }
             </div>
 
+            <div class="ar-perms">
+              <span class="dv-field__label">groups receiving this role</span>
+              @for (group of groups(); track group.id) {
+                <label class="ar-check" [for]="'rgroup-' + group.id">
+                  <input class="dv-checkbox" type="checkbox" [id]="'rgroup-' + group.id" [checked]="formGroups.includes(group.id)" (change)="toggleGroup(group.id, $event)" />
+                  <span>{{ group.name }}</span>
+                </label>
+              }
+            </div>
+
             <div class="ar-form__actions">
               <button
                 type="button"
@@ -162,6 +172,7 @@ const ROLE_CHIP_LIMIT = 6;
 export class AdminRolesComponent implements OnInit {
   roles = signal<Role[]>([]);
   permissions = signal<Permission[]>([]);
+  groups = signal<Group[]>([]);
   loading = signal(false);
   saving = signal(false);
   showForm = signal(false);
@@ -172,6 +183,7 @@ export class AdminRolesComponent implements OnInit {
   // Form fields
   formName = '';
   formPermissions: number[] = [];
+  formGroups: number[] = [];
 
   constructor(private securityService: SecurityService) {}
 
@@ -194,6 +206,7 @@ export class AdminRolesComponent implements OnInit {
     this.securityService.getPermissions().subscribe({
       next: (perms) => this.permissions.set(perms),
     });
+    this.securityService.getGroups().subscribe({ next: (groups) => this.groups.set(groups) });
   }
 
   /** Codename of a granted permission, for the chip row on a role card. */
@@ -204,7 +217,7 @@ export class AdminRolesComponent implements OnInit {
 
   /** First few granted permissions — a full list would swamp the card. */
   visiblePermissions(role: Role): number[] {
-    return role.permissions.slice(0, ROLE_CHIP_LIMIT);
+    return role.permissions.slice(0, ROLE_CHIP_LIMIT).map((permission) => permission.id);
   }
 
   hiddenPermissionCount(role: Role): number {
@@ -215,13 +228,15 @@ export class AdminRolesComponent implements OnInit {
     this.editing.set(null);
     this.formName = '';
     this.formPermissions = [];
+    this.formGroups = [];
     this.showForm.set(true);
   }
 
   startEdit(role: Role): void {
     this.editing.set(role);
     this.formName = role.name;
-    this.formPermissions = [...role.permissions];
+    this.formPermissions = role.permissions.map((permission) => permission.id);
+    this.formGroups = [...(role.groups || [])];
     this.showForm.set(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -241,9 +256,10 @@ export class AdminRolesComponent implements OnInit {
   }
 
   save(): void {
-    const data: Partial<Role> = {
+    const data = {
       name: this.formName.trim(),
-      permissions: this.formPermissions,
+      permission_ids: this.formPermissions,
+      group_ids: this.formGroups,
     };
 
     this.saving.set(true);
@@ -266,6 +282,11 @@ export class AdminRolesComponent implements OnInit {
         this.saving.set(false);
       },
     });
+  }
+
+  toggleGroup(id: number, event: Event): void {
+    this.formGroups = (event.target as HTMLInputElement).checked
+      ? [...this.formGroups, id] : this.formGroups.filter((group) => group !== id);
   }
 
   deleteRole(role: Role): void {

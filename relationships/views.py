@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from documents.models import Document
+from legal_hold.permissions import ensure_document_mutable
 from security.permissions import get_document_for_user, get_objects_for_user_with_ownership
 
 from .models import DocumentRelationship, RelationshipType
@@ -155,6 +156,7 @@ class DocumentRelationshipListCreateView(APIView):
 
     def post(self, request, document_id):
         source = get_document_for_user(request.user, document_id, action="change")
+        ensure_document_mutable(source, request.user)
 
         serializer = DocumentRelationshipCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -182,6 +184,10 @@ class DocumentRelationshipListCreateView(APIView):
                 {"error": "Relationship type not found."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+        if rel_type.slug == "supersedes":
+            target = get_document_for_user(request.user, target.pk, action="change")
+            ensure_document_mutable(target, request.user)
 
         relationship, created = DocumentRelationship.objects.get_or_create(
             source_document=source,
@@ -214,7 +220,8 @@ class DocumentRelationshipDeleteView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def delete(self, request, document_id, pk):
-        get_document_for_user(request.user, document_id, action="change")
+        document = get_document_for_user(request.user, document_id, action="change")
+        ensure_document_mutable(document, request.user)
         try:
             relationship = DocumentRelationship.objects.get(
                 pk=pk,
@@ -233,6 +240,10 @@ class DocumentRelationshipDeleteView(APIView):
         # If deleting a "supersedes" relationship, check if target should be un-obsoleted
         target_doc = relationship.target_document
         rel_type_slug = relationship.relationship_type.slug
+
+        if rel_type_slug == "supersedes":
+            get_document_for_user(request.user, target_doc.pk, action="change")
+            ensure_document_mutable(target_doc, request.user)
 
         relationship.delete()
 

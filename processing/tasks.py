@@ -59,6 +59,11 @@ def consume_document(self, source_path, original_filename, task_id,
     finally:
         if overrides.get("cleanup_source_path"):
             _cleanup_source_path(Path(source_path))
+            if (
+                context.source_path and context.source_path != Path(source_path)
+                and context.source_path.parent.name.startswith("docvault_split_")
+            ):
+                _cleanup_source_path(context.source_path)
         task.completed_at = timezone.now()
         task.save()
 
@@ -70,6 +75,13 @@ def _cleanup_source_path(path: Path) -> None:
     try:
         path.unlink(missing_ok=True)
         parent = path.parent
+        if parent.name.startswith("docvault_split_"):
+            # Other segments may still be queued; remove the folder only once empty.
+            try:
+                parent.rmdir()
+            except OSError:
+                pass
+            return
         if parent.name.startswith(("docvault_", "docvault_source_", "docvault_s3_")):
             shutil.rmtree(parent, ignore_errors=True)
     except Exception:

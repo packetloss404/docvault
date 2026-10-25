@@ -524,6 +524,14 @@ class CustomFieldAPITest(TestCase):
             {"document_type": dt.pk, "custom_field": cf.pk, "required": True},
             format="json",
         )
+        self.assertEqual(resp.status_code, status.HTTP_403_FORBIDDEN)
+        self.user.is_staff = True
+        self.user.save(update_fields=["is_staff"])
+        resp = self.client.post(
+            f"/api/v1/document-types/{dt.pk}/custom-fields/",
+            {"document_type": dt.pk, "custom_field": cf.pk, "required": True},
+            format="json",
+        )
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
         self.assertEqual(resp.data["field_name"], "Amount")
         self.assertTrue(resp.data["required"])

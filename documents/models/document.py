@@ -151,6 +151,7 @@ class DocumentFile(AuditableModel):
     encoding = models.CharField(max_length=64, blank=True, default="")
     checksum = models.CharField(max_length=64, help_text="SHA-256 checksum.")
     size = models.PositiveBigIntegerField(default=0, help_text="File size in bytes.")
+    page_count = models.PositiveIntegerField(default=0, db_default=0)
     comment = models.TextField(blank=True, default="")
 
     blob = models.ForeignKey(

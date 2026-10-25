@@ -211,6 +211,7 @@ class PortalSubmissionListSerializer(serializers.ModelSerializer):
             "original_filename",
             "submitter_email",
             "status",
+            "ingested_document",
             "submitted_at",
         ]
         read_only_fields = fields

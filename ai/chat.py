@@ -82,7 +82,7 @@ def chat_with_document(document_id: int, question: str, history: list[dict] | No
         prompt += f"\n\nConversation history:{history_text}"
     prompt += f"\n\nQuestion: {question}"
 
-    answer = client.generate(prompt, context=context_text)
+    answer = client.generate(prompt, context=context_text, temperature=0)
 
     return {
         "answer": answer,

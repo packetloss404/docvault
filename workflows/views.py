@@ -7,6 +7,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from legal_hold.permissions import ensure_document_mutable
 from security.permissions import IsAdminOrReadOnly, get_document_for_user
 
 from . import engine
@@ -160,7 +161,10 @@ class DocumentWorkflowViewSet(viewsets.ViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def _get_document(self, document_pk, action="view"):
-        return get_document_for_user(self.request.user, document_pk, action=action)
+        document = get_document_for_user(self.request.user, document_pk, action=action)
+        if action == "change":
+            ensure_document_mutable(document, self.request.user)
+        return document
 
     def list(self, request, document_pk=None):
         """List all workflow instances for a document."""

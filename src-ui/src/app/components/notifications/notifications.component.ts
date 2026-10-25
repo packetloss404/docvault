@@ -1,8 +1,9 @@
-import { Component, OnInit, computed, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { NotificationService } from '../../services/notification.service';
+import { NotificationWebSocketService } from '../../services/websocket.service';
 import { Notification } from '../../models/notification.model';
 
 @Component({
@@ -22,7 +23,9 @@ export class NotificationsComponent implements OnInit {
     () => this.notifications().filter((n) => !n.read).length,
   );
 
-  constructor(private notificationService: NotificationService) {}
+  constructor(private notificationService: NotificationService, live: NotificationWebSocketService) {
+    effect(() => { if (live.notification()) this.loadNotifications(); });
+  }
 
   ngOnInit(): void {
     this.loadNotifications();

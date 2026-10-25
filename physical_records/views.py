@@ -2,6 +2,7 @@
 
 import logging
 
+from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import permissions, status, viewsets
@@ -318,7 +319,25 @@ class DestructionCertificateView(APIView):
             notes=serializer.validated_data.get("notes", ""),
         )
 
+        from .certificates import generate_destruction_certificate
+
+        generate_destruction_certificate(certificate)
+
         return Response(
             DestructionCertificateSerializer(certificate).data,
             status=status.HTTP_201_CREATED,
+        )
+
+
+class DestructionCertificateDownloadView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk, certificate_id):
+        record = get_object_or_404(_permitted_physical_records(request.user), pk=pk)
+        certificate = get_object_or_404(DestructionCertificate, pk=certificate_id, physical_record=record)
+        if not certificate.certificate_pdf:
+            raise Http404("Certificate PDF has not been generated.")
+        return FileResponse(
+            certificate.certificate_pdf.open("rb"), content_type="application/pdf", as_attachment=True,
+            filename=f"destruction_{certificate.pk}.pdf",
         )

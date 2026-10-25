@@ -10,6 +10,8 @@ import { NotificationService } from '../../services/notification.service';
 import { PreferencesService } from '../../services/preferences.service';
 import { ShellStatsService } from '../../services/shell-stats.service';
 import { UploadService } from '../../services/upload.service';
+import { SearchService } from '../../services/search.service';
+import { NotificationWebSocketService, WebSocketService } from '../../services/websocket.service';
 import { RAIL } from '../../nav';
 
 function buildAuthService() {
@@ -93,6 +95,9 @@ describe('LayoutComponent', () => {
         { provide: PreferencesService, useValue: buildPreferencesService() },
         { provide: ShellStatsService, useValue: statsSvc },
         { provide: UploadService, useValue: uploadSvc },
+        { provide: SearchService, useValue: { getSidebarViews: vi.fn(() => of([])) } },
+        { provide: WebSocketService, useValue: { connect: vi.fn(), disconnect: vi.fn(), taskProgress: signal(null) } },
+        { provide: NotificationWebSocketService, useValue: { connect: vi.fn(), disconnect: vi.fn(), notification: signal(null) } },
       ],
     }).compileComponents();
 

@@ -54,32 +54,34 @@ def user(db):
 
 
 @pytest.fixture
-def document(user):
-    return Document.objects.create(
+def document(user, prepare_document):
+    document = Document.objects.create(
         title="Engine Test Doc",
         filename="engine_test_doc.pdf",
         owner=user,
     )
+    prepare_document(document)
+    return document
 
 
 @pytest.fixture
-def seq_request(document, user):
-    return SignatureRequest.objects.create(
+def seq_request(document, user, prepare_request):
+    return prepare_request(SignatureRequest.objects.create(
         document=document,
         title="Sequential Request",
         signing_order=ORDER_SEQUENTIAL,
         created_by=user,
-    )
+    ))
 
 
 @pytest.fixture
-def par_request(document, user):
-    return SignatureRequest.objects.create(
+def par_request(document, user, prepare_request):
+    return prepare_request(SignatureRequest.objects.create(
         document=document,
         title="Parallel Request",
         signing_order=ORDER_PARALLEL,
         created_by=user,
-    )
+    ))
 
 
 def _add_signer(request, name, email, order=0):
@@ -319,7 +321,9 @@ class TestCompleteSigning:
 
     @pytest.mark.django_db
     @patch("esignatures.tasks.generate_completion_certificate.delay")
-    def test_complete_signing_completes_request_when_all_done(self, mock_cert, seq_request):
+    def test_complete_signing_completes_request_when_all_done(
+        self, mock_cert, seq_request, django_capture_on_commit_callbacks,
+    ):
         s = _add_signer(seq_request, "Alice", "alice@example.com")
         f = _add_field(seq_request, s)
         seq_request.status = REQUEST_SENT
@@ -327,7 +331,8 @@ class TestCompleteSigning:
         s.status = SIGNER_VIEWED
         s.save(update_fields=["status"])
 
-        complete_signing(s, field_values=[{"field_id": f.pk, "value": "sig"}])
+        with django_capture_on_commit_callbacks(execute=True):
+            complete_signing(s, field_values=[{"field_id": f.pk, "value": "sig"}])
 
         seq_request.refresh_from_db()
         assert seq_request.status == REQUEST_COMPLETED

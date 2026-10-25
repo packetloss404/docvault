@@ -128,8 +128,10 @@ export class AnnotationPanelComponent implements OnChanges {
   @Input() documentId = 0;
   @Input() currentPage = 1;
   @Input() authorFilter = '';
+  @Input() refreshToken = 0;
 
   @Output() annotationSelected = new EventEmitter<Annotation>();
+  @Output() annotationDeleted = new EventEmitter<void>();
 
   annotations = signal<Annotation[]>([]);
   loading = signal(false);
@@ -140,7 +142,7 @@ export class AnnotationPanelComponent implements OnChanges {
   constructor(private annotationService: AnnotationService) {}
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['documentId'] || changes['currentPage'] || changes['authorFilter']) {
+    if (changes['documentId'] || changes['currentPage'] || changes['authorFilter'] || changes['refreshToken']) {
       this.loadAnnotations();
     }
   }
@@ -153,15 +155,12 @@ export class AnnotationPanelComponent implements OnChanges {
     if (this.currentPage) {
       params['page'] = String(this.currentPage);
     }
-    if (this.authorFilter) {
-      params['author'] = this.authorFilter;
-    }
 
     this.annotationService
       .getAnnotations(this.documentId, params)
       .subscribe({
         next: (data) => {
-          this.annotations.set(data);
+          this.annotations.set(this.authorFilter ? data.filter((item) => item.author_name === this.authorFilter) : data);
           this.loading.set(false);
         },
         error: () => {
@@ -213,7 +212,10 @@ export class AnnotationPanelComponent implements OnChanges {
     this.annotationService
       .deleteAnnotation(this.documentId, annotation.id)
       .subscribe({
-        next: () => this.loadAnnotations(),
+        next: () => {
+          this.loadAnnotations();
+          this.annotationDeleted.emit();
+        },
       });
   }
 

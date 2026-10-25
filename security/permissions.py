@@ -76,6 +76,8 @@ def get_objects_for_user_with_ownership(user, perm, queryset):
     """
     if user.is_superuser or user.is_staff:
         return queryset
+    if user.is_authenticated and user.has_perm(perm):
+        return queryset
 
     # Objects the user owns
     if hasattr(queryset.model, "owner"):

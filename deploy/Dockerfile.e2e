@@ -1,0 +1,7 @@
+ARG DOCVAULT_BASE_IMAGE=docvault:e2e-base
+FROM ${DOCVAULT_BASE_IMAGE}
+USER root
+COPY requirements/base.txt /tmp/e2e-requirements.txt
+RUN pip install --no-cache-dir -r /tmp/e2e-requirements.txt \
+    && python -m spacy download en_core_web_sm
+USER docvault

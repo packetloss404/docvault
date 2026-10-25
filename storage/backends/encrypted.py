@@ -208,7 +208,7 @@ def _decrypt_legacy_cbc_stream(ciphertext: BinaryIO, passphrase: str) -> BinaryI
 
 
 class EncryptedStorageBackend(StorageBackend):
-    """Storage backend that encrypts files using AES-256-CBC.
+    """Storage backend that encrypts files using authenticated AES-256-GCM.
 
     Wraps a delegate backend (local or S3) to transparently encrypt on save
     and decrypt on read. All other operations are delegated directly.
@@ -230,8 +230,8 @@ class EncryptedStorageBackend(StorageBackend):
         return self._delegate.save(name, encrypted)
 
     def open(self, name: str) -> BinaryIO:
-        encrypted = self._delegate.open(name)
-        return decrypt_stream(encrypted, self._passphrase)
+        with self._delegate.open(name) as encrypted:
+            return decrypt_stream(encrypted, self._passphrase)
 
     def delete(self, name: str) -> None:
         self._delegate.delete(name)

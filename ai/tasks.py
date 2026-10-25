@@ -23,7 +23,7 @@ def update_vector_index():
     from documents.models import Document
 
     from .embeddings import generate_document_embedding
-    from .vector_store import get_vector_store
+    from .vector_store import get_vector_store, vector_store_write_lock
 
     store = get_vector_store()
     existing_ids = set(doc_id for doc_id in store.doc_ids if doc_id != -1)
@@ -38,18 +38,24 @@ def update_vector_index():
 
     added = 0
     failed = 0
-    for doc in documents.iterator():
+    pending_ids = []
+    pending_embeddings = []
+    for doc in documents.iterator(chunk_size=100):
         try:
             embedding = generate_document_embedding(doc)
             if embedding:
-                store.add(doc.pk, embedding)
+                pending_ids.append(doc.pk)
+                pending_embeddings.append(embedding)
                 added += 1
         except Exception as e:
             logger.warning("Failed to generate embedding for document %s: %s", doc.pk, e)
             failed += 1
 
     if added > 0:
-        store.save()
+        with vector_store_write_lock():
+            store = get_vector_store()
+            store.add_batch(pending_ids, pending_embeddings)
+            store.save()
 
     logger.info("Vector index update complete: %d added, %d failed", added, failed)
     return {"status": "complete", "added": added, "failed": failed}
@@ -67,7 +73,7 @@ def rebuild_vector_index():
 
     from .client import get_llm_client
     from .embeddings import build_embedding_text
-    from .vector_store import VectorStore
+    from .vector_store import VectorStore, get_vector_store, vector_store_write_lock
 
     client = get_llm_client()
     if not client:
@@ -88,7 +94,7 @@ def rebuild_vector_index():
     batch_ids = []
     batch_size = 32
 
-    for doc in documents.iterator():
+    for doc in documents.iterator(chunk_size=100):
         text = build_embedding_text(doc)
         if not text.strip():
             continue
@@ -118,9 +124,18 @@ def rebuild_vector_index():
             logger.warning("Final batch embedding failed: %s", e)
             failed += len(batch_texts)
 
-    store = VectorStore(dimension=client.embedding_dimension)
-    store.rebuild(doc_ids, embeddings)
-    store.save()
+    with vector_store_write_lock():
+        current = get_vector_store()
+        # Preserve documents ingested while this rebuild generated its embeddings.
+        fresh_ids = set(Document.objects.exclude(content="").values_list("pk", flat=True)) - set(doc_ids)
+        if current.dimension == client.embedding_dimension:
+            for index, document_id in enumerate(current.doc_ids):
+                if document_id in fresh_ids:
+                    doc_ids.append(document_id)
+                    embeddings.append(current.index.reconstruct(index).tolist())
+        store = VectorStore(dimension=client.embedding_dimension)
+        store.rebuild(doc_ids, embeddings)
+        store.save()
 
     logger.info(
         "Vector index rebuild complete: %d indexed, %d failed",

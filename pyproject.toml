@@ -1,7 +1,7 @@
 [project]
 name = "docvault"
 version = "0.1.0"
-description = "The Ultimate Open-Source Document Management System"
+description = "Document management with OCR, permissions and configurable workflows"
 requires-python = ">=3.12"
 license = "GPL-3.0-or-later"
 

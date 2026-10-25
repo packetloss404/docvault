@@ -1,13 +1,18 @@
 """Views for the organization module."""
 
 
+from django.db import transaction
+from drf_spectacular.utils import extend_schema
+from mptt.exceptions import InvalidMove
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from documents.models import Document
+from legal_hold.permissions import ensure_document_mutable
 from security.permissions import (
+    IsAdminOrReadOnly,
     get_document_for_user,
     get_objects_for_user_with_ownership,
 )
@@ -27,6 +32,7 @@ from .models import (
 from .serializers import (
     BulkAssignSerializer,
     BulkSetCustomFieldsSerializer,
+    CabinetMoveSerializer,
     CabinetSerializer,
     CabinetTreeSerializer,
     CorrespondentSerializer,
@@ -60,6 +66,7 @@ def _validate_nested_document(view, document):
     if document_pk is not None and document.pk != int(document_pk):
         raise ValidationError({"document": "Document does not match the URL."})
     get_document_for_user(view.request.user, document.pk, action="change")
+    ensure_document_mutable(document, view.request.user)
 
 
 class TagViewSet(viewsets.ModelViewSet):
@@ -137,16 +144,27 @@ class CabinetViewSet(viewsets.ModelViewSet):
         serializer = CabinetTreeSerializer(roots, many=True)
         return Response(serializer.data)
 
+    @extend_schema(request=CabinetMoveSerializer, responses=CabinetSerializer)
     @action(detail=True, methods=["post"])
+    @transaction.atomic
     def move(self, request, pk=None):
-        """Move a cabinet to a new parent."""
+        """Move a cabinet relative to a target or to a legacy parent selection."""
         cabinet = self.get_object()
-        parent_id = request.data.get("parent")
-        if parent_id:
-            parent = Cabinet.objects.get(pk=parent_id)
-            cabinet.move_to(parent, position="last-child")
-        else:
-            cabinet.move_to(None, position="last-child")
+        serializer = CabinetMoveSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        target = data.get("target", data.get("parent"))
+        # MPTT moves can update siblings and ancestors beyond the source/target rows.
+        list(Cabinet.objects.select_for_update().order_by("pk").values_list("pk", flat=True))
+        cabinet.refresh_from_db()
+        if target:
+            target.refresh_from_db()
+            if target.pk == cabinet.pk or target.is_descendant_of(cabinet):
+                raise ValidationError("A cabinet cannot be moved inside its own subtree.")
+        try:
+            cabinet.move_to(target, position=data["position"])
+        except (InvalidMove, ValueError) as exc:
+            raise ValidationError(str(exc)) from exc
         cabinet.refresh_from_db()
         return Response(CabinetSerializer(cabinet).data)
 
@@ -173,6 +191,11 @@ class StoragePathViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
+
+    @action(detail=False, methods=["get"])
+    def autocomplete(self, request):
+        paths = self.get_queryset().filter(name__icontains=request.query_params.get("q", ""))[:20]
+        return Response([{"id": item.pk, "name": item.name} for item in paths])
 
 
 class CustomFieldViewSet(viewsets.ModelViewSet):
@@ -222,9 +245,14 @@ class CustomFieldInstanceViewSet(viewsets.ModelViewSet):
         serializer.save()
 
     def perform_update(self, serializer):
+        ensure_document_mutable(serializer.instance.document, self.request.user)
         if "document" in serializer.validated_data:
             _validate_nested_document(self, serializer.validated_data["document"])
         serializer.save()
+
+    def perform_destroy(self, instance):
+        ensure_document_mutable(instance.document, self.request.user)
+        instance.delete()
 
 
 class MetadataTypeViewSet(viewsets.ModelViewSet):
@@ -277,16 +305,21 @@ class DocumentMetadataViewSet(viewsets.ModelViewSet):
         serializer.save()
 
     def perform_update(self, serializer):
+        ensure_document_mutable(serializer.instance.document, self.request.user)
         if "document" in serializer.validated_data:
             _validate_nested_document(self, serializer.validated_data["document"])
         serializer.save()
+
+    def perform_destroy(self, instance):
+        ensure_document_mutable(instance.document, self.request.user)
+        instance.delete()
 
 
 class DocumentTypeCustomFieldViewSet(viewsets.ModelViewSet):
     """Manage custom field assignments for a document type."""
 
     serializer_class = DocumentTypeCustomFieldSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrReadOnly]
     pagination_class = None
 
     def get_queryset(self):
@@ -301,7 +334,7 @@ class DocumentTypeMetadataViewSet(viewsets.ModelViewSet):
     """Manage metadata type assignments for a document type."""
 
     serializer_class = DocumentTypeMetadataSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrReadOnly]
     pagination_class = None
 
     def get_queryset(self):
@@ -333,6 +366,9 @@ class BulkSetCustomFieldsView(viewsets.ViewSet):
                 {"error": "One or more documents were not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+        for document in docs.filter(is_held=True):
+            ensure_document_mutable(document, request.user)
 
         try:
             field = CustomField.objects.get(pk=data["field_id"])
@@ -375,6 +411,9 @@ class BulkAssignView(viewsets.ViewSet):
                 {"error": "One or more documents were not found."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+        for document in docs.filter(is_held=True):
+            ensure_document_mutable(document, request.user)
 
         # Add tags
         if data.get("tag_ids"):

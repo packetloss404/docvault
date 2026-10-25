@@ -36,7 +36,7 @@ import { SubnavComponent } from '../subnav/subnav.component';
             (ngModelChange)="filterStatus.set($event); loadSubmissions()"
           >
             <option value="">all statuses</option>
-            <option value="pending">pending</option>
+            <option value="pending_review">pending</option>
             <option value="approved">approved</option>
             <option value="rejected">rejected</option>
           </select>
@@ -82,7 +82,7 @@ import { SubnavComponent } from '../subnav/subnav.component';
 
                 <span class="dv-meta sv-row__when">{{ sub.submitted_at | date: 'short' }}</span>
 
-                @if (sub.status === 'pending') {
+                @if (sub.status === 'pending_review') {
                   <button
                     type="button"
                     class="dv-btn dv-btn--primary dv-btn--sm"
@@ -211,7 +211,7 @@ export class SubmissionReviewComponent implements OnInit {
   /** Console status chip modifier for a submission status. */
   getStatusBadgeClass(status: string): string {
     switch (status) {
-      case 'pending':
+      case 'pending_review':
         return 'dv-chip--warn';
       case 'approved':
         return 'dv-chip--ok';

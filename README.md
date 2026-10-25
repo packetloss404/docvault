@@ -4,9 +4,11 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![Angular 21](https://img.shields.io/badge/Angular-21-red.svg)](https://angular.dev)
 [![Django 5.2](https://img.shields.io/badge/Django-5.2-green.svg)](https://www.djangoproject.com)
-[![Tests: 1,554](https://img.shields.io/badge/tests-1%2C554%20passing-brightgreen.svg)]()
+[![CI](https://github.com/packetloss404/docvault/actions/workflows/ci.yml/badge.svg)](https://github.com/packetloss404/docvault/actions/workflows/ci.yml)
 
-The ultimate open-source document management system. Ingest, organize, search, and collaborate on documents with OCR, AI-powered search, workflows, e-signatures, and more.
+An open-source document management application built with Django and Angular. Its core workflow ingests documents, extracts text with OCR, organizes records, and serves authenticated previews and downloads.
+
+The feature catalog below describes implemented capabilities, including optional integrations. It is not a guarantee that every integration is configured or production-validated. See [feature verification and limitations](docs/feature-verification.md) for executed acceptance tests, prerequisites and known gaps.
 
 **Contributors welcome.** Pull requests, issues, docs, tests, and UX polish all help. Read [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md), skim [`dev/AGENTS.md`](dev/AGENTS.md) for where code lives, and grab a task from [`dev/work/CHECKLIST.md`](dev/work/CHECKLIST.md) if you want a concrete starting point. Security-sensitive reports belong in [`SECURITY.md`](SECURITY.md), not public issues.
 
@@ -15,10 +17,10 @@ The ultimate open-source document management system. Ingest, organize, search, a
 ## Features
 
 ### Document Management
-- **Upload & Ingest** — Drag-and-drop, email import (IMAP/POP3), watch folders, S3 buckets, public contributor portals
+- **Upload & Ingest** — Drag-and-drop, password-based IMAP, watch folders, S3 buckets, public contributor portals. POP3 and mail OAuth refresh are not implemented.
 - **OCR Processing** — Tesseract + ocrmypdf with deskew, rotation, and PDF/A output
 - **Zone OCR** — Template-based field extraction for structured documents (invoices, forms) with perceptual similarity scoring
-- **Versioning** — Full version history with side-by-side diff comparison and check-out/check-in locking
+- **Versioning** — Full version history with side-by-side text diff comparison and check-out/check-in locking
 - **Barcode Detection** — 1D/2D barcode scanning with separator page support, ASN assignment, and printable label generation
 
 ### Organization & Metadata
@@ -42,11 +44,11 @@ The ultimate open-source document management system. Ingest, organize, search, a
 - **LLM Integration** — OpenAI, Azure OpenAI, or Ollama (local) for document chat, summarization, entity extraction, and title suggestions
 - **ML Classification** — Scikit-learn document classifier with training pipeline and suggested field persistence
 - **Named Entity Recognition** — SpaCy-based extraction with entity co-occurrence visualization
-- **Vector Embeddings** — FAISS index for similarity search and document clustering
+- **Vector Embeddings** — FAISS index for similarity search; document clustering is not implemented
 - **Redis-Backed Caching** — Stem cache for ML preprocessing performance
 
 ### Collaboration
-- **Comments** — Threaded comments on documents with edit/delete
+- **Comments** — Document comments with edit/delete; nested comment threads are not implemented
 - **Annotations** — Visual annotations (highlights, sticky notes, text boxes, stamps) with replies, integrated into document preview
 - **Share Links** — Password-protected public access with expiration and download tracking
 - **Check-Out / Check-In** — Document locking to prevent concurrent edits
@@ -64,20 +66,20 @@ The ultimate open-source document management system. Ingest, organize, search, a
 - **External Signer Verification** — Code-based identity verification for external parties
 - **Signature Fields** — Signature, initials, date, checkbox, and text fields with page coordinates
 - **GPG Signing** — Cryptographic document signing and verification
-- **Audit Trail** — Complete event log with IP address and user agent tracking
+- **Audit Trail** — Signing event log with IP address and user agent tracking
 
 ### Security & Compliance
-- **Authentication** — Username/password, OIDC/SSO, LDAP, social auth (django-allauth)
+- **Authentication** — Username/password and generic OIDC through django-allauth. LDAP and vendor-specific social providers are not wired in the standard configuration.
 - **Two-Factor Auth** — TOTP-based 2FA with QR code setup and backup codes
 - **RBAC** — Admin UI for users, groups, roles, and permissions with role-based navigation visibility
 - **Object Permissions** — Per-document access control via django-guardian
 - **GPG Signing** — Cryptographic document signing and verification
 - **Encryption at Rest** — Optional AES storage encryption with configurable KDF
-- **Audit Logging** — Comprehensive action logging with CSV/JSON export
+- **Audit Logging** — Action logging with CSV/JSON export
 - **Legal Hold** — Document preservation with mutation blocking (HTTP 409), custodian notification, and acknowledgment
 - **Content-Addressed Storage** — Deduplication with integrity verification and CAS migration command
 - **IP Access Control** — Configurable whitelist/blacklist
-- **Security Headers** — HSTS, X-Frame-Options, CSP, XSS protection
+- **Security Headers** — HSTS, X-Frame-Options, CSP and content-type protections
 
 ### Physical Records
 - **Location Tracking** — Hierarchical physical locations (building > room > cabinet > shelf > box)
@@ -113,8 +115,8 @@ The ultimate open-source document management system. Ingest, organize, search, a
 | **Cache / Broker** | Redis 7 |
 | **Task Queue** | Celery 5.6 with Beat scheduler |
 | **Object Storage** | Local filesystem or S3/MinIO |
-| **OCR** | Tesseract, ocrmypdf 16 |
-| **AI/ML** | OpenAI / Azure OpenAI / Ollama, SpaCy 3.7, Scikit-learn 1.7, FAISS |
+| **OCR** | Tesseract, OCRmyPDF (16/17 API compatibility), Ghostscript, unpaper |
+| **AI/ML** | OpenAI / Azure OpenAI / Ollama, spaCy, Scikit-learn, FAISS |
 | **Auth** | django-allauth, django-guardian, PyOTP |
 | **API Docs** | drf-spectacular (OpenAPI 3 / Swagger UI) |
 
@@ -181,6 +183,8 @@ All configuration is via environment variables. See [`.env.example`](.env.exampl
 | `ELASTICSEARCH_ENABLED` | `false` | Enable Elasticsearch |
 | `OIDC_SERVER_URL` | — | OIDC provider URL for SSO |
 | `STORAGE_ENCRYPTION_ENABLED` | `false` | Enable AES encryption at rest |
+| `TRUSTED_PROXY_IPS` | empty | Proxy peer addresses allowed to supply the client IP; configure this when using IP policies behind a reverse proxy |
+| `RETENTION_HARD_DELETE_ENABLED` | `false` | Explicitly opt in to permanent record deletion under configured retention policies; legal holds remain protected |
 
 ---
 
@@ -202,12 +206,12 @@ All endpoints are under `/api/v1/`:
 | `/api/v1/esignatures/verify/` | External signer verification |
 | `/api/v1/legal-holds/` | Document preservation |
 | `/api/v1/storage/` | Dedup stats, integrity verification |
-| `/api/v1/security/users/`, `/groups/`, `/roles/` | RBAC admin |
+| `/api/v1/users/`, `/api/v1/groups/`, `/api/v1/roles/` | RBAC admin |
 | `/api/v1/portals/` | Contributor portal management |
 | `/api/v1/sources/`, `/mail-accounts/` | Document ingestion sources |
 | `/api/v1/zone-ocr-templates/` | Zone OCR configuration |
 | `/api/v1/entities/` | Named entity recognition |
-| `/api/v1/relationships/` | Document relationships and graph |
+| `/api/v1/documents/{id}/relationships/`, `/api/v1/documents/{id}/relationship-graph/` | Document relationships and graph |
 | `/health/`, `/ready/`, `/metrics/` | Observability |
 
 ---

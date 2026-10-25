@@ -52,6 +52,7 @@ class SignatureRequest(AuditableModel):
         null=True,
         blank=True,
     )
+    document_snapshot = models.JSONField(default=dict, db_default={}, blank=True, editable=False)
 
     class Meta:
         ordering = ["-created_at"]

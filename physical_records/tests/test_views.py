@@ -785,6 +785,12 @@ class TestDestructionCertificateView:
         assert response.data["witness"] == "Jane Doe"
         assert response.data["destroyed_at"] is not None
         assert response.data["destroyed_by"] == user.pk
+        assert response.data["certificate_pdf"]
+        download = client.get(
+            f"/api/v1/physical-records/{physical_record.pk}/destruction-certificates/{response.data['id']}/download/"
+        )
+        assert download.status_code == 200
+        assert b"".join(download.streaming_content).startswith(b"%PDF-")
 
     @pytest.mark.django_db
     def test_create_destruction_certificate_nonexistent(self, client, user):

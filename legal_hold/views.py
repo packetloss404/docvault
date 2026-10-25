@@ -5,6 +5,7 @@ import logging
 from django.utils import timezone
 from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -68,6 +69,11 @@ class LegalHoldViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         serializer.save(updated_by=self.request.user)
+
+    def perform_destroy(self, instance):
+        if instance.status == ACTIVE:
+            raise ValidationError("Release the active legal hold before deleting it.")
+        instance.delete()
 
     @action(detail=True, methods=["post"])
     def activate(self, request, pk=None):

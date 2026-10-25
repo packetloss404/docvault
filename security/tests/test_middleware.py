@@ -111,7 +111,9 @@ class TestIPAccessControlMiddleware:
         response = middleware(request)
         assert response.status_code == 200
 
-    @override_settings(IP_WHITELIST=["10.0.0.1"], IP_BLACKLIST=[])
+    @override_settings(
+        IP_WHITELIST=["10.0.0.1"], IP_BLACKLIST=[], TRUSTED_PROXY_IPS=["127.0.0.1", "192.168.1.1"],
+    )
     def test_x_forwarded_for_parsing(self, rf):
         request = rf.get("/")
         request.META["REMOTE_ADDR"] = "127.0.0.1"
@@ -121,7 +123,9 @@ class TestIPAccessControlMiddleware:
         # Should use first IP from X-Forwarded-For (10.0.0.1), which is whitelisted
         assert response.status_code == 200
 
-    @override_settings(IP_WHITELIST=["10.0.0.1"], IP_BLACKLIST=[])
+    @override_settings(
+        IP_WHITELIST=["10.0.0.1"], IP_BLACKLIST=[], TRUSTED_PROXY_IPS=["127.0.0.1", "10.0.0.1"],
+    )
     def test_x_forwarded_for_blocked_ip(self, rf):
         request = rf.get("/")
         request.META["REMOTE_ADDR"] = "127.0.0.1"
@@ -130,3 +134,27 @@ class TestIPAccessControlMiddleware:
         response = middleware(request)
         # First IP is 192.168.1.1, not whitelisted
         assert response.status_code == 403
+
+    @override_settings(IP_WHITELIST=["192.0.2.1"], IP_BLACKLIST=[], TRUSTED_PROXY_IPS=[])
+    def test_untrusted_client_cannot_spoof_whitelist_or_throttle_identity(self, rf):
+        request = rf.get("/", REMOTE_ADDR="203.0.113.4", HTTP_X_FORWARDED_FOR="192.0.2.1")
+        assert IPAccessControlMiddleware(dummy_response_view)(request).status_code == 403
+        assert "HTTP_X_FORWARDED_FOR" not in request.META
+
+    @override_settings(IP_WHITELIST=["192.0.2.1"], IP_BLACKLIST=[], TRUSTED_PROXY_IPS=["10.80.13.11"])
+    def test_explicitly_trusted_proxy_can_forward_client_address(self, rf):
+        request = rf.get("/", REMOTE_ADDR="10.80.13.11", HTTP_X_FORWARDED_FOR="192.0.2.1")
+        assert IPAccessControlMiddleware(dummy_response_view)(request).status_code == 200
+        assert request.META["HTTP_X_FORWARDED_FOR"] == "192.0.2.1"
+
+    @override_settings(IP_WHITELIST=["192.0.2.1"], IP_BLACKLIST=[], TRUSTED_PROXY_IPS=["10.80.13.11"])
+    def test_trusted_proxy_does_not_accept_spoofed_prefix_before_real_client(self, rf):
+        request = rf.get("/", REMOTE_ADDR="10.80.13.11", HTTP_X_FORWARDED_FOR="192.0.2.1, 203.0.113.4")
+        assert IPAccessControlMiddleware(dummy_response_view)(request).status_code == 403
+        assert request.META["HTTP_X_FORWARDED_FOR"] == "203.0.113.4"
+
+    @override_settings(IP_WHITELIST=["192.0.2.1"], IP_BLACKLIST=[], TRUSTED_PROXY_IPS=["10.80.13.11"])
+    def test_malformed_forwarded_address_falls_back_to_connection_address(self, rf):
+        request = rf.get("/", REMOTE_ADDR="10.80.13.11", HTTP_X_FORWARDED_FOR="not-an-address")
+        assert IPAccessControlMiddleware(dummy_response_view)(request).status_code == 403
+        assert "HTTP_X_FORWARDED_FOR" not in request.META

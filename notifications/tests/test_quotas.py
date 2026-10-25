@@ -162,6 +162,12 @@ class QuotaEnforcementTest(TestCase):
         self.assertFalse(allowed)
         self.assertIn("Storage limit reached", message)
 
+    def test_incoming_upload_must_fit_remaining_storage(self):
+        Quota.objects.create(user=self.user, max_storage_bytes=10)
+        self._create_document_with_file("Existing", 4)
+        self.assertTrue(check_quota(self.user, incoming_bytes=6)[0])
+        self.assertFalse(check_quota(self.user, incoming_bytes=7)[0])
+
     def test_storage_quota_over_limit(self):
         """User over the storage quota limit should NOT be allowed."""
         # 1 MB limit
