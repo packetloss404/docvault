@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
   LegalHold,
@@ -23,9 +23,9 @@ export class LegalHoldService {
         httpParams = httpParams.set(key, value);
       }
     }
-    return this.http.get<LegalHold[]>(`${this.apiUrl}/`, {
+    return this.http.get<LegalHold[] | { results: LegalHold[] }>(`${this.apiUrl}/`, {
       params: httpParams,
-    });
+    }).pipe(map((response) => Array.isArray(response) ? response : response.results));
   }
 
   getHold(id: number): Observable<LegalHold> {

@@ -363,18 +363,10 @@ export class DocumentDetailComponent implements OnInit {
     return 'none';
   });
 
-  /**
-   * PDF viewer URL. The page and zoom fragment is a standard PDF open
-   * parameter, so the toolbar controls drive the embedded viewer for real.
-   */
-  previewFrameUrl = computed(() => {
+  previewPageUrl = computed(() => {
     const doc = this.document();
     if (!doc) return '';
-    const base = this.documentService.getDownloadUrl(
-      doc.id,
-      doc.archive_filename ? 'archive' : 'original',
-    );
-    return `${base}#page=${this.currentPage()}&zoom=${this.zoom()}`;
+    return this.documentService.getPreviewUrl(doc.id, this.currentPage());
   });
 
   zoomIn(): void {

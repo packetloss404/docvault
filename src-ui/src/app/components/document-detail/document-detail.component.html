@@ -68,11 +68,13 @@
       <div class="dv-viewer dd-viewer">
         @switch (previewKind()) {
           @case ('pdf') {
-            <iframe
-              class="dd-frame"
-              [authenticatedSrc]="previewFrameUrl()"
-              title="Document preview"
-            ></iframe>
+            <div class="dd-page-wrap" [style.width.%]="zoom()">
+              <img
+                class="dd-image"
+                [authenticatedSrc]="previewPageUrl()"
+                [alt]="'Document preview, page ' + currentPage()"
+              />
+            </div>
           }
           @case ('image') {
             <div class="dd-page-wrap" [style.width.%]="zoom()">

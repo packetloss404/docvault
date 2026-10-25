@@ -26,6 +26,10 @@ describe('LegalHoldService', () => {
   });
 
   describe('getHolds', () => {
+    it('unwraps the paginated API response before callers check hold status', () => {
+      service.getHolds().subscribe((holds) => expect(holds).toEqual([]));
+      httpMock.expectOne(`${BASE}/`).flush({ count: 0, results: [], next: null, previous: null });
+    });
     it('sends GET to /legal-holds/ with no params by default', () => {
       service.getHolds().subscribe();
       const req = httpMock.expectOne(`${BASE}/`);

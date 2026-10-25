@@ -5,10 +5,7 @@ import { DocumentService } from './document.service';
 
 interface DedupStats {
   total_blobs: number;
-  total_size_bytes: number;
-  deduplicated_size_bytes: number;
-  savings_bytes: number;
-  savings_percent: number;
+  total_stored_bytes: number;
 }
 
 interface ProcessingTaskLite {
@@ -83,7 +80,11 @@ export class ShellStatsService {
       .get<DedupStats>(`${environment.apiUrl}/storage/dedup-stats/`)
       .subscribe({
         next: (stats) =>
-          this.diskBytesSignal.set(stats.deduplicated_size_bytes),
+          this.diskBytesSignal.set(
+            stats.total_blobs > 0 && Number.isFinite(stats.total_stored_bytes)
+              ? stats.total_stored_bytes
+              : null,
+          ),
         error: () => this.diskBytesSignal.set(null),
       });
   }

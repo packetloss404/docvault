@@ -82,8 +82,9 @@ export class DocumentService {
 
   // --- Preview & Download ---
 
-  getPreviewUrl(id: number): string {
-    return `${this.apiUrl}/${id}/preview/`;
+  getPreviewUrl(id: number, page?: number): string {
+    const url = `${this.apiUrl}/${id}/preview/`;
+    return page === undefined ? url : `${url}?page=${page}`;
   }
 
   getDownloadUrl(id: number, version: 'original' | 'archive' = 'original'): string {

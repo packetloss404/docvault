@@ -47,7 +47,8 @@ $mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 // normalised annotation coordinates map onto.
 .dd-page-wrap {
   position: relative;
-  max-width: 100%;
+  align-self: flex-start;
+  margin-inline: auto;
   flex-shrink: 0;
   line-height: 0;
 }

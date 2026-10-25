@@ -263,6 +263,9 @@ describe('DocumentService', () => {
     it('should return the correct preview URL string', () => {
       expect(service.getPreviewUrl(10)).toBe(`${DOCS_URL}/10/preview/`);
     });
+    it('requests the selected PDF page while preserving the thumbnail URL by default', () => {
+      expect(service.getPreviewUrl(10, 2)).toBe(`${DOCS_URL}/10/preview/?page=2`);
+    });
   });
 
   describe('getDownloadUrl()', () => {

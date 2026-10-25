@@ -132,6 +132,11 @@ class DocumentViewSet(viewsets.ModelViewSet):
         """Serve the document thumbnail with ETag caching."""
         doc = self.get_object()
 
+        if "page" in request.query_params:
+            from .previews import build_pdf_page_preview
+
+            return build_pdf_page_preview(doc, request.query_params["page"])
+
         if not doc.thumbnail_path:
             raise Http404("No thumbnail available for this document.")
 
