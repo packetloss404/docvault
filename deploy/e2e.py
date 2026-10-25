@@ -3,6 +3,7 @@
 import argparse
 import os
 import subprocess
+import sys
 import time
 from pathlib import Path
 from urllib.error import URLError
@@ -38,7 +39,7 @@ def main():
         run(compose + ["up", "-d"])
         run(compose + ["exec", "-T", "web", "python", "manage.py", "seed_e2e"])
         if args.integrations:
-            for model in ("qwen2.5:0.5b", "all-minilm"):
+            for model in ("qwen2.5:1.5b", "all-minilm"):
                 run(compose + ["exec", "-T", "ollama", "ollama", "pull", model])
         deadline = time.monotonic() + 120
         while True:
@@ -55,9 +56,21 @@ def main():
             npm = "npm.cmd" if os.name == "nt" else "npm"
             subprocess.run([npm, "run", "e2e"], cwd=ROOT / "src-ui", env=environment, check=True)
     finally:
-        if not args.keep:
-            subprocess.run(compose + ["logs", "--no-color", "--tail", "100"], cwd=ROOT, env=environment)
-            subprocess.run(compose + ["down", "--volumes", "--remove-orphans"], cwd=ROOT, env=environment)
+        try:
+            report_directory = ROOT / "src-ui" / "test-results"
+            report_directory.mkdir(parents=True, exist_ok=True)
+            with (report_directory / "services.log").open("w", encoding="utf-8") as service_log:
+                subprocess.run(
+                    compose + ["logs", "--no-color", "--timestamps"], cwd=ROOT, env=environment,
+                    stdout=service_log, stderr=subprocess.STDOUT,
+                )
+            if not args.keep:
+                subprocess.run(compose + ["logs", "--no-color", "--tail", "100"], cwd=ROOT, env=environment)
+        except OSError as error:
+            print(f"Could not capture service diagnostics: {error}", file=sys.stderr)
+        finally:
+            if not args.keep:
+                subprocess.run(compose + ["down", "--volumes", "--remove-orphans"], cwd=ROOT, env=environment)
 
 
 if __name__ == "__main__":

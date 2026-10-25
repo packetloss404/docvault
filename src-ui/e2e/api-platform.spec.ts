@@ -18,6 +18,65 @@ function stackPython(script: string, payload: Record<string, unknown> = {}): str
   ], { timeout: 90_000, encoding: 'utf8', stdio: 'pipe' }).trim();
 }
 
+function logSourceFailure(sourceId: number, owner: number, folder: string, filename: string): void {
+  try {
+    const snapshot = stackPython(String.raw`
+import django; django.setup()
+import json, re, stat, sys
+from pathlib import Path
+from django.db.models import Q
+from documents.models import Document
+from processing.models import ProcessingTask
+from sources.models import Source, WatchFolderSource
+
+p = json.loads(sys.argv[1])
+source = Source.objects.get(pk=p["source_id"], owner_id=p["owner_id"])
+assert source.source_type in {"watch_folder", "staging"}
+folder = Path(p["folder"]).resolve()
+assert folder.parent == Path("/data/consume").resolve()
+assert re.fullmatch(r"(?:watch_folder|staging)-[0-9]{13}-[0-9a-f]{6}", folder.name)
+assert p["filename"] == folder.name + ".txt"
+watch = WatchFolderSource.objects.filter(source_id=source.pk).first()
+configured_path = watch.path if watch else source.configuration.get("path")
+assert configured_path and Path(configured_path).resolve() == folder
+
+file_state = {"exists": False, "size": None, "regular_file": False}
+try:
+    info = (folder / p["filename"]).lstat()
+    file_state.update(exists=True, size=info.st_size, regular_file=stat.S_ISREG(info.st_mode))
+except FileNotFoundError:
+    pass
+
+documents = list(Document.all_objects.filter(original_filename=p["filename"]).values(
+    "id", "original_filename", "owner_id", "document_type_id", "created_at", "deleted_at", "is_held",
+)[:10])
+document_ids = [item["id"] for item in documents]
+marker = Path(p["filename"]).stem
+tasks = ProcessingTask.objects.filter(
+    Q(document_id__in=document_ids) | Q(owner_id=p["owner_id"], result__contains=marker),
+).order_by("created_at")
+task_rows = list(tasks.values(
+    "task_id", "owner_id", "document_id", "status", "result", "created_at", "started_at", "completed_at",
+)[:10])
+for row in task_rows:
+    row["result"] = re.sub(r"://[^/@\s]+:[^/@\s]+@", "://[redacted]@", row["result"][:1500])
+print(json.dumps({
+    "source": {"id": source.pk, "owner_id": source.owner_id, "source_type": source.source_type,
+               "enabled": source.enabled, "created_at": source.created_at, "updated_at": source.updated_at,
+               "last_polled": None, "polling_interval": watch.polling_interval if watch else None},
+    "filename": p["filename"], "file": file_state, "documents_including_trash": documents,
+    "matching_processing_tasks": task_rows,
+    "source_logs": {"available": False, "reason": "SourceLog is not implemented"},
+    "unavailable": ["Source.last_polled is not implemented",
+                    "Pending tasks have no persisted source or filename relation and cannot be attributed exactly"],
+}, default=str))
+`, { source_id: sourceId, owner_id: owner, folder, filename });
+    console.error(`SOURCE_INGESTION_DIAGNOSTICS ${snapshot}`);
+  } catch {
+    console.error('SOURCE_INGESTION_DIAGNOSTICS {"diagnostic_error":"Scoped snapshot could not be collected"}');
+  }
+}
+
 async function body(response: APIResponse, status = 200): Promise<any> {
   expect(response.status(), `${response.url()}: ${await response.text()}`).toBe(status);
   return status === 204 ? null : response.json();
@@ -422,12 +481,15 @@ test('AI disabled state is explicit, or real Ollama chat and FAISS indexing work
   expect(chat.answer, 'Real document Q&A must recover the known fixture fact').toContain('ORBIT73491');
   expect(chat.sources[0].document_id).toBe(document.id);
   const summary = await call(request, user, 'GET', `/ai/documents/${document.id}/summarize/`, undefined, 200, modelRequestTimeout);
-  expect(summary.summary, 'Summary must retain a fact from the source document').toMatch(/ORBIT73491|1234|solar|batter|Barack Obama/i);
+  expect(summary.summary, 'Summary must preserve the actual mission identifier').toContain('ORBIT73491');
+  expect(summary.summary, 'Summary must preserve the actual battery cost').toMatch(/\b(?:1234|1,234)\b/);
   const title = await call(request, user, 'GET', `/ai/documents/${document.id}/suggest-title/`, undefined, 200, modelRequestTimeout);
   expect(title.suggested_title, 'Title must describe the fixture document').toMatch(/mission|solar|batter|ORBIT|Barack Obama/i);
   expect(title.suggested_title.length).toBeLessThanOrEqual(128);
   const extracted = await call(request, user, 'GET', `/ai/documents/${document.id}/entities/`, undefined, 200, modelRequestTimeout);
   expect(extracted.entities.names, 'Entity endpoint must return structured, source-grounded names').toEqual(expect.arrayContaining(['Barack Obama']));
+  expect(extracted.entities.dates, 'No dates are present in the fixture; inferred dates must be rejected').toEqual([]);
+  expect(extracted.entities.amounts.some((amount: string) => amount.includes('1234'))).toBe(true);
   const hybrid = await call(request, user, 'GET', '/ai/search/hybrid/?query=solar', undefined, 200, modelRequestTimeout);
   expect(hybrid.results.length).toBeGreaterThan(0);
 });
@@ -517,11 +579,16 @@ test('watch and staging folders ingest real files through Beat and the separate 
       }
       await call(request, token, 'PATCH', `/sources/${source.id}/`, { enabled: true });
       let documentId: number | undefined;
-      await expect.poll(async () => {
-        const documents = await call(request, token, 'GET', `/documents/?search=${filename}`);
-        documentId = documents.results.find((document: any) => document.original_filename === filename)?.id;
-        return documentId;
-      }, { timeout: 100_000 }).toBeTruthy();
+      try {
+        await expect.poll(async () => {
+          const documents = await call(request, token, 'GET', `/documents/?search=${filename}`);
+          documentId = documents.results.find((document: any) => document.original_filename === filename)?.id;
+          return documentId;
+        }, { timeout: 100_000 }).toBeTruthy();
+      } catch (error) {
+        logSourceFailure(source.id, owner, folder, filename);
+        throw error;
+      }
       const download = await request.get(`${api}/documents/${documentId}/download/`, { headers: authHeaders(token) });
       expect(download.status()).toBe(200);
       expect((await download.body()).toString()).toBe(content);

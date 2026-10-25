@@ -1,5 +1,6 @@
 """Ollama LLM provider implementation."""
 
+import json
 import logging
 import time
 
@@ -47,25 +48,39 @@ class OllamaClient(LLMClient):
         return parsed if parsed > 0 else None
 
     def generate(self, prompt: str, context: str = "", **kwargs) -> str:
-        full_prompt = prompt
         if context:
-            full_prompt = (
-                f"Use the following document content as context:\n\n{context}\n\n"
-                f"Now answer this question:\n{prompt}"
-            )
+            messages = [{"role": "system", "content": prompt}]
+            for example in kwargs.get("examples", []):
+                messages.extend([
+                    {"role": "user", "content": example["document"]},
+                    {"role": "assistant", "content": json.dumps(example["response"])},
+                ])
+            messages.append({"role": "user", "content": context})
+        else:
+            messages = [{"role": "user", "content": prompt}]
+
+        options = {
+            **self._runtime_options,
+            "temperature": kwargs.get("temperature", 0.3),
+            "num_predict": self._positive_int(kwargs.get("max_tokens")) or self._max_tokens,
+        }
+        if isinstance(kwargs.get("seed"), int):
+            options["seed"] = kwargs["seed"]
+        structured = {"format": kwargs["json_schema"]} if kwargs.get("json_schema") else {}
 
         for attempt in range(MAX_RETRIES):
             try:
                 response = self._client.chat(
                     model=self._model,
-                    messages=[{"role": "user", "content": full_prompt}],
-                    options={
-                        **self._runtime_options,
-                        "temperature": kwargs.get("temperature", 0.3),
-                        "num_predict": self._positive_int(kwargs.get("max_tokens")) or self._max_tokens,
-                    },
+                    messages=messages,
+                    options=options,
+                    **structured,
                 )
+                if structured and getattr(response, "done_reason", None) == "length":
+                    raise ValueError("Structured output exceeded the configured token limit.")
                 return response.message.content or ""
+            except ValueError:
+                raise
             except Exception as e:
                 if attempt < MAX_RETRIES - 1:
                     wait = RETRY_BACKOFF * (2 ** attempt)

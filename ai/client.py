@@ -22,7 +22,8 @@ class LLMClient(ABC):
         Args:
             prompt: The user prompt / instruction.
             context: Optional context (e.g. document content) to include.
-            **kwargs: Provider-specific options (temperature, max_tokens, etc.).
+            **kwargs: Provider options such as temperature/max_tokens; Ollama also
+                accepts json_schema, seed and document/response examples.
 
         Returns:
             The generated text response.

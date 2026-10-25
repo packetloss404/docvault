@@ -252,6 +252,21 @@ class TestEntityExtractView:
         assert resp.status_code == status.HTTP_200_OK
         assert "Acme Corp" in resp.data["entities"]["names"]
 
+    @patch('ai.features.get_llm_client')
+    def test_unfounded_provider_output_returns_bad_gateway(self, mock_client, api_client, user, sample_doc):
+        import json
+
+        from ai.features import ENTITY_RESPONSE_SCHEMA
+
+        result = {category: [] for category in ENTITY_RESPONSE_SCHEMA['required']}
+        result['dates'] = ['2017-05-19']
+        mock_client.return_value.generate.return_value = json.dumps(result)
+        api_client.force_authenticate(user)
+        response = api_client.get(f'/api/v1/ai/documents/{sample_doc.pk}/entities/')
+        assert response.status_code == status.HTTP_502_BAD_GATEWAY
+        assert response.data['entities'] is None
+        assert response.data['error_code'] == 'invalid_model_output'
+
 
 # --- SmartTitleView ---
 

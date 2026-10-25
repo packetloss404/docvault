@@ -1,5 +1,6 @@
 """Tests for AI feature functions: summarize, extract entities, suggest title."""
 
+import json
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -7,6 +8,7 @@ from django.contrib.auth.models import User
 from django.test import override_settings
 
 from ai.client import reset_client
+from ai.features import ENTITY_RESPONSE_SCHEMA
 from documents.models import Document
 
 
@@ -97,11 +99,13 @@ class TestExtractEntities:
         assert "names" in result["entities"]
         assert "John Smith" in result["entities"]["names"]
         assert "Acme Corp" in result["entities"]["organizations"]
+        assert mock_client.generate.call_args.kwargs['temperature'] == 0
+        assert mock_client.generate.call_args.kwargs['seed'] == 0
+        assert mock_client.generate.call_args.kwargs['json_schema'] == ENTITY_RESPONSE_SCHEMA
 
     @override_settings(LLM_ENABLED=True, LLM_PROVIDER="openai", LLM_API_KEY="test-key")
     @patch("ai.features.get_llm_client")
-    def test_handles_json_parse_failure_gracefully(self, mock_get_client):
-        """Returns raw response when JSON parsing fails."""
+    def test_rejects_json_parse_failure_instead_of_returning_raw_data(self, mock_get_client):
         mock_client = MagicMock()
         mock_client.generate.return_value = "This is not valid JSON at all"
         mock_get_client.return_value = mock_client
@@ -117,9 +121,9 @@ class TestExtractEntities:
         from ai.features import extract_entities
 
         result = extract_entities(document_id=doc.pk)
-        assert result["entities"] is not None
-        assert "raw" in result["entities"]
-        assert result["entities"]["raw"] == "This is not valid JSON at all"
+        assert result['entities'] is None
+        assert result['error_code'] == 'invalid_model_output'
+        assert 'raw' not in result
 
     @override_settings(LLM_ENABLED=True, LLM_PROVIDER="openai", LLM_API_KEY="test-key")
     @patch("ai.features.get_llm_client")
@@ -127,7 +131,8 @@ class TestExtractEntities:
         """Correctly strips markdown code fences from JSON response."""
         mock_client = MagicMock()
         mock_client.generate.return_value = (
-            '```json\n{"names": ["Alice"], "dates": ["2025-03-01"]}\n```'
+            '```json\n{"names": ["Alice"], "dates": ["2025-03-01"], "organizations": [], '
+            '"amounts": [], "addresses": [], "emails": [], "phone_numbers": []}\n```'
         )
         mock_get_client.return_value = mock_client
 
@@ -145,6 +150,39 @@ class TestExtractEntities:
         assert result["entities"] is not None
         assert "names" in result["entities"]
         assert "Alice" in result["entities"]["names"]
+
+    @pytest.mark.parametrize('changes', [
+        {'dates': ['2017-05-19', '2018-03-16']},
+        {'names': ['Invented Person']},
+        {'names': ['Mira Soland']},
+        {'organizations': ['United States Government']},
+        {'names': 'Barack Obama'},
+        {'amounts': [1234]},
+        {'names': ['']},
+        {'unsupported': []},
+    ])
+    @patch('ai.features.get_llm_client')
+    def test_rejects_unfounded_values_and_invalid_shapes(self, mock_get_client, changes):
+        entities = {category: [] for category in ENTITY_RESPONSE_SCHEMA['required']}
+        entities.update(changes)
+        mock_get_client.return_value.generate.return_value = json.dumps(entities)
+        document = Document.objects.create(
+            title='Source grounding',
+            content='Barack Obama approved the mission in London. Batteries cost 1234 dollars.',
+        )
+        from ai.features import extract_entities
+
+        result = extract_entities(document.pk)
+        assert result['entities'] is None
+        assert result['error_code'] == 'invalid_model_output'
+
+    @patch('ai.features.get_llm_client')
+    def test_missing_categories_are_rejected(self, mock_get_client):
+        mock_get_client.return_value.generate.return_value = '{"names": ["Alice"]}'
+        document = Document.objects.create(title='Incomplete result', content='Alice signed.')
+        from ai.features import extract_entities
+
+        assert extract_entities(document.pk)['error_code'] == 'invalid_model_output'
 
 
 @pytest.mark.django_db

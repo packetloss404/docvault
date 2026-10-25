@@ -7,6 +7,32 @@ from .client import get_llm_client
 
 logger = logging.getLogger(__name__)
 
+ENTITY_DESCRIPTIONS = {
+    "names": "Person names exactly as written in the document, without expanding or resolving their identity.",
+    "organizations": "Names of organizations explicitly named in the document, copied verbatim.",
+    "dates": "Date expressions actually written in the document, without inferring historical dates.",
+    "amounts": "Amounts actually written in the document, preserving their original currency or unit text.",
+    "addresses": "Addresses or place names actually written in the document, copied verbatim.",
+    "emails": "Email addresses actually written in the document, copied verbatim.",
+    "phone_numbers": "Phone numbers actually written in the document, copied verbatim.",
+}
+ENTITY_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        category: {"type": "array", "items": {"type": "string"}, "description": description}
+        for category, description in ENTITY_DESCRIPTIONS.items()
+    },
+    "required": list(ENTITY_DESCRIPTIONS),
+    "additionalProperties": False,
+}
+ENTITY_EXAMPLES = [{
+    "document": "Mira Soland paid 75 dollars in Paris.",
+    "response": {
+        "names": ["Mira Soland"], "organizations": [], "dates": [], "amounts": ["75 dollars"],
+        "addresses": ["Paris"], "emails": [], "phone_numbers": [],
+    },
+}]
+
 
 def summarize_document(document_id: int) -> dict:
     """Generate a summary for a document.
@@ -35,12 +61,13 @@ def summarize_document(document_id: int) -> dict:
         content = content[:max_chars] + "..."
 
     prompt = (
-        "Provide a concise summary of the following document in 2-4 sentences. "
-        "Focus on the key points, purpose, and any important details like dates, "
-        "amounts, or parties involved."
+        "Summarize only the facts explicitly stated in the supplied document in 2-4 sentences. "
+        "Preserve its important identifiers, amounts and named parties. "
+        "Do not add facts from memory or claim that information is missing when it is present. "
+        "Return the summary directly, without a preamble."
     )
 
-    summary = client.generate(prompt, context=content)
+    summary = client.generate(prompt, context=content, temperature=0, seed=0)
     return {"summary": summary}
 
 
@@ -70,23 +97,40 @@ def extract_entities(document_id: int) -> dict:
         content = content[:max_chars] + "..."
 
     prompt = (
-        "Extract named entities from the following document. Return a JSON object with "
-        "these categories: dates, amounts, names, organizations, addresses, emails, "
-        "phone_numbers. Each category should be a list of strings. Only include entities "
-        "that are clearly present. Return ONLY the JSON object, no other text."
+        "Extract person names, organization names, date mentions, monetary amounts, places and addresses, "
+        "emails and phone numbers. Every value must be copied exactly from the user document. "
+        "Do not expand names or invent dates. Empty arrays mean the category is absent. "
+        "Return only a JSON object with string-list fields: names, organizations, dates, amounts, "
+        "addresses, emails, phone_numbers."
     )
 
-    response = client.generate(prompt, context=content, temperature=0.1)
-
     try:
-        # Try to parse JSON from the response
+        response = client.generate(
+            prompt, context=content, temperature=0, seed=0,
+            json_schema=ENTITY_RESPONSE_SCHEMA, examples=ENTITY_EXAMPLES,
+        )
         response = response.strip()
         if response.startswith("```"):
             response = response.split("\n", 1)[1].rsplit("```", 1)[0]
         entities = json.loads(response)
-    except (json.JSONDecodeError, IndexError):
-        logger.warning("Failed to parse entity extraction response as JSON")
-        entities = {"raw": response}
+        if not isinstance(entities, dict) or set(entities) != set(ENTITY_DESCRIPTIONS):
+            raise ValueError("Unexpected entity categories")
+        normalized_content = " ".join(content.casefold().split())
+        for values in entities.values():
+            if not isinstance(values, list):
+                raise ValueError("Entity categories must contain lists")
+            for value in values:
+                if not isinstance(value, str) or not value.strip():
+                    raise ValueError("Entities must be nonempty strings")
+                if " ".join(value.casefold().split()) not in normalized_content:
+                    raise ValueError("Entity value is absent from the document")
+    except (ValueError, TypeError, IndexError):
+        logger.warning("Entity extraction returned invalid or ungrounded output")
+        return {
+            "entities": None,
+            "error": "Entity extraction did not return valid source-grounded data.",
+            "error_code": "invalid_model_output",
+        }
 
     return {"entities": entities}
 

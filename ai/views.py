@@ -162,7 +162,11 @@ class EntityExtractView(APIView):
 
         result = extract_entities(document_id=pk)
         if result.get("error"):
-            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+            response_status = (
+                status.HTTP_502_BAD_GATEWAY if result.get("error_code") == "invalid_model_output"
+                else status.HTTP_400_BAD_REQUEST
+            )
+            return Response(result, status=response_status)
         return Response(result)
 
 
