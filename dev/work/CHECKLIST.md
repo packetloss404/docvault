@@ -177,6 +177,7 @@ Source: `work/features/FEAT-NG-*.md`
 
 - [x] Root `Dockerfile` multi-stage parity with `Dockerfile.production`.
 - [x] Django `urls.py`: SPA deep-link fallback for Angular routes.
+- [x] CI: build locked Helm dependencies before chart linting and rendering.
 
 ---
 

@@ -41,5 +41,8 @@ coverage.xml
 # pytest
 .pytest_cache/
 
+# Downloaded Helm dependencies (versions are tracked in Chart.lock)
+/deploy/helm/docvault/charts/
+
 # Claude Code
 .claude/
