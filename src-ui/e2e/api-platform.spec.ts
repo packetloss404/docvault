@@ -370,8 +370,11 @@ test('real Elasticsearch returns text hits, facets, synonyms, curations and sear
   let results: any;
   await expect.poll(async () => {
     results = await call(request, user, 'GET', `/search/?query=${key}`);
-    return results.results.map((result: any) => result.id);
-  }, { timeout: 80_000 }).toContain(document.id);
+    return {
+      document: results.results.some((result: any) => result.id === document.id),
+      tag: (results.facets.tags ?? []).some((facet: any) => facet.key === tag.name),
+    };
+  }, { timeout: 80_000, message: 'Search must expose the document and its updated tag facet' }).toEqual({ document: true, tag: true });
   expect(results.facets.tags.some((facet: any) => facet.key === tag.name)).toBeTruthy();
   const synonymWord = uniqueName('solarsynonym').replaceAll('-', '');
   const synonym = await call(request, admin, 'POST', '/search/synonyms/', { terms: [synonymWord, key], enabled: true }, 201);

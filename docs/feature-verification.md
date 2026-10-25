@@ -68,7 +68,7 @@ During the clean follow-up run, more than 3,000 periodic dispatches produced no 
 
 ## Search and AI
 
-- **F12 — Full-text search: locally verified.** Real Elasticsearch hits, permission scoping, metadata/entity facets and index updates are checked; browser filters operate on an ingested document.
+- **F12 — Full-text search: locally verified.** Real Elasticsearch hits, permission scoping, metadata/entity facets and index updates are checked; browser filters operate on an ingested document. Metadata visibility follows background indexing. The acceptance check waits for both the document and its updated tag facet within the existing timeout, since creation can become searchable before a later tag update.
 - **F13 — Semantic search: locally verified.** Real embeddings are published by workers to FAISS and reloaded by web processes. Two concurrent ingests remain discoverable.
 - **F14 — Hybrid search: bounded live coverage.** The configured local embedding/text path returns real results. Ranking quality across representative corpora has not been evaluated.
 - **F15 — Global search: bounded browser coverage.** The command palette opens with Ctrl+K and navigates to the matching uploaded document. Not every entity category, platform shortcut or recent-query permutation is covered end to end.
