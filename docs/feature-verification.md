@@ -25,8 +25,11 @@ The main application publishes only `127.0.0.1:18086`. Infrastructure cases temp
 CI builds the application and requires this integration profile. Failure screenshots, videos and Playwright traces are retained for seven days. Local reports are in `src-ui/playwright-report` and `src-ui/test-results`, ignored by Git.
 
 ## Execution evidence
+[Strict GitHub CI for the accepted application commit](https://github.com/packetloss404/docvault/actions/runs/40223450800) passed **2,307 backend tests**, **653 Angular unit tests across 34 files**, and **all 73 acceptance checks** with no skips or retries. Ruff, migration consistency, production configuration checks, frontend build and Helm lint/render also passed.
 
-Repository-wide local checks passed: **2,307 backend checks** (2,305 in the full run plus two subsequently added cleanup regressions), **653 Angular unit tests across 34 files**, Ruff, migration consistency, production configuration checks and the production frontend build. The final strict combined run passed **all 73 acceptance checks in 7.3 minutes**, from a fresh database and managed file store, with no skips or retries: **35 browser journeys**, **15 domain API cases**, **17 platform API cases** and **six infrastructure cases**. Development failures and traces were retained. The final run included AI grounding changes and enabled the CI flaky-test rejection gate; no targeted rerun was substituted for this clean combined pass.
+The final local strict combined run passed all 73 acceptance checks in 7.3 minutes from a fresh database and managed file store: **35 browser journeys**, **15 domain API cases**, **17 platform API cases** and **six infrastructure cases**. Development failures and traces were retained; targeted reruns were not substituted for this clean combined pass.
+
+Deployment of [application commit 0b93425](https://github.com/packetloss404/docvault/commit/0b934251a1978f03ab707c9b059e81c30fec0fe2) was verified on 2026-10-25 after a private database backup and graceful worker shutdown. All six existing document downloads retained their checksums. New PDF/image uploads, OCR, private previews, original/archive downloads and anonymous-access rejection passed over HTTPS. Real Edge controls additionally verified login, upload, WebSocket status, dashboard refresh, two rendered pages, zoom, OCR text and checksum-correct downloads. The legacy backlog of 410 jobs drained to zero. Production uses local storage, PostgreSQL and Redis; optional AI, NER and Elasticsearch remain disabled there.
 
 Evidence files:
 

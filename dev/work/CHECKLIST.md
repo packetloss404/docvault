@@ -204,5 +204,5 @@ These checkboxes track implementation work, not a guarantee that every advertise
 - [x] Exercise real browser journeys against PostgreSQL, Redis, Celery, Beat and configured integration services.
 - [x] Repair confirmed failures and add regression coverage.
 - [x] Require the acceptance suite in CI, including retained failure traces.
-- [ ] Run complete validation, review the fixes, push and verify CI.
-- [ ] Redeploy the accepted commit and smoke-test the live service.
+- [x] Run complete validation, review the fixes, push and verify CI.
+- [x] Redeploy the accepted commit and smoke-test the live service.
